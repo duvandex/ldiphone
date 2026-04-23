@@ -200,11 +200,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     }
     
     try {
-      const invoiceNumber = await generateInvoiceNumber();
+      // El número de factura ahora se genera automáticamente dentro de la transacción en updateProduct
       await updateProduct(selectedProduct.id, {
         ...sellData,
         status: 'sold',
-        invoiceNumber: invoiceNumber,
       });
       setIsSellOpen(false);
       setSelectedProduct(null);

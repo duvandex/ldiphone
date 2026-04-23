@@ -177,6 +177,16 @@ export function useAppData() {
         const inv = updates.investor || product.investor;
         const saleQty = updates.sellQuantity || updates.quantity || product.quantity || 1;
 
+        // If it's a sale, we need an invoice number
+        let finalInvoiceNumber = updates.invoiceNumber;
+        if (updates.status === 'sold' && !finalInvoiceNumber) {
+          const settingsRef = doc(db, 'app_settings', 'global');
+          const settingsDoc = await transaction.get(settingsRef);
+          const currentCounter = settingsDoc.exists() ? settingsDoc.data().invoiceCounter || 1 : 1;
+          finalInvoiceNumber = `FAC-${String(currentCounter).padStart(3, '0')}`;
+          transaction.set(settingsRef, { invoiceCounter: currentCounter + 1 }, { merge: true });
+        }
+
         if (updates.status === 'sold' && updates.sellQuantity && updates.sellQuantity < (product.quantity || 1)) {
           // Partial sale
           transaction.update(productRef, {
@@ -192,7 +202,7 @@ export function useAppData() {
             salePrice: updates.salePrice,
             saleDate: updates.saleDate,
             buyer: updates.buyer,
-            invoiceNumber: updates.invoiceNumber,
+            invoiceNumber: finalInvoiceNumber,
             saleMethod: updates.saleMethod,
           };
           transaction.set(doc(db, 'products', newSoldId), soldEntry);
@@ -206,7 +216,6 @@ export function useAppData() {
                 balance: accountDoc.data().balance + (updates.salePrice! * updates.sellQuantity!)
               });
             } else {
-              // Create account if missing for some reason
               transaction.set(accountRef, {
                 id: accountId,
                 investor: inv,
@@ -219,8 +228,12 @@ export function useAppData() {
         } else {
           // Full update or status change
           const oldStatus = product.status;
-          // Ensure we don't save sellQuantity as a field in the product doc if it's just a helper
           const { sellQuantity, ...cleanUpdates } = updates;
+          
+          if (updates.status === 'sold') {
+            cleanUpdates.invoiceNumber = finalInvoiceNumber;
+          }
+          
           transaction.update(productRef, cleanUpdates);
 
           if (oldStatus !== 'sold' && updates.status === 'sold' && updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {

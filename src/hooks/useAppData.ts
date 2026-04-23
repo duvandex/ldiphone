@@ -141,13 +141,22 @@ export function useAppData() {
         transaction.set(docRef, newProduct);
         
         if (newProduct.purchaseMethod && newProduct.purchaseMethod !== 'none') {
-          const targetAccountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
-          const accountRef = doc(db, 'accounts', targetAccountId);
+          const accountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
+          const accountRef = doc(db, 'accounts', accountId);
           const accountDoc = await transaction.get(accountRef);
           
+          const amount = newProduct.purchasePrice * newProduct.quantity;
           if (accountDoc.exists()) {
             transaction.update(accountRef, {
-              balance: accountDoc.data().balance - (newProduct.purchasePrice * newProduct.quantity)
+              balance: accountDoc.data().balance - amount
+            });
+          } else {
+            transaction.set(accountRef, {
+              id: accountId,
+              investor: newProduct.investor,
+              method: newProduct.purchaseMethod,
+              name: newProduct.purchaseMethod,
+              balance: -amount
             });
           }
         }
@@ -166,6 +175,7 @@ export function useAppData() {
 
         const product = productDoc.data() as Product;
         const inv = updates.investor || product.investor;
+        const saleQty = updates.sellQuantity || updates.quantity || product.quantity || 1;
 
         if (updates.status === 'sold' && updates.sellQuantity && updates.sellQuantity < (product.quantity || 1)) {
           // Partial sale
@@ -188,25 +198,46 @@ export function useAppData() {
           transaction.set(doc(db, 'products', newSoldId), soldEntry);
 
           if (updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
-            const accountRef = doc(db, 'accounts', `${inv}-${updates.saleMethod}`);
+            const accountId = `${inv}-${updates.saleMethod}`;
+            const accountRef = doc(db, 'accounts', accountId);
             const accountDoc = await transaction.get(accountRef);
             if (accountDoc.exists()) {
               transaction.update(accountRef, {
                 balance: accountDoc.data().balance + (updates.salePrice! * updates.sellQuantity!)
+              });
+            } else {
+              // Create account if missing for some reason
+              transaction.set(accountRef, {
+                id: accountId,
+                investor: inv,
+                method: updates.saleMethod,
+                name: updates.saleMethod,
+                balance: updates.salePrice! * updates.sellQuantity!
               });
             }
           }
         } else {
           // Full update or status change
           const oldStatus = product.status;
-          transaction.update(productRef, updates);
+          // Ensure we don't save sellQuantity as a field in the product doc if it's just a helper
+          const { sellQuantity, ...cleanUpdates } = updates;
+          transaction.update(productRef, cleanUpdates);
 
           if (oldStatus !== 'sold' && updates.status === 'sold' && updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
-            const accountRef = doc(db, 'accounts', `${inv}-${updates.saleMethod}`);
+            const accountId = `${inv}-${updates.saleMethod}`;
+            const accountRef = doc(db, 'accounts', accountId);
             const accountDoc = await transaction.get(accountRef);
             if (accountDoc.exists()) {
               transaction.update(accountRef, {
-                balance: accountDoc.data().balance + (updates.salePrice! * (updates.quantity || product.quantity || 1))
+                balance: accountDoc.data().balance + (updates.salePrice! * saleQty)
+              });
+            } else {
+              transaction.set(accountRef, {
+                id: accountId,
+                investor: inv,
+                method: updates.saleMethod,
+                name: updates.saleMethod,
+                balance: updates.salePrice! * saleQty
               });
             }
           }
@@ -221,8 +252,8 @@ export function useAppData() {
     try {
       const id = Math.random().toString(36).substr(2, 9);
       const expenseRef = doc(db, 'expenses', id);
-      const targetAccountId = `${expense.investor}-${expense.method}`;
-      const accountRef = doc(db, 'accounts', targetAccountId);
+      const accountId = `${expense.investor}-${expense.method}`;
+      const accountRef = doc(db, 'accounts', accountId);
 
       await runTransaction(db, async (transaction) => {
         transaction.set(expenseRef, { ...expense, id });
@@ -230,6 +261,14 @@ export function useAppData() {
         if (accountDoc.exists()) {
           transaction.update(accountRef, {
             balance: accountDoc.data().balance - expense.amount
+          });
+        } else {
+          transaction.set(accountRef, {
+            id: accountId,
+            investor: expense.investor,
+            method: expense.method,
+            name: expense.method,
+            balance: -expense.amount
           });
         }
       });

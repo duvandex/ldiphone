@@ -223,6 +223,7 @@ export function useAppData() {
               buyer: updates.buyer,
               invoiceNumber: finalInvoiceNumber,
               saleMethod: updates.saleMethod,
+              originalProductId: id, // Guardamos la referencia para devoluciones
             };
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
@@ -413,6 +414,72 @@ export function useAppData() {
     }
   };
 
+  const undoSale = async (saleId: string) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const saleRef = doc(db, 'products', saleId);
+        const saleDoc = await transaction.get(saleRef);
+        if (!saleDoc.exists()) return;
+
+        const sale = saleDoc.data() as Product;
+        if (sale.status !== 'sold') return;
+
+        // 1. Restaurar el stock
+        if (sale.originalProductId) {
+          // Fue venta PARCIAL: El registro de venta es uno aparte que debemos borrar
+          const originalRef = doc(db, 'products', sale.originalProductId);
+          const originalDoc = await transaction.get(originalRef);
+          
+          if (originalDoc.exists()) {
+            const original = originalDoc.data() as Product;
+            transaction.update(originalRef, {
+              quantity: (original.quantity || 0) + (sale.quantity || 1),
+              status: 'stock'
+            });
+            transaction.delete(saleRef); // Borramos el registro de venta "hijo"
+          } else {
+            // Si el original desapareció (raro), convertimos la venta en stock nuevamente
+            transaction.update(saleRef, {
+              status: 'stock',
+              salePrice: null,
+              saleDate: null,
+              buyer: null,
+              invoiceNumber: null,
+              saleMethod: null,
+              originalProductId: null
+            });
+          }
+        } else {
+          // Fue venta TOTAL: El mismo registro cambió de estado
+          transaction.update(saleRef, {
+            status: 'stock',
+            salePrice: null,
+            saleDate: null,
+            buyer: null,
+            invoiceNumber: null,
+            saleMethod: null
+          });
+        }
+
+        // 2. Revertir el dinero de las cuentas
+        if (sale.saleMethod && sale.salePrice && sale.saleMethod !== 'none') {
+          const accountId = `${sale.investor}-${sale.saleMethod}`;
+          const accountRef = doc(db, 'accounts', accountId);
+          const accountDoc = await transaction.get(accountRef);
+          
+          if (accountDoc.exists()) {
+            const amount = (sale.salePrice || 0) * (sale.quantity || 1);
+            transaction.update(accountRef, {
+              balance: accountDoc.data().balance - amount
+            });
+          }
+        }
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `sales/${saleId}`);
+    }
+  };
+
   return {
     data,
     user,
@@ -420,6 +487,7 @@ export function useAppData() {
     addProduct,
     updateProduct,
     deleteProduct,
+    undoSale,
     addDebtor,
     addPayment,
     deleteDebtor,

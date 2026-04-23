@@ -21,6 +21,8 @@ export interface Product {
   saleMethod?: PaymentMethod;
   warrantyMonths?: number;
   warrantyExpiration?: string;
+  originalProductId?: string; // Reference to original product for partial sales
+  description?: string;
 }
 
 export interface FinancialAccount {

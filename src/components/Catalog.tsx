@@ -99,7 +99,12 @@ export default function Catalog() {
                     <span>{p.investor}</span>
                     <Badge className="bg-emerald-50 text-emerald-600 border-none hover:bg-emerald-50 text-[10px]">DISPONIBLE</Badge>
                   </div>
-                  <h3 className="font-bold text-lg mb-2 text-slate-900 leading-snug">{p.name}</h3>
+                  <h3 className="font-bold text-lg mb-1 text-slate-900 leading-snug">{p.name}</h3>
+                  {p.description && (
+                    <p className="text-xs text-slate-500 line-clamp-2 mb-2 leading-relaxed">
+                      {p.description}
+                    </p>
+                  )}
                   {p.warrantyMonths ? (
                     <div className="text-[10px] font-bold text-blue-500 mb-4 uppercase flex items-center gap-1">
                       <ShieldCheck className="w-3 h-3" /> {p.warrantyMonths} Meses de Garantía

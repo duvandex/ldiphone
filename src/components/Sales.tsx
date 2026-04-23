@@ -6,17 +6,19 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Receipt, Download, Pencil } from 'lucide-react';
+import { Receipt, Download, Pencil, Trash2 } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Product, PaymentMethod } from '../types';
 
 export default function Sales({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, updateProduct } = appData;
+  const { data, updateProduct, undoSale } = appData;
   const navigate = useNavigate();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Product | null>(null);
+  const [isUndoOpen, setIsUndoOpen] = useState(false);
+  const [undoId, setUndoId] = useState<string | null>(null);
 
   const soldProducts = [...data.products.filter(p => p.status === 'sold')].sort((a, b) => 
     (b.saleDate || '').localeCompare(a.saleDate || '')
@@ -136,17 +138,30 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                       </Button>
                     </TableCell>
                     <TableCell className="py-4 text-right pr-6">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-slate-400 hover:text-slate-600"
-                        onClick={() => {
-                          setEditingSale({ ...p });
-                          setIsEditOpen(true);
-                        }}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                          onClick={() => {
+                            setEditingSale({ ...p });
+                            setIsEditOpen(true);
+                          }}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                          onClick={() => {
+                            setUndoId(p.id);
+                            setIsUndoOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -162,6 +177,30 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
           </Table>
         </CardContent>
       </Card>
+
+      {/* Confirm Undo Dialog */}
+      <Dialog open={isUndoOpen} onOpenChange={setIsUndoOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
+              <Trash2 className="w-5 h-5" /> ¿Eliminar Venta?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 text-sm text-slate-600">
+            Esta acción revertirá la venta. El equipo volverá al inventario y el dinero se descontará de la cuenta correspondiente.
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setIsUndoOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={async () => {
+              if (undoId) {
+                await undoSale(undoId);
+                setIsUndoOpen(false);
+                setUndoId(null);
+              }
+            }}>Confirmar y Revertir</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Sale Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>

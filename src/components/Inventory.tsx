@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
@@ -116,6 +117,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Form states
@@ -133,6 +135,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     purchaseMethod: 'none',
     warrantyMonths: 0,
     warrantyExpiration: '',
+    description: '',
   });
 
   const [editProductState, setEditProductState] = useState<Product | null>(null);
@@ -178,6 +181,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       purchaseMethod: 'none',
       warrantyMonths: 0,
       warrantyExpiration: '',
+      description: '',
     });
     setIsAddOpen(false);
   };
@@ -214,6 +218,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       setSelectedProduct(null);
     } catch (err: any) {
       alert("No se pudo completar la venta: " + err.message);
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct) return;
+    try {
+      await deleteProduct(selectedProduct.id);
+      setIsDeleteOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      alert("No se pudo eliminar el producto: " + err.message);
     }
   };
 
@@ -298,6 +313,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <div className="grid gap-2">
                 <Label htmlFor="name">Nombre del Producto *</Label>
                 <Input id="name" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} placeholder="Ej: iPhone 15 Pro" />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="desc">Descripción (Solo visible en catálogo)</Label>
+                <Textarea id="desc" value={newProduct.description || ''} onChange={e => setNewProduct({...newProduct, description: e.target.value})} placeholder="Detalles, estado, color, etc." />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -471,7 +491,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     size="icon" 
                     className="h-8 w-8 text-rose-500"
                     onClick={() => {
-                      if (confirm('¿Eliminar producto?')) deleteProduct(p.id);
+                      setSelectedProduct(p);
+                      setIsDeleteOpen(true);
                     }}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -556,7 +577,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                       ) : null}
                     </TableCell>
                     <TableCell className="py-4 text-right pr-6">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-1">
                         <Button 
                           variant="ghost" 
                           size="icon" 
@@ -592,7 +613,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                          onClick={() => deleteProduct(p.id)}
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setIsDeleteOpen(true);
+                          }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -631,6 +655,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <div className="grid gap-2">
               <Label htmlFor="e-name">Nombre del Producto</Label>
               <Input id="e-name" value={editProductState?.name || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, name: e.target.value}) : null)} />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="e-desc">Descripción</Label>
+              <Textarea id="e-desc" value={editProductState?.description || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, description: e.target.value}) : null)} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -683,6 +712,32 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             </div>
           </div>
           <Button onClick={handleEditProduct} className="w-full h-11 bg-slate-900">Aplicar Cambios</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={(open) => {
+        setIsDeleteOpen(open);
+        if (!open) setSelectedProduct(null);
+      }}>
+        <DialogContent className="max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-rose-600 flex items-center gap-2">
+              <Trash2 className="w-5 h-5" /> Confirmar Eliminación
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <p className="text-slate-600">
+              ¿Estás seguro de que deseas eliminar <strong>{selectedProduct?.name}</strong>?
+            </p>
+            <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+              Esta acción es permanente y no se podrá recuperar el registro del inventario.
+            </p>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDeleteProduct}>Eliminar Definitivamente</Button>
+          </div>
         </DialogContent>
       </Dialog>
 

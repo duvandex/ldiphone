@@ -169,36 +169,49 @@ export function useAppData() {
   const updateProduct = async (id: string, updates: Partial<Product> & { sellQuantity?: number }) => {
     try {
       await runTransaction(db, async (transaction) => {
+        // --- 1. TODOS LOS "GET" (LECTURAS) AL PRINCIPIO ---
         const productRef = doc(db, 'products', id);
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists()) return;
 
         const product = productDoc.data() as Product;
         const inv = updates.investor || product.investor;
-        const saleQty = updates.sellQuantity || updates.quantity || product.quantity || 1;
+        const sellQty = updates.sellQuantity || 1;
 
-        // If it's a sale, we need an invoice number
+        let settingsDoc = null;
+        if (updates.status === 'sold' && !updates.invoiceNumber) {
+          const settingsRef = doc(db, 'app_settings', 'global');
+          settingsDoc = await transaction.get(settingsRef);
+        }
+
+        let accountDoc = null;
+        let accountRef = null;
+        if (updates.status === 'sold' && updates.saleMethod && updates.saleMethod !== 'none') {
+          const accountId = `${inv}-${updates.saleMethod}`;
+          accountRef = doc(db, 'accounts', accountId);
+          accountDoc = await transaction.get(accountRef);
+        }
+
+        // --- 2. TODAS LAS ESCRITURAS DESPUÉS ---
+        
+        // Manejar Número de Factura
         let finalInvoiceNumber = updates.invoiceNumber;
         if (updates.status === 'sold' && !finalInvoiceNumber) {
-          const settingsRef = doc(db, 'app_settings', 'global');
-          const settingsDoc = await transaction.get(settingsRef);
-          const currentCounter = settingsDoc.exists() ? settingsDoc.data().invoiceCounter || 1 : 1;
+          const currentCounter = settingsDoc && settingsDoc.exists() ? settingsDoc.data().invoiceCounter || 1 : 1;
           finalInvoiceNumber = `FAC-${String(currentCounter).padStart(3, '0')}`;
-          transaction.set(settingsRef, { invoiceCounter: currentCounter + 1 }, { merge: true });
+          transaction.set(doc(db, 'app_settings', 'global'), { invoiceCounter: currentCounter + 1 }, { merge: true });
         }
 
         if (updates.status === 'sold') {
           const currentQty = product.quantity || 1;
-          const sellQty = updates.sellQuantity || 1;
 
           if (sellQty < currentQty) {
-            // Venta PARCIAL: Solo restamos del original
+            // Venta PARCIAL
             transaction.update(productRef, {
               quantity: currentQty - sellQty,
-              status: 'stock' // Se mantiene en stock porque aún quedan unidades
+              status: 'stock'
             });
 
-            // Creamos un registro nuevo para la venta en el historial
             const newSoldId = Math.random().toString(36).substr(2, 9);
             const soldEntry: Product = {
               ...product,
@@ -213,26 +226,22 @@ export function useAppData() {
             };
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
-            // Venta TOTAL: El producto original cambia a vendido
+            // Venta TOTAL
             const { sellQuantity, ...cleanUpdates } = updates;
             cleanUpdates.invoiceNumber = finalInvoiceNumber;
             transaction.update(productRef, cleanUpdates);
           }
 
-          // Actualizar el saldo monetario (siempre se suma el dinero de lo vendido)
-          if (updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
-            const accountId = `${inv}-${updates.saleMethod}`;
-            const accountRef = doc(db, 'accounts', accountId);
-            const accountDoc = await transaction.get(accountRef);
+          // Actualizar Saldo
+          if (accountRef && updates.salePrice) {
             const profit = updates.salePrice * sellQty;
-
-            if (accountDoc.exists()) {
+            if (accountDoc && accountDoc.exists()) {
               transaction.update(accountRef, {
                 balance: accountDoc.data().balance + profit
               });
             } else {
               transaction.set(accountRef, {
-                id: accountId,
+                id: `${inv}-${updates.saleMethod}`,
                 investor: inv,
                 method: updates.saleMethod,
                 name: updates.saleMethod,
@@ -241,7 +250,7 @@ export function useAppData() {
             }
           }
         } else {
-          // No es una venta, es una edición normal
+          // Edición normal
           const { sellQuantity, ...cleanUpdates } = updates;
           transaction.update(productRef, cleanUpdates);
         }

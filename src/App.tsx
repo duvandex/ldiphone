@@ -17,24 +17,37 @@ import Finance from './components/Finance';
 import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
 import { useAppData } from './hooks/useAppData';
+import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 
-function Login({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = useState('');
+function Login() {
+  const [email, setEmail] = useState('duvanmarinj@gmail.com');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.toLowerCase() === 'duvanmarinj@gmail.com' && password === 'Thomas1228$') {
-      if (rememberMe) {
-        localStorage.setItem('ldiphone_auth', 'true');
+    setLoading(true);
+    setError('');
+    try {
+      console.log("Intentando inicio de sesión para:", email);
+      await loginWithEmail(email, password);
+      console.log("Inicio de sesión exitoso");
+    } catch (err: any) {
+      console.error("Error de login detallado:", err);
+      const errorCode = err.code || 'unknown';
+      
+      if (errorCode === 'auth/user-not-found' || errorCode === 'auth/wrong-password' || errorCode === 'auth/invalid-credential') {
+        setError('Credenciales incorrectas. Revisa usuario y contraseña.');
+      } else if (errorCode === 'auth/operation-not-allowed') {
+        setError('El método de correo/contraseña no está habilitado en la consola de Firebase.');
+      } else if (errorCode === 'auth/unauthorized-domain') {
+        setError('Este dominio no está autorizado en Firestore. Agrégalo en Authentication -> Settings.');
       } else {
-        sessionStorage.setItem('ldiphone_auth', 'true');
+        setError(`Error (${errorCode}): ${err.message}`);
       }
-      onLogin();
-    } else {
-      setError('Credenciales incorrectas');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,16 +59,15 @@ function Login({ onLogin }: { onLogin: () => void }) {
             <Lock className="w-6 h-6" />
           </div>
           <CardTitle className="text-2xl font-black uppercase tracking-tight">Acceso Restringido</CardTitle>
-          <p className="text-slate-500 text-sm">Ingresa tus credenciales para continuar</p>
+          <p className="text-slate-500 text-sm">Ingresa con tu usuario y contraseña para sincronizar</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Correo Electrónico</Label>
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="usuario@ejemplo.com" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -71,22 +83,35 @@ function Login({ onLogin }: { onLogin: () => void }) {
                 required
               />
             </div>
-            
-            <div className="flex items-center space-x-2">
-              <input 
-                type="checkbox" 
-                id="remember" 
-                className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <Label htmlFor="remember" className="text-sm font-medium cursor-pointer">Mantener sesión iniciada</Label>
-            </div>
 
             {error && <p className="text-rose-500 text-xs font-bold text-center">{error}</p>}
-            <Button type="submit" className="w-full bg-slate-900 h-11 text-base">
-              Iniciar Sesión
+            
+            <Button type="submit" disabled={loading} className="w-full bg-slate-900 h-11 text-base">
+              {loading ? 'Iniciando...' : 'Iniciar Sesión'}
             </Button>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-slate-500">O también</span></div>
+            </div>
+
+            <Button 
+              type="button"
+              onClick={loginWithGoogle} 
+              disabled={loading}
+              className="w-full bg-white text-slate-900 border border-slate-200 h-12 text-sm hover:bg-slate-50 relative group"
+            >
+              <div className="absolute left-4">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5.04c1.94 0 3.68.67 5.05 1.97l3.77-3.77C18.54 1.15 15.48 0 12 0 7.31 0 3.25 2.69 1.25 6.64l4.41 3.42C6.71 7.23 9.13 5.04 12 5.04z" />
+                  <path fill="#4285F4" d="M23.49 12.27c0-.8-.07-1.56-.19-2.27H12v4.51h6.47c-.28 1.48-1.13 2.74-2.4 3.58l3.74 2.9c2.18-2.02 3.44-4.99 3.44-8.72z" />
+                  <path fill="#FBBC05" d="M5.66 14.71c-.26-.77-.41-1.6-.41-2.46s.15-1.69.41-2.46l-4.41-3.42C.45 8.18 0 10.04 0 12s.45 3.82 1.25 5.64l4.41-3.42z" />
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.74-2.9c-1.1.74-2.51 1.17-4.19 1.17-3.23 0-5.96-2.18-6.94-5.11l-4.41 3.42C3.25 21.31 7.31 24 12 24z" />
+                </svg>
+              </div>
+              Google
+            </Button>
+
             <div className="pt-4 border-t text-center">
               <Link to="/catalog" className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest">
                 Volver al Catálogo Público
@@ -173,18 +198,28 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+      <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
+      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sincronizando LDIPHONE...</p>
+    </div>
+  );
+}
+
 export default function App() {
   const appData = useAppData();
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    localStorage.getItem('ldiphone_auth') === 'true' || 
-    sessionStorage.getItem('ldiphone_auth') === 'true'
-  );
+  const { user, loading } = appData;
 
-  const handleLogout = () => {
-    localStorage.removeItem('ldiphone_auth');
-    sessionStorage.removeItem('ldiphone_auth');
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await logout();
   };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  const isAuthenticated = !!user;
 
   return (
     <Router>
@@ -197,7 +232,7 @@ export default function App() {
           <Route path="/warranty/:id" element={<WarrantyPage />} />
           <Route path="/view-invoice/:id" element={<InvoiceView appData={appData} isPublic />} />
           <Route path="/login" element={
-            isAuthenticated ? <Navigate to="/" replace /> : <Login onLogin={() => setIsAuthenticated(true)} />
+            isAuthenticated ? <Navigate to="/" replace /> : <Login />
           } />
           
           {/* Admin Routes (Protected) */}

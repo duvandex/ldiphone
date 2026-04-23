@@ -1,12 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Package, ShoppingCart, TrendingUp, Wallet, CreditCard } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, Wallet, CreditCard, RefreshCw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Button } from './ui/button';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function Dashboard({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data } = appData;
+  const { data, user, initializeDatabase } = appData;
+  const isDuvan = user?.email === 'duvanmarinj@gmail.com';
+  const isDbEmpty = data.products.length === 0;
   const stock = data.products.filter(p => p.status === 'stock');
   const sold = data.products.filter(p => p.status === 'sold');
   
@@ -52,6 +55,23 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
 
   return (
     <div className="space-y-6">
+      {isDuvan && isDbEmpty && (
+        <Card className="border-2 border-dashed border-slate-200 bg-white">
+          <CardContent className="p-8 flex flex-col items-center justify-center text-center gap-4">
+            <div className="bg-slate-50 p-4 rounded-full">
+              <RefreshCw className="w-8 h-8 text-slate-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold">Base de datos vacía</h3>
+              <p className="text-slate-500 text-sm max-w-sm">Si es la primera vez que sincronizas la nube, puedes cargar los datos iniciales de LDIPHONE aquí.</p>
+            </div>
+            <Button onClick={initializeDatabase} className="bg-slate-900">
+              Sincronizar Datos Iniciales
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {stats.map((stat) => (
           <Card key={stat.label} className="border-none shadow-sm bg-white/50 backdrop-blur-sm">

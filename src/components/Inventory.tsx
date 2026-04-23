@@ -396,8 +396,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   
                   <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
                     <div>
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Cant.</div>
-                      <div className="text-xs font-bold">{p.quantity}</div>
+                      <div className="text-[9px] uppercase font-bold text-slate-400">Disponible</div>
+                      <div className="text-xs font-bold text-blue-600">{p.quantity} {p.quantity === 1 ? 'Unidad' : 'Unidades'}</div>
                     </div>
                     <div>
                       <div className="text-[9px] uppercase font-bold text-slate-400">P. Compra</div>
@@ -473,7 +473,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-[10px] uppercase font-bold pl-6">Producto</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-center">Cant.</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-center">Disponible</TableHead>
                 <TableHead className="text-[10px] uppercase font-bold">IMEI / Inversor</TableHead>
                 <TableHead className="text-[10px] uppercase font-bold">Compra (u)</TableHead>
                 <TableHead className="text-[10px] uppercase font-bold">Venta (u)</TableHead>

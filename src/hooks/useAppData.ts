@@ -1,296 +1,366 @@
 import { useState, useEffect } from 'react';
+import { 
+  onSnapshot, 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc,
+  runTransaction
+} from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { AppData, Product, Debtor, Liability, Expense, Investor, PaymentMethod, FinancialAccount } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_DEBTORS, INITIAL_LIABILITIES } from '../constants';
 
-const STORAGE_KEY = 'ldiphone_app_data_v6';
-
 export function useAppData() {
-  const [data, setData] = useState<AppData>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
-    const methods: PaymentMethod[] = ['Efectivo', 'Bancolombia', 'Nequi', 'Banco de Bogota'];
-    
-    // Create accounts for each investor
-    const defaultAccounts: FinancialAccount[] = [];
-    investors.forEach(inv => {
-      methods.forEach(met => {
-        defaultAccounts.push({
-          id: `${inv}-${met}`,
-          investor: inv,
-          method: met,
-          name: met,
-          balance: 0
-        });
-      });
-    });
-
-    const defaults: AppData = {
-      products: INITIAL_PRODUCTS,
-      debtors: INITIAL_DEBTORS,
-      liabilities: INITIAL_LIABILITIES,
-      invoiceCounter: 15,
-      accounts: defaultAccounts,
-      expenses: [],
-    };
-
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Migration check for account IDs
-        let savedAccounts = parsed.accounts || defaultAccounts;
-        if (savedAccounts.length > 0 && !savedAccounts[0].investor) {
-           // Old format detected, reset or migrate? 
-           // Better to reset since the structure changed drastically for individual tracking
-           savedAccounts = defaultAccounts;
-        }
-
-        return {
-          ...defaults,
-          ...parsed,
-          products: parsed.products || INITIAL_PRODUCTS,
-          debtors: parsed.debtors || INITIAL_DEBTORS,
-          liabilities: parsed.liabilities || INITIAL_LIABILITIES,
-          accounts: savedAccounts,
-          expenses: parsed.expenses || defaults.expenses,
-        };
-      } catch (e) {
-        console.error('Error parsing saved data', e);
-      }
-    }
-    return defaults;
+  const [user, setUser] = useState<User | null>(null);
+  const [data, setData] = useState<AppData>({
+    products: [],
+    debtors: [],
+    liabilities: [],
+    invoiceCounter: 15,
+    accounts: [],
+    expenses: [],
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-      if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-        console.error('Error: Límite de almacenamiento excedido (LocalStorage Quota exceeded)');
-      } else {
-        console.error('Error saving data', e);
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) {
+        setLoading(false);
       }
-    }
-  }, [data]);
+    });
+    return () => unsubscribeAuth();
+  }, []);
 
-  const addProduct = (product: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...product,
-      id: Math.random().toString(36).substr(2, 9),
-      initialQuantity: product.quantity,
-      status: product.status || 'stock',
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setData(prev => ({ ...prev, products }));
+      setLoading(false);
+    }, (err) => handleFirestoreError(err, 'list', 'products'));
+
+    const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
+      const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));
+      setData(prev => ({ ...prev, debtors }));
+    });
+
+    const unsubLiabilities = onSnapshot(collection(db, 'liabilities'), (snapshot) => {
+      const liabilities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Liability));
+      setData(prev => ({ ...prev, liabilities }));
+    });
+
+    const unsubAccounts = onSnapshot(collection(db, 'accounts'), (snapshot) => {
+      const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialAccount));
+      setData(prev => ({ ...prev, accounts }));
+    });
+
+    const unsubExpenses = onSnapshot(collection(db, 'expenses'), (snapshot) => {
+      const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
+      setData(prev => ({ ...prev, expenses }));
+    });
+
+    const unsubSettings = onSnapshot(doc(db, 'app_settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setData(prev => ({ ...prev, invoiceCounter: snapshot.data().invoiceCounter }));
+      }
+    });
+
+    return () => {
+      unsubProducts();
+      unsubDebtors();
+      unsubLiabilities();
+      unsubAccounts();
+      unsubExpenses();
+      unsubSettings();
     };
+  }, [user]);
+
+  const initializeDatabase = async () => {
+    if (!user || user.email !== 'duvanmarinj@gmail.com') return;
     
-    setData(prev => {
-      let newAccounts = [...prev.accounts];
-      if (newProduct.purchaseMethod && newProduct.purchaseMethod !== 'none') {
-        const targetAccountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
-        newAccounts = newAccounts.map(acc => 
-          acc.id === targetAccountId 
-            ? { ...acc, balance: acc.balance - (newProduct.purchasePrice * newProduct.quantity) }
-            : acc
-        );
-      }
+    setLoading(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        // Init Settings
+        transaction.set(doc(db, 'app_settings', 'global'), { invoiceCounter: 15 });
 
-      return {
-        ...prev,
-        products: [...prev.products, newProduct],
-        accounts: newAccounts,
-      };
-    });
-  };
-
-  const updateProduct = (id: string, updates: Partial<Product> & { sellQuantity?: number }) => {
-    setData(prev => {
-      const productIndex = prev.products.findIndex(p => p.id === id);
-      if (productIndex === -1) return prev;
-
-      const product = prev.products[productIndex];
-      const newProducts = [...prev.products];
-      let newAccounts = [...prev.accounts];
-      
-      const inv = updates.investor || product.investor;
-
-      if (updates.status === 'sold' && updates.sellQuantity && updates.sellQuantity < (product.quantity || 1)) {
-        newProducts[productIndex] = {
-          ...product,
-          quantity: (product.quantity || 1) - updates.sellQuantity,
-        };
+        // Init Accounts
+        const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+        const methods: PaymentMethod[] = ['Efectivo', 'Bancolombia', 'Nequi', 'Banco de Bogota'];
         
-        const soldEntry: Product = {
-          ...product,
-          id: Math.random().toString(36).substr(2, 9),
-          status: 'sold',
-          quantity: updates.sellQuantity,
-          salePrice: updates.salePrice,
-          saleDate: updates.saleDate,
-          buyer: updates.buyer,
-          invoiceNumber: updates.invoiceNumber,
-          saleMethod: updates.saleMethod,
-        };
-        newProducts.push(soldEntry);
+        investors.forEach(inv => {
+          methods.forEach(met => {
+            const id = `${inv}-${met}`;
+            transaction.set(doc(db, 'accounts', id), {
+              id,
+              investor: inv,
+              method: met,
+              name: met,
+              balance: 0
+            });
+          });
+        });
 
-        if (updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
-          const targetAccountId = `${inv}-${updates.saleMethod}`;
-          newAccounts = newAccounts.map(acc => 
-            acc.id === targetAccountId 
-              ? { ...acc, balance: acc.balance + (updates.salePrice! * updates.sellQuantity!) }
-              : acc
-          );
-        }
-      } else {
-        const oldStatus = product.status;
-        newProducts[productIndex] = { ...product, ...updates };
-
-        if (oldStatus !== 'sold' && updates.status === 'sold' && updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
-          const targetAccountId = `${inv}-${updates.saleMethod}`;
-          newAccounts = newAccounts.map(acc => 
-            acc.id === targetAccountId 
-              ? { ...acc, balance: acc.balance + (updates.salePrice! * (updates.quantity || product.quantity || 1)) }
-              : acc
-          );
-        }
-      }
-
-      return { ...prev, products: newProducts, accounts: newAccounts };
-    });
+        // Init Data from constants
+        INITIAL_PRODUCTS.forEach(p => {
+          transaction.set(doc(db, 'products', p.id), p);
+        });
+        INITIAL_DEBTORS.forEach(d => {
+          transaction.set(doc(db, 'debtors', d.id), d);
+        });
+        INITIAL_LIABILITIES.forEach(l => {
+          transaction.set(doc(db, 'liabilities', l.id), l);
+        });
+      });
+      alert('Base de datos inicializada con éxito.');
+    } catch (err) {
+      console.error("Error initializing DB", err);
+      alert('Error al inicializar: ' + err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addExpense = (expense: Omit<Expense, 'id'>) => {
-    const newExpense: Expense = {
-      ...expense,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setData(prev => {
-      const targetAccountId = `${newExpense.investor}-${newExpense.method}`;
-      const newAccounts = prev.accounts.map(acc => 
-        acc.id === targetAccountId 
-          ? { ...acc, balance: acc.balance - newExpense.amount }
-          : acc
-      );
-      return {
-        ...prev,
-        expenses: [...prev.expenses, newExpense],
-        accounts: newAccounts,
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      const docRef = doc(db, 'products', id);
+      const newProduct: Product = {
+        ...product,
+        id,
+        initialQuantity: product.quantity,
+        status: product.status || 'stock',
       };
-    });
+
+      await runTransaction(db, async (transaction) => {
+        transaction.set(docRef, newProduct);
+        
+        if (newProduct.purchaseMethod && newProduct.purchaseMethod !== 'none') {
+          const targetAccountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
+          const accountRef = doc(db, 'accounts', targetAccountId);
+          const accountDoc = await transaction.get(accountRef);
+          
+          if (accountDoc.exists()) {
+            transaction.update(accountRef, {
+              balance: accountDoc.data().balance - (newProduct.purchasePrice * newProduct.quantity)
+            });
+          }
+        }
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'products');
+    }
   };
 
-  const deleteExpense = (id: string) => {
-    setData(prev => {
-      const expense = prev.expenses.find(e => e.id === id) as Expense | undefined;
-      if (!expense) return prev;
-      
+  const updateProduct = async (id: string, updates: Partial<Product> & { sellQuantity?: number }) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const productRef = doc(db, 'products', id);
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) return;
+
+        const product = productDoc.data() as Product;
+        const inv = updates.investor || product.investor;
+
+        if (updates.status === 'sold' && updates.sellQuantity && updates.sellQuantity < (product.quantity || 1)) {
+          // Partial sale
+          transaction.update(productRef, {
+            quantity: (product.quantity || 1) - updates.sellQuantity,
+          });
+
+          const newSoldId = Math.random().toString(36).substr(2, 9);
+          const soldEntry: Product = {
+            ...product,
+            id: newSoldId,
+            status: 'sold',
+            quantity: updates.sellQuantity,
+            salePrice: updates.salePrice,
+            saleDate: updates.saleDate,
+            buyer: updates.buyer,
+            invoiceNumber: updates.invoiceNumber,
+            saleMethod: updates.saleMethod,
+          };
+          transaction.set(doc(db, 'products', newSoldId), soldEntry);
+
+          if (updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
+            const accountRef = doc(db, 'accounts', `${inv}-${updates.saleMethod}`);
+            const accountDoc = await transaction.get(accountRef);
+            if (accountDoc.exists()) {
+              transaction.update(accountRef, {
+                balance: accountDoc.data().balance + (updates.salePrice! * updates.sellQuantity!)
+              });
+            }
+          }
+        } else {
+          // Full update or status change
+          const oldStatus = product.status;
+          transaction.update(productRef, updates);
+
+          if (oldStatus !== 'sold' && updates.status === 'sold' && updates.saleMethod && updates.salePrice && updates.saleMethod !== 'none') {
+            const accountRef = doc(db, 'accounts', `${inv}-${updates.saleMethod}`);
+            const accountDoc = await transaction.get(accountRef);
+            if (accountDoc.exists()) {
+              transaction.update(accountRef, {
+                balance: accountDoc.data().balance + (updates.salePrice! * (updates.quantity || product.quantity || 1))
+              });
+            }
+          }
+        }
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'update', `products/${id}`);
+    }
+  };
+
+  const addExpense = async (expense: Omit<Expense, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      const expenseRef = doc(db, 'expenses', id);
       const targetAccountId = `${expense.investor}-${expense.method}`;
-      const newAccounts = prev.accounts.map(acc => 
-        acc.id === targetAccountId 
-          ? { ...acc, balance: acc.balance + expense.amount }
-          : acc
-      );
-      
-      return {
-        ...prev,
-        expenses: prev.expenses.filter(e => e.id !== id),
-        accounts: newAccounts,
-      };
-    });
-  };
+      const accountRef = doc(db, 'accounts', targetAccountId);
 
-  const updateAccountBalance = (accountId: string, newBalance: number) => {
-    setData(prev => ({
-      ...prev,
-      accounts: prev.accounts.map(acc => 
-        acc.id === accountId ? { ...acc, balance: newBalance } : acc
-      ),
-    }));
-  };
-
-  const deleteProduct = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      products: prev.products.filter(p => p.id !== id),
-    }));
-  };
-
-  const addDebtor = (debtor: Omit<Debtor, 'id'>) => {
-    const newDebtor = {
-      ...debtor,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setData(prev => ({
-      ...prev,
-      debtors: [...prev.debtors, newDebtor],
-    }));
-  };
-
-  const addPayment = (debtorId: string, amount: number) => {
-    setData(prev => ({
-      ...prev,
-      debtors: prev.debtors.map(d => {
-        if (d.id === debtorId) {
-          const newPayments = [...d.payments, amount];
-          const totalPaid = newPayments.reduce((a, b) => a + b, 0);
-          return {
-            ...d,
-            payments: newPayments,
-            status: totalPaid >= d.totalAmount ? 'paid' : 'pending',
-          };
+      await runTransaction(db, async (transaction) => {
+        transaction.set(expenseRef, { ...expense, id });
+        const accountDoc = await transaction.get(accountRef);
+        if (accountDoc.exists()) {
+          transaction.update(accountRef, {
+            balance: accountDoc.data().balance - expense.amount
+          });
         }
-        return d;
-      }),
-    }));
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'expenses');
+    }
   };
 
-  const deleteDebtor = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      debtors: prev.debtors.filter(d => d.id !== id),
-    }));
-  };
+  const deleteExpense = async (id: string) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        const expenseRef = doc(db, 'expenses', id);
+        const expenseDoc = await transaction.get(expenseRef);
+        if (!expenseDoc.exists()) return;
 
-  const addLiability = (liability: Omit<Liability, 'id'>) => {
-    const newLiability = {
-      ...liability,
-      id: Math.random().toString(36).substr(2, 9),
-    };
-    setData(prev => ({
-      ...prev,
-      liabilities: [...prev.liabilities, newLiability],
-    }));
-  };
-
-  const addLiabilityPayment = (liabilityId: string, amount: number) => {
-    setData(prev => ({
-      ...prev,
-      liabilities: prev.liabilities.map(l => {
-        if (l.id === liabilityId) {
-          const newPayments = [...l.payments, amount];
-          const totalPaid = newPayments.reduce((a, b) => a + b, 0);
-          return {
-            ...l,
-            payments: newPayments,
-            status: totalPaid >= l.totalAmount ? 'paid' : 'pending',
-          };
+        const expense = expenseDoc.data() as Expense;
+        const accountRef = doc(db, 'accounts', `${expense.investor}-${expense.method}`);
+        
+        transaction.delete(expenseRef);
+        const accountDoc = await transaction.get(accountRef);
+        if (accountDoc.exists()) {
+          transaction.update(accountRef, {
+            balance: accountDoc.data().balance + expense.amount
+          });
         }
-        return l;
-      }),
-    }));
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `expenses/${id}`);
+    }
   };
 
-  const deleteLiability = (id: string) => {
-    setData(prev => ({
-      ...prev,
-      liabilities: prev.liabilities.filter(l => l.id !== id),
-    }));
+  const updateAccountBalance = async (accountId: string, newBalance: number) => {
+    try {
+      await updateDoc(doc(db, 'accounts', accountId), { balance: newBalance });
+    } catch (err) {
+      handleFirestoreError(err, 'update', `accounts/${accountId}`);
+    }
+  };
+
+  const deleteProduct = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'products', id));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `products/${id}`);
+    }
+  };
+
+  const addDebtor = async (debtor: Omit<Debtor, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      await setDoc(doc(db, 'debtors', id), { ...debtor, id });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'debtors');
+    }
+  };
+
+  const addPayment = async (debtorId: string, amount: number) => {
+    try {
+      const debtorRef = doc(db, 'debtors', debtorId);
+      await runTransaction(db, async (transaction) => {
+        const dDoc = await transaction.get(debtorRef);
+        if (!dDoc.exists()) return;
+        
+        const d = dDoc.data() as Debtor;
+        const newPayments = [...d.payments, amount];
+        const totalPaid = newPayments.reduce((a, b) => a + b, 0);
+        transaction.update(debtorRef, {
+          payments: newPayments,
+          status: totalPaid >= d.totalAmount ? 'paid' : 'pending',
+        });
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'update', `debtors/${debtorId}`);
+    }
+  };
+
+  const deleteDebtor = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'debtors', id));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `debtors/${id}`);
+    }
+  };
+
+  const addLiability = async (liability: Omit<Liability, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      await setDoc(doc(db, 'liabilities', id), { ...liability, id });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'liabilities');
+    }
+  };
+
+  const addLiabilityPayment = async (liabilityId: string, amount: number) => {
+    try {
+      const libRef = doc(db, 'liabilities', liabilityId);
+      await runTransaction(db, async (transaction) => {
+        const lDoc = await transaction.get(libRef);
+        if (!lDoc.exists()) return;
+
+        const l = lDoc.data() as Liability;
+        const newPayments = [...l.payments, amount];
+        const totalPaid = newPayments.reduce((a, b) => a + b, 0);
+        transaction.update(libRef, {
+          payments: newPayments,
+          status: totalPaid >= l.totalAmount ? 'paid' : 'pending',
+        });
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'update', `liabilities/${liabilityId}`);
+    }
+  };
+
+  const deleteLiability = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'liabilities', id));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `liabilities/${id}`);
+    }
   };
 
   const generateInvoiceNumber = () => {
     const num = data.invoiceCounter;
-    setData(prev => ({ ...prev, invoiceCounter: prev.invoiceCounter + 1 }));
+    updateDoc(doc(db, 'app_settings', 'global'), { invoiceCounter: num + 1 });
     return `FAC-${String(num).padStart(3, '0')}`;
   };
 
   return {
     data,
+    user,
+    loading,
     addProduct,
     updateProduct,
     deleteProduct,
@@ -304,5 +374,6 @@ export function useAppData() {
     deleteExpense,
     updateAccountBalance,
     generateInvoiceNumber,
+    initializeDatabase,
   };
 }

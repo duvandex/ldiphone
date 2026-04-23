@@ -138,24 +138,30 @@ export function useAppData() {
       };
 
       await runTransaction(db, async (transaction) => {
-        transaction.set(docRef, newProduct);
-        
+        // --- 1. LECTURAS ---
+        let accountDoc = null;
+        let accountRef = null;
         if (newProduct.purchaseMethod && newProduct.purchaseMethod !== 'none') {
           const accountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
-          const accountRef = doc(db, 'accounts', accountId);
-          const accountDoc = await transaction.get(accountRef);
-          
+          accountRef = doc(db, 'accounts', accountId);
+          accountDoc = await transaction.get(accountRef);
+        }
+
+        // --- 2. ESCRITURAS ---
+        transaction.set(docRef, newProduct);
+        
+        if (accountRef) {
           const amount = newProduct.purchasePrice * newProduct.quantity;
-          if (accountDoc.exists()) {
+          if (accountDoc && accountDoc.exists()) {
             transaction.update(accountRef, {
               balance: accountDoc.data().balance - amount
             });
           } else {
             transaction.set(accountRef, {
-              id: accountId,
+              id: accountRef.id,
               investor: newProduct.investor,
-              method: newProduct.purchaseMethod,
-              name: newProduct.purchaseMethod,
+              method: newProduct.purchaseMethod!,
+              name: newProduct.purchaseMethod!,
               balance: -amount
             });
           }
@@ -269,8 +275,11 @@ export function useAppData() {
       const accountRef = doc(db, 'accounts', accountId);
 
       await runTransaction(db, async (transaction) => {
-        transaction.set(expenseRef, { ...expense, id });
+        // --- 1. LECTURAS (GETS) ---
         const accountDoc = await transaction.get(accountRef);
+
+        // --- 2. ESCRITURAS ---
+        transaction.set(expenseRef, { ...expense, id });
         if (accountDoc.exists()) {
           transaction.update(accountRef, {
             balance: accountDoc.data().balance - expense.amount
@@ -293,15 +302,17 @@ export function useAppData() {
   const deleteExpense = async (id: string) => {
     try {
       await runTransaction(db, async (transaction) => {
+        // --- 1. LECTURAS (GETS) ---
         const expenseRef = doc(db, 'expenses', id);
         const expenseDoc = await transaction.get(expenseRef);
         if (!expenseDoc.exists()) return;
 
         const expense = expenseDoc.data() as Expense;
         const accountRef = doc(db, 'accounts', `${expense.investor}-${expense.method}`);
-        
-        transaction.delete(expenseRef);
         const accountDoc = await transaction.get(accountRef);
+
+        // --- 2. ESCRITURAS ---
+        transaction.delete(expenseRef);
         if (accountDoc.exists()) {
           transaction.update(accountRef, {
             balance: accountDoc.data().balance + expense.amount
@@ -417,6 +428,7 @@ export function useAppData() {
   const undoSale = async (saleId: string) => {
     try {
       await runTransaction(db, async (transaction) => {
+        // --- 1. LECTURAS (GETS) ---
         const saleRef = doc(db, 'products', saleId);
         const saleDoc = await transaction.get(saleRef);
         if (!saleDoc.exists()) return;
@@ -424,21 +436,33 @@ export function useAppData() {
         const sale = saleDoc.data() as Product;
         if (sale.status !== 'sold') return;
 
-        // 1. Restaurar el stock
+        let originalDoc = null;
+        let originalRef = null;
         if (sale.originalProductId) {
-          // Fue venta PARCIAL: El registro de venta es uno aparte que debemos borrar
-          const originalRef = doc(db, 'products', sale.originalProductId);
-          const originalDoc = await transaction.get(originalRef);
-          
-          if (originalDoc.exists()) {
+          originalRef = doc(db, 'products', sale.originalProductId);
+          originalDoc = await transaction.get(originalRef);
+        }
+
+        let accountDoc = null;
+        let accountRef = null;
+        if (sale.saleMethod && sale.salePrice && sale.saleMethod !== 'none') {
+          const accountId = `${sale.investor}-${sale.saleMethod}`;
+          accountRef = doc(db, 'accounts', accountId);
+          accountDoc = await transaction.get(accountRef);
+        }
+
+        // --- 2. ESCRITURAS ---
+        
+        // Restaurar el stock
+        if (sale.originalProductId && originalRef) {
+          if (originalDoc && originalDoc.exists()) {
             const original = originalDoc.data() as Product;
             transaction.update(originalRef, {
               quantity: (original.quantity || 0) + (sale.quantity || 1),
               status: 'stock'
             });
-            transaction.delete(saleRef); // Borramos el registro de venta "hijo"
+            transaction.delete(saleRef);
           } else {
-            // Si el original desapareció (raro), convertimos la venta en stock nuevamente
             transaction.update(saleRef, {
               status: 'stock',
               salePrice: null,
@@ -450,7 +474,6 @@ export function useAppData() {
             });
           }
         } else {
-          // Fue venta TOTAL: El mismo registro cambió de estado
           transaction.update(saleRef, {
             status: 'stock',
             salePrice: null,
@@ -461,18 +484,12 @@ export function useAppData() {
           });
         }
 
-        // 2. Revertir el dinero de las cuentas
-        if (sale.saleMethod && sale.salePrice && sale.saleMethod !== 'none') {
-          const accountId = `${sale.investor}-${sale.saleMethod}`;
-          const accountRef = doc(db, 'accounts', accountId);
-          const accountDoc = await transaction.get(accountRef);
-          
-          if (accountDoc.exists()) {
-            const amount = (sale.salePrice || 0) * (sale.quantity || 1);
-            transaction.update(accountRef, {
-              balance: accountDoc.data().balance - amount
-            });
-          }
+        // Revertir el dinero de las cuentas
+        if (accountRef && accountDoc && accountDoc.exists()) {
+          const amount = (sale.salePrice || 0) * (sale.quantity || 1);
+          transaction.update(accountRef, {
+            balance: accountDoc.data().balance - amount
+          });
         }
       });
     } catch (err) {

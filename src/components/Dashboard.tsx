@@ -11,8 +11,8 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
   const { data, user, initializeDatabase } = appData;
   const isDuvan = user?.email === 'duvanmarinj@gmail.com';
   const isDbEmpty = data.products.length === 0;
-  const stock = data.products.filter(p => p.status === 'stock');
-  const sold = data.products.filter(p => p.status === 'sold');
+  const stock = (data.products || []).filter(p => p.status === 'stock');
+  const sold = (data.products || []).filter(p => p.status === 'sold');
   
   const totalProfit = sold.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
   const stockValue = stock.reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0);

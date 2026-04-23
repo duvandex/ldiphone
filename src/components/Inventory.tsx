@@ -156,7 +156,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const filteredProducts = data.products.filter(p => {
     if (p.status === 'sold') return false;
 
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
                          (p.imei || '').includes(search) ||
                          (p.provider || '').toLowerCase().includes(search.toLowerCase());
     const matchesInvestor = investorFilter === 'all' || p.investor === investorFilter;

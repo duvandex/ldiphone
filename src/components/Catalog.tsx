@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
+import { Button } from './ui/button';
 import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
@@ -16,7 +17,7 @@ export default function Catalog() {
 
   const publicProducts = data.products.filter(p => 
     p.status === 'stock' && 
-    p.name.toLowerCase().includes(search.toLowerCase())
+    (p.name?.toLowerCase() || '').includes(search.toLowerCase())
   );
 
   const container = {

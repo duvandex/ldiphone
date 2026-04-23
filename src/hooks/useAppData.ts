@@ -36,13 +36,20 @@ export function useAppData() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setData(prev => ({ ...prev, products }));
       setLoading(false);
-    }, (err) => handleFirestoreError(err, 'list', 'products'));
+    }, (err) => {
+      console.error("Products fallback error:", err);
+      setLoading(false);
+    });
+
+    return () => unsubProducts();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
 
     const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
       const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));
@@ -71,7 +78,6 @@ export function useAppData() {
     });
 
     return () => {
-      unsubProducts();
       unsubDebtors();
       unsubLiabilities();
       unsubAccounts();

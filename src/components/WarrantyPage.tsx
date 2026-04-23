@@ -81,11 +81,17 @@ export default function WarrantyPage() {
         </Link>
 
         {/* Certificate Header */}
-        <Card className="border-none shadow-sm overflow-hidden bg-primary text-primary-foreground">
-          <CardContent className="p-8 text-center">
-            <ShieldCheck className="w-16 h-16 mx-auto mb-4 opacity-40 text-emerald-400" />
-            <h1 className="text-2xl font-black uppercase tracking-tight">Certificado de Garantía</h1>
-            <p className="opacity-70 mt-1 font-mono text-sm">Factura No. {product.invoiceNumber}</p>
+        <Card className="border-none shadow-sm overflow-hidden bg-slate-900 text-white">
+          <CardContent className="p-8 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6">
+            <div className="bg-white p-3 rounded-2xl">
+              <Logo size="lg" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-black uppercase tracking-tight">Certificado de Garantía</h1>
+              <p className="opacity-70 font-mono text-sm uppercase">{data.settings.companyName}</p>
+              <p className="opacity-50 text-[10px] font-bold uppercase tracking-widest">Factura No. {product.invoiceNumber}</p>
+            </div>
+            <ShieldCheck className="w-16 h-16 ml-auto opacity-20 text-emerald-400 hidden sm:block" />
           </CardContent>
         </Card>
 
@@ -159,14 +165,14 @@ export default function WarrantyPage() {
         </div>
 
         {/* Terms */}
-        <Card className="border-none shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase text-slate-400">Condiciones de Garantía</CardTitle>
+        <Card className="border-none shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50 border-b">
+            <CardTitle className="text-sm font-bold uppercase text-slate-500">Condiciones y Cobertura</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-slate-600 space-y-3">
-            <p>1. La garantía cubre fallos técnicos de fábrica por un periodo de {product.warrantyMonths || 6} meses desde la fecha de compra.</p>
-            <p>2. No incluye daños causados por humedad, golpes, sobrecargas eléctricas o manipulación por terceros.</p>
-            <p>3. El producto debe presentarse con sus sellos de seguridad intactos.</p>
+          <CardContent className="p-6">
+            <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
+              {product.warrantyTerms || data.settings.warrantyTerms}
+            </div>
           </CardContent>
         </Card>
 

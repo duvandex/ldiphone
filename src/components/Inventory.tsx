@@ -12,6 +12,7 @@ import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smart
 import { useAppData } from '../hooks/useAppData';
 import { Investor, Product, PaymentMethod } from '../types';
 import { fmt, cn } from '../lib/utils';
+import IMEIScanner from './IMEIScanner';
 
 const ImageUploader = ({ 
   images, 
@@ -118,6 +119,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [activeScannerMode, setActiveScannerMode] = useState<'add' | 'edit' | null>(null);
 
   // Form states
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
@@ -139,19 +142,42 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 
+  // Initialize new product with defaults from settings
+  React.useEffect(() => {
+    if (isAddOpen) {
+      setNewProduct(prev => ({
+        ...prev,
+        warrantyMonths: data.settings.defaultWarrantyMonths
+      }));
+    }
+  }, [isAddOpen, data.settings.defaultWarrantyMonths]);
+
   const [sellData, setSellData] = useState<{
     salePrice: number | string;
     saleDate: string;
     buyer: string;
     sellQuantity: number | string;
     saleMethod: PaymentMethod;
+    warrantyMonths: number;
+    warrantyExpiration: string;
   }>({
     salePrice: '',
     saleDate: new Date().toISOString().split('T')[0],
     buyer: '',
     sellQuantity: 1,
     saleMethod: 'Efectivo',
+    warrantyMonths: data.settings.defaultWarrantyMonths,
+    warrantyExpiration: '',
   });
+
+  // Calculate warranty expiration when months change
+  React.useEffect(() => {
+    if (sellData.warrantyMonths > 0) {
+      const date = new Date(sellData.saleDate || new Date());
+      date.setMonth(date.getMonth() + sellData.warrantyMonths);
+      setSellData(prev => ({ ...prev, warrantyExpiration: date.toISOString().split('T')[0] }));
+    }
+  }, [sellData.warrantyMonths, sellData.saleDate]);
 
   const filteredProducts = data.products.filter(p => {
     if (p.status === 'sold') return false;
@@ -212,6 +238,9 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
         salePrice: sPrice,
         sellQuantity: isNaN(sQty) ? 1 : sQty,
         status: 'sold',
+        warrantyMonths: sellData.warrantyMonths,
+        warrantyExpiration: sellData.warrantyExpiration,
+        warrantyTerms: data.settings.warrantyTerms,
       });
       setIsSellOpen(false);
       setSelectedProduct(null);
@@ -323,7 +352,18 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI / Serial</Label>
-                  <Input id="imei" placeholder="15 dígitos" className="rounded-xl border-slate-100 h-11" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} />
+                  <div className="flex gap-2">
+                    <Input id="imei" placeholder="15 dígitos" className="rounded-xl border-slate-100 h-11 flex-1" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => { setActiveScannerMode('add'); setIsScannerOpen(true); }}
+                      className="h-11 w-11 rounded-xl border-rose-100 bg-rose-50 text-rose-500 hover:bg-rose-100"
+                    >
+                      <Camera className="w-5 h-5" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
@@ -627,7 +667,18 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="e-imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI</Label>
-                <Input id="e-imei" className="rounded-xl border-slate-100 h-11" value={editProductState?.imei || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, imei: e.target.value}) : null)} />
+                <div className="flex gap-2">
+                  <Input id="e-imei" className="rounded-xl border-slate-100 h-11 flex-1" value={editProductState?.imei || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, imei: e.target.value}) : null)} />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon" 
+                    onClick={() => { setActiveScannerMode('edit'); setIsScannerOpen(true); }}
+                    className="h-11 w-11 rounded-xl border-rose-100 bg-rose-50 text-rose-500 hover:bg-rose-100"
+                  >
+                    <Camera className="w-5 h-5" />
+                  </Button>
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="e-provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
@@ -775,6 +826,28 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-rose-500">Garantía (Meses)</Label>
+                <Input 
+                  type="number" 
+                  min="0" 
+                  className="rounded-xl border-slate-100 h-11"
+                  value={sellData.warrantyMonths} 
+                  onChange={e => setSellData({...sellData, warrantyMonths: parseInt(e.target.value) || 0})} 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Hasta:</Label>
+                <Input 
+                  type="date" 
+                  className="rounded-xl border-slate-100 h-11 bg-slate-50"
+                  value={sellData.warrantyExpiration} 
+                  readOnly
+                />
+              </div>
+            </div>
             
             <div className="grid gap-2">
               <Label htmlFor="buyer" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Comprador</Label>
@@ -793,6 +866,22 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           </div>
         </DialogContent>
       </Dialog>
+
+      {isScannerOpen && (
+        <IMEIScanner 
+          onResult={(imei) => {
+            if (activeScannerMode === 'add') {
+              setNewProduct(prev => ({ ...prev, imei }));
+            } else if (activeScannerMode === 'edit') {
+              setEditProductState(prev => prev ? ({ ...prev, imei }) : null);
+            }
+          }}
+          onClose={() => {
+            setIsScannerOpen(false);
+            setActiveScannerMode(null);
+          }}
+        />
+      )}
     </div>
   );
 }

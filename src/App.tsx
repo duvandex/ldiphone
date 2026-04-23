@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -16,6 +16,7 @@ import InvoiceView from './components/InvoiceView';
 import Finance from './components/Finance';
 import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
+import Settings from './components/Settings';
 import { useAppData } from './hooks/useAppData';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 
@@ -140,6 +141,7 @@ function Navigation({ onLogout }: { onLogout: () => void }) {
     { path: '/finance', label: 'Cuentas/Gastos', icon: Wallet },
     { path: '/debtors', label: 'Cuentas x Cobrar', icon: CreditCard },
     { path: '/liabilities', label: 'Pasivos', icon: TrendingDown },
+    { path: '/settings', label: 'Configuración', icon: SettingsIcon },
     { path: '/cat', label: 'Catálogo', icon: ExternalLink, external: true },
   ];
 
@@ -264,6 +266,9 @@ export default function App() {
           } />
           <Route path="/invoice" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><InvoiceView appData={appData} /></AdminLayout>
+          } />
+          <Route path="/settings" element={
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Settings /></AdminLayout>
           } />
           
           {/* Fallback */}

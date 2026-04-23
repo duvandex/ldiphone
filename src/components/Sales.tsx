@@ -285,8 +285,40 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                 onChange={e => setEditingSale(prev => prev ? ({...prev, invoiceNumber: e.target.value}) : null)} 
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+              <div className="grid gap-2">
+                <Label className="text-rose-600">Garantía (Meses)</Label>
+                <Input 
+                  type="number" 
+                  min="0"
+                  value={editingSale?.warrantyMonths || 0} 
+                  onChange={e => {
+                    const months = parseInt(e.target.value) || 0;
+                    setEditingSale(prev => {
+                      if (!prev) return null;
+                      const date = prev.saleDate ? new Date(prev.saleDate) : new Date();
+                      date.setMonth(date.getMonth() + months);
+                      return {
+                        ...prev,
+                        warrantyMonths: months,
+                        warrantyExpiration: date.toISOString().split('T')[0]
+                      };
+                    });
+                  }} 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Vencimiento</Label>
+                <Input 
+                  type="date"
+                  value={editingSale?.warrantyExpiration || ''} 
+                  onChange={e => setEditingSale(prev => prev ? ({...prev, warrantyExpiration: e.target.value}) : null)} 
+                />
+              </div>
+            </div>
           </div>
-          <Button onClick={handleUpdateSale} className="w-full bg-slate-900">Actualizar Información</Button>
+          <Button onClick={handleUpdateSale} className="w-full bg-slate-900 h-12 rounded-xl font-bold">Actualizar Información</Button>
         </DialogContent>
       </Dialog>
     </div>

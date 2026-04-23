@@ -21,6 +21,8 @@ export interface Product {
   saleMethod?: PaymentMethod;
   warrantyMonths?: number;
   warrantyExpiration?: string;
+  warrantyTerms?: string;
+  customerName?: string;
   originalProductId?: string; // Reference to original product for partial sales
   description?: string;
 }
@@ -61,6 +63,13 @@ export interface Liability {
   status: 'pending' | 'paid';
 }
 
+export interface AppSettings {
+  companyName: string;
+  companyLogo?: string; // base64
+  warrantyTerms: string;
+  defaultWarrantyMonths: number;
+}
+
 export interface AppData {
   products: Product[];
   debtors: Debtor[];
@@ -68,4 +77,5 @@ export interface AppData {
   invoiceCounter: number;
   accounts: FinancialAccount[];
   expenses: Expense[];
+  settings: AppSettings;
 }

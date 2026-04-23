@@ -22,6 +22,11 @@ export function useAppData() {
     invoiceCounter: 15,
     accounts: [],
     expenses: [],
+    settings: {
+      companyName: 'LDIPHONE',
+      warrantyTerms: 'La garantía cubre defectos de fábrica. No cubre daños por humedad, golpes o mal uso.',
+      defaultWarrantyMonths: 3
+    }
   });
   const [loading, setLoading] = useState(true);
 
@@ -73,7 +78,17 @@ export function useAppData() {
 
     const unsubSettings = onSnapshot(doc(db, 'app_settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
-        setData(prev => ({ ...prev, invoiceCounter: snapshot.data().invoiceCounter }));
+        const snapData = snapshot.data();
+        setData(prev => ({ 
+          ...prev, 
+          invoiceCounter: snapData.invoiceCounter || prev.invoiceCounter,
+          settings: {
+            companyName: snapData.companyName || prev.settings.companyName,
+            companyLogo: snapData.companyLogo,
+            warrantyTerms: snapData.warrantyTerms || prev.settings.warrantyTerms,
+            defaultWarrantyMonths: snapData.defaultWarrantyMonths || prev.settings.defaultWarrantyMonths,
+          }
+        }));
       }
     });
 
@@ -93,7 +108,12 @@ export function useAppData() {
     try {
       await runTransaction(db, async (transaction) => {
         // Init Settings
-        transaction.set(doc(db, 'app_settings', 'global'), { invoiceCounter: 15 });
+        transaction.set(doc(db, 'app_settings', 'global'), { 
+          invoiceCounter: 15,
+          companyName: 'LDIPHONE',
+          warrantyTerms: 'La garantía cubre defectos de fábrica. No cubre daños por humedad, golpes o mal uso.',
+          defaultWarrantyMonths: 3
+        });
 
         // Init Accounts
         const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
@@ -420,6 +440,14 @@ export function useAppData() {
     }
   };
 
+  const updateSettings = async (updates: Partial<AppData['settings']>) => {
+    try {
+      await setDoc(doc(db, 'app_settings', 'global'), updates, { merge: true });
+    } catch (err) {
+      handleFirestoreError(err, 'update', 'app_settings/global');
+    }
+  };
+
   const generateInvoiceNumber = async () => {
     const num = data.invoiceCounter || 1;
     try {
@@ -520,6 +548,7 @@ export function useAppData() {
     addExpense,
     deleteExpense,
     updateAccountBalance,
+    updateSettings,
     generateInvoiceNumber,
     initializeDatabase,
   };

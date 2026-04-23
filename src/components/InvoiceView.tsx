@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Printer, Share2, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import Logo from './Logo';
@@ -130,11 +130,10 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
               <div className="flex flex-col items-center gap-4 text-center">
                 <Logo size="xl" />
                 <div className="space-y-1">
-                  <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">LDIPHONE ACCESORIOS</h1>
+                  <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none uppercase">{data.settings.companyName}</h1>
                   <div className="text-[10px] text-slate-500 font-medium uppercase tracking-widest leading-relaxed">
-                    Autorizado MinTIC · NUV: 00000024390 · Autorización: 0000003130<br />
-                    CR 108 #107B 17 · Apartadó, Antioquia · Colombia<br />
-                    Duvan Darío Marín Jaramillo · CC 1128401809
+                    FACTURACIÓN ELECTRÓNICA Y GARANTÍAS<br />
+                    COMPRA Y VENTA DE DISPOSITIVOS MÓVILES
                   </div>
                 </div>
               </div>
@@ -203,19 +202,16 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
               {/* Warranty Box */}
               <div className="bg-slate-900 text-white rounded-xl p-5 space-y-3">
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Términos de Garantía
+                  <ShieldCheck className="w-4 h-4" />
+                  Garantía y Condiciones
                 </div>
-                <div className="space-y-2">
-                  <div className="text-[10px] font-bold text-slate-300">
-                    Garantía de {product.warrantyMonths || 2} meses (Vence: {product.warrantyExpiration || (() => {
-                      const d = new Date(product.saleDate || new Date());
-                      d.setMonth(d.getMonth() + (product.warrantyMonths || 2));
-                      return d.toLocaleDateString();
-                    })()})
+                <div className="space-y-3">
+                  <div className="text-[10px] font-black bg-white/10 w-fit px-3 py-1 rounded-full text-white uppercase tracking-widest">
+                    Vigencia: {product.warrantyMonths || data.settings.defaultWarrantyMonths} Meses 
+                    {product.warrantyExpiration && ` (Hasta: ${product.warrantyExpiration})`}
                   </div>
-                  <div className="text-[9px] text-slate-400 leading-relaxed italic">
-                    <span className="text-rose-400 font-bold uppercase">IMPORTANTE:</span> No se otorga garantía por daños en el display (pantalla), Face ID, equipos que no enciendan (apagados) o daños causados por humedad. Tampoco cubre reportes por falta de registro de IMEI ante operadores.
+                  <div className="text-[9px] text-slate-300 leading-relaxed whitespace-pre-wrap font-medium border-l-2 border-emerald-500/30 pl-3">
+                    {product.warrantyTerms || data.settings.warrantyTerms}
                   </div>
                 </div>
               </div>

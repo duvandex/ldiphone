@@ -390,10 +390,15 @@ export function useAppData() {
     }
   };
 
-  const generateInvoiceNumber = () => {
-    const num = data.invoiceCounter;
-    updateDoc(doc(db, 'app_settings', 'global'), { invoiceCounter: num + 1 });
-    return `FAC-${String(num).padStart(3, '0')}`;
+  const generateInvoiceNumber = async () => {
+    const num = data.invoiceCounter || 1;
+    try {
+      await setDoc(doc(db, 'app_settings', 'global'), { invoiceCounter: num + 1 }, { merge: true });
+      return `FAC-${String(num).padStart(3, '0')}`;
+    } catch (err) {
+      console.error("Error generating invoice number", err);
+      return `FAC-${Date.now().toString().slice(-6)}`; // Fallback simple if Firestore fails
+    }
   };
 
   return {

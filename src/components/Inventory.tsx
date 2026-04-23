@@ -182,22 +182,35 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     setIsAddOpen(false);
   };
 
-  const handleEditProduct = () => {
+  const handleEditProduct = async () => {
     if (!editProductState) return;
-    updateProduct(editProductState.id, editProductState);
-    setIsEditOpen(false);
-    setEditProductState(null);
+    try {
+      await updateProduct(editProductState.id, editProductState);
+      setIsEditOpen(false);
+      setEditProductState(null);
+    } catch (err: any) {
+      alert("Error al actualizar producto: " + err.message);
+    }
   };
 
-  const handleSellProduct = () => {
-    if (!selectedProduct || !sellData.salePrice) return;
-    updateProduct(selectedProduct.id, {
-      ...sellData,
-      status: 'sold',
-      invoiceNumber: generateInvoiceNumber(),
-    });
-    setIsSellOpen(false);
-    setSelectedProduct(null);
+  const handleSellProduct = async () => {
+    if (!selectedProduct || !sellData.salePrice) {
+      alert("Por favor completa el precio de venta.");
+      return;
+    }
+    
+    try {
+      const invoiceNumber = await generateInvoiceNumber();
+      await updateProduct(selectedProduct.id, {
+        ...sellData,
+        status: 'sold',
+        invoiceNumber: invoiceNumber,
+      });
+      setIsSellOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      alert("No se pudo completar la venta: " + err.message);
+    }
   };
 
   const handleImageUpload = (base64: string, mode: 'add' | 'edit') => {

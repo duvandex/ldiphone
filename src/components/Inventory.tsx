@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { Investor, Product, PaymentMethod } from '../types';
 import { fmt, cn } from '../lib/utils';
@@ -108,7 +108,6 @@ const ImageUploader = ({
     </div>
   );
 };
-
 export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data, addProduct, deleteProduct, updateProduct, generateInvoiceNumber } = appData;
   const [search, setSearch] = useState('');
@@ -249,26 +248,26 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header & Controls */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 w-full">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
             <Input
-              placeholder="Buscar producto, IMEI o proveedor..."
-              className="pl-9 bg-white border-none shadow-sm h-10"
+              placeholder="Buscar por nombre, IMEI o proveedor..."
+              className="pl-11 bg-white border-none shadow-sm h-12 rounded-2xl ring-offset-background focus-visible:ring-2 focus-visible:ring-slate-900 transition-all font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <Select value={investorFilter} onValueChange={setInvestorFilter}>
-              <SelectTrigger className="flex-1 sm:w-[140px] bg-white border-none shadow-sm h-10">
+              <SelectTrigger className="flex-1 lg:w-[180px] bg-white border-none shadow-sm h-12 rounded-2xl font-bold text-xs uppercase tracking-widest px-4">
                 <SelectValue placeholder="Inversor" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos Los Inversores</SelectItem>
+              <SelectContent className="rounded-2xl border-slate-100">
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="Duvan">Duvan</SelectItem>
                 <SelectItem value="Lina">Lina</SelectItem>
                 <SelectItem value="Santiago">Santiago</SelectItem>
@@ -279,10 +278,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1 sm:w-[120px] bg-white border-none shadow-sm h-10">
+              <SelectTrigger className="flex-1 lg:w-[160px] bg-white border-none shadow-sm h-12 rounded-2xl font-bold text-xs uppercase tracking-widest px-4">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl border-slate-100">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="stock">En Stock</SelectItem>
                 <SelectItem value="out_of_stock">Agotado</SelectItem>
@@ -294,16 +293,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger
             render={
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 h-11 text-base">
-                <Plus className="w-5 h-5 mr-2" /> Agregar Producto
+              <Button className="w-full lg:w-fit lg:px-12 bg-slate-900 hover:bg-slate-800 h-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] active:scale-95 ml-auto">
+                <Plus className="w-5 h-5 mr-3" /> Nuevo Producto
               </Button>
             }
           />
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Nuevo Producto</DialogTitle>
+          {/* ... Dialog content remains mostly same but with rounded-3xl and spacing ... */}
+          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-3xl p-8 border-none shadow-2xl">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Dispositivo</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
+            <div className="grid gap-6">
               <ImageUploader 
                 images={newProduct.images || []} 
                 onUpload={(b64) => handleImageUpload(b64, 'add')} 
@@ -311,277 +311,158 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               />
               
               <div className="grid gap-2">
-                <Label htmlFor="name">Nombre del Producto *</Label>
-                <Input id="name" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} placeholder="Ej: iPhone 15 Pro" />
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Dispositivo *</Label>
+                <Input id="name" placeholder="Ej: iPhone 15 Pro Max" className="rounded-xl border-slate-100 h-11" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="desc">Descripción (Solo visible en catálogo)</Label>
-                <Textarea id="desc" value={newProduct.description || ''} onChange={e => setNewProduct({...newProduct, description: e.target.value})} placeholder="Detalles, estado, color, etc." />
+                <Label htmlFor="desc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción / Detalles</Label>
+                <Textarea id="desc" placeholder="Estado, color, detalles adicionales..." className="rounded-xl border-slate-100 min-h-[100px]" value={newProduct.description} onChange={e => setNewProduct({...newProduct, description: e.target.value})} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="imei">IMEI</Label>
-                  <Input id="imei" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} placeholder="IMEI" />
+                  <Label htmlFor="imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI / Serial</Label>
+                  <Input id="imei" placeholder="15 dígitos" className="rounded-xl border-slate-100 h-11" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="provider">Proveedor</Label>
-                  <Input id="provider" value={newProduct.provider} onChange={e => setNewProduct({...newProduct, provider: e.target.value})} placeholder="Proveedor" />
+                  <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
+                  <Input id="provider" placeholder="Origen" className="rounded-xl border-slate-100 h-11" value={newProduct.provider} onChange={e => setNewProduct({...newProduct, provider: e.target.value})} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="investor">Inversor *</Label>
-                  <Select value={newProduct.investor || 'Duvan'} onValueChange={v => setNewProduct({...newProduct, investor: v as Investor})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversor *</Label>
+                  <Select value={newProduct.investor} onValueChange={v => setNewProduct({...newProduct, investor: v as Investor})}>
+                    <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-100 transition-all">
                       <SelectItem value="Duvan">Duvan</SelectItem>
                       <SelectItem value="Lina">Lina</SelectItem>
                       <SelectItem value="Santiago">Santiago</SelectItem>
                       <SelectItem value="Johana">Johana</SelectItem>
-                      <SelectItem value="Pool">Pool</SelectItem>
-                      <SelectItem value="Santa Maria">Santa María</SelectItem>
-                      <SelectItem value="Thomas">Thomas</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="date">Fecha de Compra</Label>
-                  <Input id="date" type="date" value={newProduct.purchaseDate} onChange={e => setNewProduct({...newProduct, purchaseDate: e.target.value})} />
+                  <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha Compra</Label>
+                  <Input id="date" type="date" className="rounded-xl border-slate-100 h-11" value={newProduct.purchaseDate} onChange={e => setNewProduct({...newProduct, purchaseDate: e.target.value})} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="pc">P. Compra (u) *</Label>
-                  <Input id="pc" type="number" value={newProduct.purchasePrice || 0} onChange={e => setNewProduct({...newProduct, purchasePrice: parseFloat(e.target.value) || 0})} />
+                  <Label htmlFor="pc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversión (u) *</Label>
+                  <Input id="pc" type="number" placeholder="0" className="rounded-xl border-slate-100 h-11" value={newProduct.purchasePrice || ''} onChange={e => setNewProduct({...newProduct, purchasePrice: parseFloat(e.target.value) || 0})} />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="pv">P. Venta Sugerido</Label>
-                  <Input id="pv" type="number" value={newProduct.salePrice || 0} onChange={e => setNewProduct({...newProduct, salePrice: parseFloat(e.target.value) || 0})} />
+                  <Label htmlFor="qty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cantidad *</Label>
+                  <Input id="qty" type="number" min="1" className="rounded-xl border-slate-100 h-11" value={newProduct.quantity} onChange={e => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 1})} />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2 border-t border-slate-50 pt-4">
+                <Label htmlFor="pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Sugerido Venta</Label>
+                <Input id="pv" type="number" placeholder="0" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={newProduct.salePrice || ''} onChange={e => setNewProduct({...newProduct, salePrice: parseFloat(e.target.value) || 0})} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="quantity">Cantidad inicial *</Label>
-                  <Input id="quantity" type="number" min="1" value={newProduct.quantity} onChange={e => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 1})} />
+                  <Label htmlFor="warranty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Garantía (Meses)</Label>
+                  <Input id="warranty" type="number" min="0" placeholder="0" className="rounded-xl border-slate-100 h-11" value={newProduct.warrantyMonths} onChange={e => setNewProduct({...newProduct, warrantyMonths: parseInt(e.target.value) || 0})} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Medio de Pago (Salida) *</Label>
-                  <Select value={newProduct.purchaseMethod || 'none'} onValueChange={v => setNewProduct({...newProduct, purchaseMethod: v as PaymentMethod})}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Ninguno (No descontar saldo)</SelectItem>
-                      <SelectItem value="Efectivo">Efectivo</SelectItem>
-                      <SelectItem value="Bancolombia">Bancolombia</SelectItem>
-                      <SelectItem value="Nequi">Nequi</SelectItem>
-                      <SelectItem value="Banco de Bogota">Banco de Bogota</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="w-exp" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencimiento</Label>
+                  <Input id="w-exp" type="date" className="rounded-xl border-slate-100 h-11" value={newProduct.warrantyExpiration} onChange={e => setNewProduct({...newProduct, warrantyExpiration: e.target.value})} />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="warranty">Garantía (Meses)</Label>
-                  <Input id="warranty" type="number" min="0" value={newProduct.warrantyMonths || 0} onChange={e => setNewProduct({...newProduct, warrantyMonths: parseInt(e.target.value) || 0})} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="w-exp">Fecha Venc. Garantía</Label>
-                  <Input id="w-exp" type="date" value={newProduct.warrantyExpiration || ''} onChange={e => setNewProduct({...newProduct, warrantyExpiration: e.target.value})} />
-                </div>
-              </div>
+              <Button onClick={handleAddProduct} className="w-full bg-slate-900 hover:bg-slate-800 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-slate-900/10 mt-2">
+                Finalizar Registro
+              </Button>
             </div>
-            <Button onClick={handleAddProduct} className="w-full h-11">Guardar Producto</Button>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Product List - Mobile View (Cards) */}
-      <div className="grid grid-cols-1 md:hidden gap-4">
-        {filteredProducts.map((p) => {
-          const profitPerUnit = p.status === 'sold' ? (p.salePrice || 0) - p.purchasePrice : null;
-          const totalProfit = profitPerUnit !== null ? profitPerUnit * (p.quantity || 1) : null;
-          return (
-            <Card key={p.id} className="border-none shadow-sm overflow-hidden overflow-ellipsis">
-              <div className="flex">
-                {p.images && p.images.length > 0 ? (
-                  <div className="w-24 h-24 shrink-0">
-                    <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
-                  </div>
-                ) : (
-                  <div className="w-24 h-24 shrink-0 bg-slate-100 flex items-center justify-center text-slate-300">
-                    <Camera className="w-8 h-8" />
-                  </div>
-                )}
-                <div className="p-3 flex-1 min-w-0">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="truncate">
-                      <h3 className="font-bold text-sm truncate">{p.name}</h3>
-                      <div className="text-[10px] font-mono text-slate-400 mt-0.5">{p.id}</div>
-                    </div>
-                    <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
-                      "text-[8px] uppercase font-bold shrink-0",
-                      p.status === 'stock' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
-                    )}>
-                      {p.status === 'stock' ? 'En Stock' : 'Agotado'}
-                    </Badge>
-                  </div>
-                  
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
-                    <div>
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Disponible</div>
-                      <div className="text-xs font-bold text-blue-600">{p.quantity} {p.quantity === 1 ? 'Unidad' : 'Unidades'}</div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] uppercase font-bold text-slate-400">P. Compra</div>
-                      <div className="text-xs font-mono">{fmt(p.purchasePrice)}</div>
-                    </div>
-                  </div>
-
-                  {p.warrantyMonths ? (
-                    <div className="mt-2 p-1.5 bg-blue-50/50 rounded flex items-center justify-between text-[9px] border border-blue-100">
-                      <span className="font-bold text-blue-700">GARANTÍA: {p.warrantyMonths} MESES</span>
-                      {p.warrantyExpiration && (
-                        <span className="text-blue-500 font-mono">FIN: {p.warrantyExpiration}</span>
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-              <div className="px-3 py-2 bg-slate-50/50 border-t flex justify-between items-center">
-                <div className="text-[10px] font-bold text-slate-400 uppercase">{p.investor}</div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-slate-400"
-                    onClick={() => {
-                      setEditProductState(p);
-                      setIsEditOpen(true);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  {p.status === 'stock' && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-8 w-8 text-emerald-600"
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setSellData({
-                          salePrice: p.salePrice || 0,
-                          saleDate: new Date().toISOString().split('T')[0],
-                          buyer: '',
-                          sellQuantity: 1,
-                          saleMethod: 'Efectivo',
-                        });
-                        setIsSellOpen(true);
-                      }}
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                    </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-rose-500"
-                    onClick={() => {
-                      setSelectedProduct(p);
-                      setIsDeleteOpen(true);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
       {/* Desktop Table View */}
-      <Card className="hidden md:block border-none shadow-sm">
+      <Card className="hidden md:block card-premium border-none shadow-sm rounded-[2rem] overflow-hidden">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase font-bold pl-6">Producto</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-center">Disponible</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">IMEI / Inversor</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Compra (u)</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Venta (u)</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Ganancia Total</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Estado</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right pr-6">Acciones</TableHead>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="hover:bg-transparent border-b border-slate-100">
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 pl-8 h-14">Detalle Dispositivo</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center">Qty</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400">Identificación</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Inversión (u)</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Profit Est.</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center">Estado</TableHead>
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right pr-8">Operaciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredProducts.map((p) => {
-                const profitPerUnit = p.status === 'sold' ? (p.salePrice || 0) - p.purchasePrice : null;
-                const totalProfit = profitPerUnit !== null ? profitPerUnit * (p.quantity || 1) : null;
+                const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
+                const totalProfit = profitPerUnit * (p.quantity || 1);
                 return (
-                  <TableRow key={p.id} className="group">
-                    <TableCell className="py-4 pl-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 border border-slate-200">
+                  <TableRow key={p.id} className="group border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                    <TableCell className="py-5 pl-8">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 border-2 border-white shadow-sm transition-transform group-hover:scale-105 duration-300">
                           {p.images && p.images.length > 0 ? (
                             <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
                           ) : (
-                            <Camera className="w-5 h-5 text-slate-300" />
+                            <div className="text-slate-300 bg-white w-full h-full flex items-center justify-center">
+                               <Smartphone className="w-6 h-6 opacity-30" />
+                            </div>
                           )}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{p.name}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{p.id}</div>
+                        <div className="space-y-0.5">
+                          <div className="font-black text-slate-900 tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                             {p.investor}
+                             <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                             {p.purchaseDate}
+                          </div>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 text-center">
-                      <div className="text-xs font-bold bg-slate-100 px-2 py-1 rounded w-fit mx-auto">
+                    <TableCell className="py-5 text-center">
+                      <div className="text-xs font-black bg-white border border-slate-100 shadow-sm px-3 py-1.5 rounded-xl w-fit mx-auto text-slate-900">
                         {p.quantity || 1}
                       </div>
                     </TableCell>
-                    <TableCell className="py-4">
-                      <div className="text-xs font-mono text-slate-500">{p.imei || '—'}</div>
-                      <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{p.investor}</div>
+                    <TableCell className="py-5">
+                      <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-1">IMEI / ID</div>
+                      <div className="text-xs font-bold text-slate-600 font-mono tracking-tighter">{p.imei || p.id.slice(0,8).toUpperCase()}</div>
                     </TableCell>
-                    <TableCell className="py-4">
-                      <div className="text-xs font-mono">{fmt(p.purchasePrice)}</div>
-                      <div className="text-[10px] text-slate-400">{p.purchaseDate}</div>
+                    <TableCell className="py-5 text-right">
+                      <div className="text-sm font-black text-slate-900">{fmt(p.purchasePrice)}</div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Total: {fmt(p.purchasePrice * (p.quantity || 1))}</div>
                     </TableCell>
-                    <TableCell className="py-4">
-                      <div className="text-xs font-mono">{p.salePrice ? fmt(p.salePrice) : '—'}</div>
-                      <div className="text-[10px] text-slate-400">{p.saleDate || '—'}</div>
+                    <TableCell className="py-5 text-right">
+                       <div className="text-sm font-black text-emerald-600">+{fmt(totalProfit)}</div>
+                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Neto Sugerido</div>
                     </TableCell>
-                    <TableCell className="py-4">
-                      {totalProfit !== null ? (
-                        <div className={cn("text-xs font-bold font-mono", totalProfit >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                          {fmt(totalProfit)}
-                        </div>
-                      ) : '—'}
-                    </TableCell>
-                    <TableCell className="py-4">
+                    <TableCell className="py-5 text-center">
                       <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
-                        "text-[9px] uppercase font-bold px-1.5 py-0.5",
-                        p.status === 'stock' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-rose-50 text-rose-600 border-rose-100"
+                        "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-none shadow-sm",
+                        p.status === 'stock' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
                       )}>
-                        {p.status === 'stock' ? 'En Stock' : 'Agotado'}
+                        {p.status === 'stock' ? 'DISPONIBLE' : 'AGOTADO'}
                       </Badge>
                       {p.warrantyMonths ? (
-                        <div className="text-[9px] font-bold text-blue-500 mt-1 uppercase">Garantía: {p.warrantyMonths} Meses</div>
+                        <div className="text-[8px] font-black text-blue-400 mt-1.5 uppercase tracking-tighter flex items-center justify-center gap-1">
+                            <ShieldCheck className="w-3 h-3" /> {p.warrantyMonths} MESES
+                        </div>
                       ) : null}
                     </TableCell>
-                    <TableCell className="py-4 text-right pr-6">
-                      <div className="flex items-center justify-end gap-1">
+                    <TableCell className="py-5 text-right pr-8">
+                      <div className="flex items-center justify-end gap-2">
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-slate-600 hover:bg-slate-100"
+                          className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
                           onClick={() => {
                             setEditProductState(p);
                             setIsEditOpen(true);
@@ -593,7 +474,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            className="h-10 w-10 text-emerald-500 hover:text-white hover:bg-emerald-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
                             onClick={() => {
                               setSelectedProduct(p);
                               setSellData({
@@ -612,7 +493,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                          className="h-10 w-10 text-slate-400 hover:text-rose-500 hover:bg-white rounded-xl shadow-none hover:shadow-sm"
                           onClick={() => {
                             setSelectedProduct(p);
                             setIsDeleteOpen(true);
@@ -625,27 +506,108 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   </TableRow>
                 );
               })}
-              {filteredProducts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12 text-slate-400">
-                    No se encontraron productos
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
+      {/* Product List - Mobile View (Cards) */}
+      <div className="grid grid-cols-1 md:hidden gap-6">
+        {filteredProducts.map((p) => {
+          const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
+          return (
+            <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl">
+              <div className="flex flex-col">
+                <div className="relative aspect-video bg-slate-50 flex items-center justify-center overflow-hidden">
+                  {p.images && p.images.length > 0 ? (
+                    <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
+                  ) : (
+                    <Smartphone className="w-12 h-12 text-slate-200" />
+                  )}
+                  <Badge className="absolute top-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 border-none font-black text-[9px] tracking-widest px-3 rounded-full">
+                     {p.investor}
+                  </Badge>
+                </div>
+                
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="min-w-0">
+                      <h3 className="font-black text-lg text-slate-900 tracking-tight truncate">{p.name}</h3>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{p.id.slice(0, 8)}</div>
+                    </div>
+                    <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
+                      "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full",
+                      p.status === 'stock' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
+                    )}>
+                      {p.status === 'stock' ? 'STOCK' : 'OUT'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="space-y-1">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Inversión</div>
+                      <div className="text-sm font-black text-slate-900">{fmt(p.purchasePrice)}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Stock Disp.</div>
+                      <div className="text-sm font-black text-blue-600">{p.quantity} Unid.</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
+                    <Button 
+                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                      onClick={() => {
+                        setEditProductState(p);
+                        setIsEditOpen(true);
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
+                    </Button>
+                    {p.status === 'stock' && (
+                        <Button 
+                            className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"
+                            onClick={() => {
+                                setSelectedProduct(p);
+                                setSellData({
+                                    salePrice: p.salePrice || 0,
+                                    saleDate: new Date().toISOString().split('T')[0],
+                                    buyer: '',
+                                    sellQuantity: 1,
+                                    saleMethod: 'Efectivo',
+                                });
+                                setIsSellOpen(true);
+                            }}
+                        >
+                            <ShoppingCart className="w-5 h-5" />
+                        </Button>
+                    )}
+                    <Button 
+                      variant="outline"
+                      className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 rounded-2xl transition-colors"
+                      onClick={() => {
+                        setSelectedProduct(p);
+                        setIsDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
       {/* Add Product Dialog - Empty as it is handled by the Dialog block above */}
 
-      {/* Edit Product Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Editar Producto</DialogTitle>
+        <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-3xl p-8 border-none shadow-2xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-black tracking-tight uppercase">Editar Producto</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-6">
             <ImageUploader 
               images={editProductState?.images || []} 
               onUpload={(b64) => handleImageUpload(b64, 'edit')} 
@@ -653,65 +615,68 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             />
             
             <div className="grid gap-2">
-              <Label htmlFor="e-name">Nombre del Producto</Label>
-              <Input id="e-name" value={editProductState?.name || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, name: e.target.value}) : null)} />
+              <Label htmlFor="e-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Producto</Label>
+              <Input id="e-name" className="rounded-xl border-slate-100 h-11" value={editProductState?.name || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, name: e.target.value}) : null)} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="e-desc">Descripción</Label>
-              <Textarea id="e-desc" value={editProductState?.description || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, description: e.target.value}) : null)} />
+              <Label htmlFor="e-desc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción</Label>
+              <Textarea id="e-desc" className="rounded-xl border-slate-100 min-h-[100px]" value={editProductState?.description || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, description: e.target.value}) : null)} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="e-imei">IMEI</Label>
-                <Input id="e-imei" value={editProductState?.imei || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, imei: e.target.value}) : null)} />
+                <Label htmlFor="e-imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI</Label>
+                <Input id="e-imei" className="rounded-xl border-slate-100 h-11" value={editProductState?.imei || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, imei: e.target.value}) : null)} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="e-provider">Proveedor</Label>
-                <Input id="e-provider" value={editProductState?.provider || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, provider: e.target.value}) : null)} />
+                <Label htmlFor="e-provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
+                <Input id="e-provider" className="rounded-xl border-slate-100 h-11" value={editProductState?.provider || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, provider: e.target.value}) : null)} />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="e-pc">Precio Compra (u)</Label>
-                <Input id="e-pc" type="number" value={editProductState?.purchasePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, purchasePrice: parseFloat(e.target.value) || 0}) : null)} />
+                <Label htmlFor="e-pc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversión (u)</Label>
+                <Input id="e-pc" type="number" className="rounded-xl border-slate-100 h-11" value={editProductState?.purchasePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, purchasePrice: parseFloat(e.target.value) || 0}) : null)} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="e-qty">Cantidad</Label>
-                <Input id="e-qty" type="number" value={editProductState?.quantity || 1} onChange={e => setEditProductState(prev => prev ? ({...prev, quantity: parseInt(e.target.value) || 1}) : null)} />
+                <Label htmlFor="e-qty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cantidad</Label>
+                <Input id="e-qty" type="number" className="rounded-xl border-slate-100 h-11" value={editProductState?.quantity || 1} onChange={e => setEditProductState(prev => prev ? ({...prev, quantity: parseInt(e.target.value) || 1}) : null)} />
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="e-pv">Precio Venta Sugerido</Label>
-              <Input id="e-pv" type="number" value={editProductState?.salePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, salePrice: parseFloat(e.target.value) || 0}) : null)} />
+            <div className="grid gap-2 border-t border-slate-50 pt-4">
+              <Label htmlFor="e-pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Venta Sugerido</Label>
+              <Input id="e-pv" type="number" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={editProductState?.salePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, salePrice: parseFloat(e.target.value) || 0}) : null)} />
             </div>
 
-            <div className="grid gap-2">
-              <Label>Estado del Producto</Label>
+            <div className="grid gap-2 border-t border-slate-50 pt-4">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado del Producto</Label>
               <Select value={editProductState?.status || 'stock'} onValueChange={v => setEditProductState(prev => prev ? ({...prev, status: v as any}) : null)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-2xl border-slate-100">
                   <SelectItem value="stock">En Stock</SelectItem>
                   <SelectItem value="out_of_stock">Agotado / No disponible</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
               <div className="grid gap-2">
-                <Label htmlFor="e-warranty">Garantía (Meses)</Label>
-                <Input id="e-warranty" type="number" min="0" value={editProductState?.warrantyMonths || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, warrantyMonths: parseInt(e.target.value) || 0}) : null)} />
+                <Label htmlFor="e-warranty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Garantía (Meses)</Label>
+                <Input id="e-warranty" type="number" min="0" className="rounded-xl border-slate-100 h-11" value={editProductState?.warrantyMonths || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, warrantyMonths: parseInt(e.target.value) || 0}) : null)} />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="e-w-exp">Fecha Venc. Garantía</Label>
-                <Input id="e-w-exp" type="date" value={editProductState?.warrantyExpiration || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, warrantyExpiration: e.target.value}) : null)} />
+                <Label htmlFor="e-w-exp" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencimiento</Label>
+                <Input id="e-w-exp" type="date" className="rounded-xl border-slate-100 h-11" value={editProductState?.warrantyExpiration || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, warrantyExpiration: e.target.value}) : null)} />
               </div>
             </div>
+            
+            <Button onClick={handleEditProduct} className="w-full bg-slate-900 hover:bg-slate-800 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-slate-900/10 mt-2">
+               Aplicar Cambios
+            </Button>
           </div>
-          <Button onClick={handleEditProduct} className="w-full h-11 bg-slate-900">Aplicar Cambios</Button>
         </DialogContent>
       </Dialog>
 
@@ -741,65 +706,67 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
         </DialogContent>
       </Dialog>
 
-      {/* Sell Dialog */}
       <Dialog open={isSellOpen} onOpenChange={setIsSellOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Registrar Venta</DialogTitle>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Venta</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-             {/* ... sell logic ... */}
-             <div className="flex justify-between items-center text-sm">
-              <span className="font-medium text-slate-500">{selectedProduct?.name}</span>
-              <Badge variant="outline" className="bg-slate-50 text-slate-600">
-                Disponibles: {selectedProduct?.quantity || 1}
-              </Badge>
+          <div className="grid gap-6">
+            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+               <div className="w-12 h-12 rounded-xl overflow-hidden bg-white shrink-0 border border-slate-100">
+                  {selectedProduct?.images?.[0] ? (
+                    <img src={selectedProduct.images[0]} className="w-full h-full object-cover" alt={selectedProduct.name} />
+                  ) : <Smartphone className="w-full h-full p-3 text-slate-200" />}
+               </div>
+               <div className="min-w-0">
+                  <div className="font-black text-slate-900 truncate">{selectedProduct?.name}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock: {selectedProduct?.quantity}</div>
+               </div>
             </div>
             
             {(selectedProduct?.quantity || 1) > 1 && (
               <div className="grid gap-2">
-                <Label htmlFor="sell-qty">¿Cuántos vas a vender? *</Label>
-                <div className="flex items-center gap-4">
-                  <Input 
-                    id="sell-qty" 
-                    type="number" 
-                    min="1" 
-                    max={selectedProduct?.quantity || 1}
-                    value={sellData.sellQuantity} 
-                    onChange={e => setSellData({...sellData, sellQuantity: e.target.value})}
-                    onFocus={e => e.target.select()}
-                  />
-                  <div className="text-[10px] text-slate-400 font-bold uppercase w-24">Unidades</div>
-                </div>
+                <Label htmlFor="sell-qty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">¿Cuántas unidades se venden? *</Label>
+                <Input 
+                  id="sell-qty" 
+                  type="number" 
+                  min="1" 
+                  max={selectedProduct?.quantity || 1}
+                  className="rounded-xl border-slate-100 h-11"
+                  value={sellData.sellQuantity} 
+                  onChange={e => setSellData({...sellData, sellQuantity: e.target.value})}
+                />
               </div>
             )}
 
             <div className="grid gap-2">
-              <Label htmlFor="sell-price">Precio de Venta (unitario) *</Label>
+              <Label htmlFor="sell-price" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio de Venta (Total) *</Label>
               <Input 
                 id="sell-price" 
                 type="number" 
+                className="rounded-xl border-slate-100 h-11 font-black text-emerald-600"
                 value={sellData.salePrice} 
                 onChange={e => setSellData({...sellData, salePrice: e.target.value})}
-                onFocus={e => e.target.select()}
                 placeholder="0"
               />
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="sell-date">Fecha de Venta</Label>
+                <Label htmlFor="sell-date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</Label>
                 <Input 
                   id="sell-date" 
                   type="date" 
+                  className="rounded-xl border-slate-100 h-11"
                   value={sellData.saleDate} 
                   onChange={e => setSellData({...sellData, saleDate: e.target.value})} 
                 />
               </div>
               <div className="grid gap-2">
-                <Label>¿A qué cuenta entra? *</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Medodo Pago *</Label>
                 <Select value={sellData.saleMethod} onValueChange={v => setSellData({...sellData, saleMethod: v as PaymentMethod})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-100">
                     <SelectItem value="Efectivo">Efectivo</SelectItem>
                     <SelectItem value="Bancolombia">Bancolombia</SelectItem>
                     <SelectItem value="Nequi">Nequi</SelectItem>
@@ -808,17 +775,22 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 </Select>
               </div>
             </div>
+            
             <div className="grid gap-2">
-              <Label htmlFor="buyer">Nombre del Comprador</Label>
+              <Label htmlFor="buyer" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Comprador</Label>
               <Input 
                 id="buyer" 
-                placeholder="Opcional" 
+                placeholder="Identificación / Nombre" 
+                className="rounded-xl border-slate-100 h-11"
                 value={sellData.buyer} 
                 onChange={e => setSellData({...sellData, buyer: e.target.value})} 
               />
             </div>
+
+            <Button onClick={handleSellProduct} className="w-full bg-emerald-600 hover:bg-emerald-700 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/10 mt-2">
+              Confirmar Venta
+            </Button>
           </div>
-          <Button onClick={handleSellProduct} className="w-full bg-emerald-600 hover:bg-emerald-700">Confirmar Venta</Button>
         </DialogContent>
       </Dialog>
     </div>

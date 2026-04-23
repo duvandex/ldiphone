@@ -144,49 +144,51 @@ function Navigation({ onLogout }: { onLogout: () => void }) {
   ];
 
   return (
-    <nav className="flex items-center gap-1 p-2 bg-white border-b overflow-x-auto no-scrollbar sticky top-0 z-50">
-      <div className="pr-4 border-r mr-2 flex items-center">
+    <nav className="glass sticky top-0 z-50 px-4 py-2 flex items-center gap-1 border-b shadow-sm overflow-x-auto no-scrollbar">
+      <div className="pr-4 border-r border-slate-200 mr-2 flex items-center shrink-0">
         <Logo size="sm" />
       </div>
-      {navItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.path;
-        
-        if (item.external) {
+      <div className="flex items-center gap-1">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          
+          if (item.external) {
+            return (
+                <Link
+                key={item.path}
+                to="/catalog"
+                className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm transition-all whitespace-nowrap btn-premium"
+                >
+                <Icon className="w-3.5 h-3.5" />
+                {item.label}
+                </Link>
+            );
+          }
+
           return (
             <Link
               key={item.path}
-              to="/catalog"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors whitespace-nowrap"
+              to={item.path}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap",
+                isActive 
+                  ? "bg-slate-900 text-white shadow-md shadow-slate-200 scale-105" 
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+              )}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={cn("w-3.5 h-3.5", isActive ? "text-blue-400" : "text-slate-400")} />
               {item.label}
             </Link>
           );
-        }
-
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap",
-              isActive 
-                ? "bg-slate-100 text-slate-900 border border-slate-200" 
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <Icon className="w-4 h-4" />
-            {item.label}
-          </Link>
-        );
-      })}
+        })}
+      </div>
       
       <button
         onClick={onLogout}
-        className="ml-auto flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium text-rose-500 hover:bg-rose-50 transition-colors whitespace-nowrap"
+        className="ml-auto flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold text-rose-500 hover:bg-rose-50 transition-all whitespace-nowrap"
       >
-        <LogOut className="w-4 h-4" />
+        <LogOut className="w-3.5 h-3.5" />
         Salir
       </button>
     </nav>

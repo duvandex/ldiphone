@@ -10,6 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Printer, Share2, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
+import Logo from './Logo';
 
 export default function InvoiceView({ appData, isPublic = false }: { appData: ReturnType<typeof useAppData>, isPublic?: boolean }) {
   const { id } = useParams();
@@ -126,12 +127,15 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
           <Card className="border-none shadow-lg overflow-hidden bg-white print:shadow-none print:border">
             <CardContent className="p-8 space-y-8">
               {/* Header */}
-              <div className="text-center space-y-2">
-                <h1 className="text-2xl font-black tracking-tighter text-slate-900">LDIPHONE ACCESORIOS</h1>
-                <div className="text-[10px] text-slate-500 font-medium uppercase tracking-widest leading-relaxed">
-                  Autorizado MinTIC · NUV: 00000024390 · Autorización: 0000003130<br />
-                  CR 108 #107B 17 · Apartadó, Antioquia · Colombia<br />
-                  Duvan Darío Marín Jaramillo · CC 1128401809
+              <div className="flex flex-col items-center gap-4 text-center">
+                <Logo size="xl" />
+                <div className="space-y-1">
+                  <h1 className="text-xl font-black tracking-tighter text-slate-900 leading-none">LDIPHONE ACCESORIOS</h1>
+                  <div className="text-[10px] text-slate-500 font-medium uppercase tracking-widest leading-relaxed">
+                    Autorizado MinTIC · NUV: 00000024390 · Autorización: 0000003130<br />
+                    CR 108 #107B 17 · Apartadó, Antioquia · Colombia<br />
+                    Duvan Darío Marín Jaramillo · CC 1128401809
+                  </div>
                 </div>
               </div>
 

@@ -7,6 +7,7 @@ import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard } from 
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
+import Logo from './Logo';
 
 export default function Catalog() {
   const { data } = useAppData();
@@ -48,11 +49,9 @@ export default function Catalog() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="bg-slate-900 text-white p-2 rounded-xl hidden sm:block">
-                <ShoppingBag className="w-5 h-5" />
-              </div>
+              <Logo size="sm" />
               <div className="leading-tight">
-                <h1 className="text-lg font-black uppercase tracking-tighter">LDIphone Shop</h1>
+                <h1 className="text-lg font-black uppercase tracking-tighter">LDIPHONE Shop</h1>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-1 rounded inline-block">Disponibilidad Inmediata</p>
               </div>
             </div>

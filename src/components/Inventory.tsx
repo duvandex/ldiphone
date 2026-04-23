@@ -138,13 +138,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 
   const [sellData, setSellData] = useState<{
-    salePrice: number;
+    salePrice: number | string;
     saleDate: string;
     buyer: string;
-    sellQuantity: number;
+    sellQuantity: number | string;
     saleMethod: PaymentMethod;
   }>({
-    salePrice: 0,
+    salePrice: '',
     saleDate: new Date().toISOString().split('T')[0],
     buyer: '',
     sellQuantity: 1,
@@ -194,8 +194,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   };
 
   const handleSellProduct = async () => {
-    if (!selectedProduct || !sellData.salePrice) {
-      alert("Por favor completa el precio de venta.");
+    const sPrice = typeof sellData.salePrice === 'string' ? parseFloat(sellData.salePrice) : sellData.salePrice;
+    const sQty = typeof sellData.sellQuantity === 'string' ? parseInt(sellData.sellQuantity) : sellData.sellQuantity;
+
+    if (!selectedProduct || isNaN(sPrice) || sPrice <= 0) {
+      alert("Por favor completa un precio de venta válido.");
       return;
     }
     
@@ -203,6 +206,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       // El número de factura ahora se genera automáticamente dentro de la transacción en updateProduct
       await updateProduct(selectedProduct.id, {
         ...sellData,
+        salePrice: sPrice,
+        sellQuantity: isNaN(sQty) ? 1 : sQty,
         status: 'sold',
       });
       setIsSellOpen(false);
@@ -706,7 +711,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     min="1" 
                     max={selectedProduct?.quantity || 1}
                     value={sellData.sellQuantity} 
-                    onChange={e => setSellData({...sellData, sellQuantity: Math.min(selectedProduct?.quantity || 1, Math.max(1, parseInt(e.target.value) || 1))})} 
+                    onChange={e => setSellData({...sellData, sellQuantity: e.target.value})}
+                    onFocus={e => e.target.select()}
                   />
                   <div className="text-[10px] text-slate-400 font-bold uppercase w-24">Unidades</div>
                 </div>
@@ -718,8 +724,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <Input 
                 id="sell-price" 
                 type="number" 
-                value={sellData.salePrice || 0} 
-                onChange={e => setSellData({...sellData, salePrice: parseFloat(e.target.value) || 0})} 
+                value={sellData.salePrice} 
+                onChange={e => setSellData({...sellData, salePrice: e.target.value})}
+                onFocus={e => e.target.select()}
+                placeholder="0"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">

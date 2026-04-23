@@ -5,9 +5,10 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
-import { ShoppingBag, ChevronLeft, ShieldCheck, Calendar, Hash, User } from 'lucide-react';
+import { Hash, User, ShoppingBag, ChevronLeft, ShieldCheck, Calendar } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt } from '../lib/utils';
+import Logo from './Logo';
 
 export default function WarrantyPage() {
   const { id } = useParams();
@@ -27,9 +28,7 @@ export default function WarrantyPage() {
       <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
         <Card className="max-w-md w-full border-none shadow-xl">
           <CardHeader className="text-center">
-            <div className="mx-auto bg-slate-900 text-white p-3 rounded-2xl w-fit mb-4">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
+            <Logo size="lg" className="mb-4" />
             <CardTitle className="text-xl font-bold uppercase tracking-tight">Consulta de Garantía</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

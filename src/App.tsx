@@ -19,6 +19,8 @@ import WarrantyPage from './components/WarrantyPage';
 import { useAppData } from './hooks/useAppData';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 
+import Logo from './components/Logo';
+
 function Login() {
   const [email, setEmail] = useState('duvanmarinj@gmail.com');
   const [password, setPassword] = useState('');
@@ -55,9 +57,7 @@ function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-100 p-4">
       <Card className="w-full max-w-md border-none shadow-xl">
         <CardHeader className="text-center space-y-1">
-          <div className="mx-auto bg-slate-900 text-white p-3 rounded-2xl w-fit mb-4">
-            <Lock className="w-6 h-6" />
-          </div>
+          <Logo size="lg" className="mb-4" />
           <CardTitle className="text-2xl font-black uppercase tracking-tight">Acceso Restringido</CardTitle>
           <p className="text-slate-500 text-sm">Ingresa con tu usuario y contraseña para sincronizar</p>
         </CardHeader>
@@ -145,6 +145,9 @@ function Navigation({ onLogout }: { onLogout: () => void }) {
 
   return (
     <nav className="flex items-center gap-1 p-2 bg-white border-b overflow-x-auto no-scrollbar sticky top-0 z-50">
+      <div className="pr-4 border-r mr-2 flex items-center">
+        <Logo size="sm" />
+      </div>
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = location.pathname === item.path;

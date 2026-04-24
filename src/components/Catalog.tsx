@@ -381,12 +381,25 @@ export default function Catalog() {
                         <AnimatePresence mode="wait">
                             <motion.img 
                                 key={activeImageIndex}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                onDragEnd={(_, info) => {
+                                    if (!selectedProduct.images) return;
+                                    const threshold = 50;
+                                    if (info.offset.x < -threshold) {
+                                        setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0);
+                                    } else if (info.offset.x > threshold) {
+                                        setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1);
+                                    }
+                                }}
+                                whileTap={{ cursor: 'grabbing' }}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
                                 src={selectedProduct.images?.[activeImageIndex] || ''} 
-                                className="w-full h-full object-contain"
+                                className="w-full h-full object-contain cursor-grab touch-pan-y"
                                 alt={selectedProduct.name}
+                                draggable="false"
                             />
                         </AnimatePresence>
                         

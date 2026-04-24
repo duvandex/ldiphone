@@ -143,49 +143,6 @@ export default function Catalog() {
               <span className="text-slate-300">Sin complicaciones.</span>
             </h2>
 
-            <div className="flex flex-col items-center gap-8 pt-4">
-              <div className="flex items-center gap-4 w-full max-w-md">
-                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200"></div>
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 whitespace-nowrap">Medios de Pago</span>
-                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200"></div>
-              </div>
-              
-              <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 opacity-90 hover:opacity-100 transition-opacity bg-white/50 px-8 py-6 rounded-[2rem] border border-slate-100 shadow-sm backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-2">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Plataforma Aliada</span>
-                  <img 
-                    src="https://logos-download.com/wp-content/uploads/2022/01/Addi_Logo.png" 
-                    alt="Addi Logo" 
-                    className="h-6 md:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
-                    referrerPolicy="no-referrer"
-                  />
-                </div>
-                <div className="hidden md:block w-px h-12 bg-slate-200"></div>
-                <div className="flex flex-col items-center gap-3">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Otros Medios de Pago</span>
-                  <div className="flex items-center gap-6">
-                    <img 
-                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Nequi.png/1200px-Logo_Nequi.png" 
-                      alt="Nequi" 
-                      className="h-6 md:h-8 w-auto grayscale group-hover:grayscale-0 transition-all"
-                      referrerPolicy="no-referrer"
-                    />
-                    <img 
-                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_Bancolombia.png/1200px-Logo_Bancolombia.png" 
-                      alt="Bancolombia" 
-                      className="h-5 md:h-6 w-auto grayscale group-hover:grayscale-0 transition-all"
-                      referrerPolicy="no-referrer"
-                    />
-                    <img 
-                      src="https://www.wompi.com/assets/img/logos/logo-wompi.png" 
-                      alt="Wompi" 
-                      className="h-5 md:h-6 w-auto grayscale group-hover:grayscale-0 transition-all"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
             <p className="max-w-2xl text-slate-500 font-medium text-lg md:text-xl leading-relaxed">
               Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
             </p>

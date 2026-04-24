@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send } from 'lucide-react';
+import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send, Tablet, Watch, Headphones, CreditCard } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -13,12 +13,50 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Product } from '../types';
 
 export default function Catalog() {
-  const { data } = useAppData();
+  const { data, user, updateSettings } = useAppData();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isUploading, setIsUploading] = useState<number | null>(null);
+
+  const isAuthenticated = !!user;
+
+  const handlePaymentImageUpload = (index: number) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setIsUploading(index);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const currentMethods = [...(data.settings.paymentMethods || [])];
+        
+        // Ensure array has enough slots
+        while (currentMethods.length <= index) {
+          currentMethods.push('');
+        }
+        
+        currentMethods[index] = base64;
+        await updateSettings({ paymentMethods: currentMethods });
+        setIsUploading(null);
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  const removePaymentImage = async (index: number) => {
+    if (!confirm('¿Eliminar este medio de pago?')) return;
+    const currentMethods = [...(data.settings.paymentMethods || [])];
+    currentMethods[index] = '';
+    await updateSettings({ paymentMethods: currentMethods });
+  };
 
   const publicProducts = data.products
     .filter(p => 
@@ -31,12 +69,12 @@ export default function Catalog() {
     .sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
 
   const categories = [
-    { id: 'all', name: 'Todos', icon: ShoppingBag },
-    { id: 'iPhone', name: 'iPhone', icon: Smartphone },
-    { id: 'Pro', name: 'iPhone Pro', icon: Smartphone },
-    { id: 'Watch', name: 'Apple Watch', icon: Smartphone },
-    { id: 'AirPods', name: 'AirPods', icon: Smartphone },
-    { id: 'Accessory', name: 'Accesorios', icon: Apple },
+    { id: 'all', name: 'Todo', icon: ShoppingBag },
+    { id: 'Celulares', name: 'Celulares', icon: Smartphone },
+    { id: 'Tablet', name: 'Tablet', icon: Tablet },
+    { id: 'Watch', name: 'Watch', icon: Watch },
+    { id: 'Auriculares', name: 'Auriculares', icon: Headphones },
+    { id: 'Accesorio', name: 'Accesorio', icon: Apple },
   ];
 
   const container = {
@@ -146,6 +184,65 @@ export default function Catalog() {
             <p className="max-w-2xl text-slate-500 font-medium text-lg md:text-xl leading-relaxed">
               Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
             </p>
+
+            <div className="pt-12 w-full max-w-4xl">
+              <div className="flex flex-col items-center gap-6">
+                <div className="flex items-center gap-4 w-full">
+                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200"></div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 whitespace-nowrap">Medios de Pago</span>
+                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200"></div>
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-6">
+                  {[0, 1].map((index) => {
+                    const imageUrl = data.settings.paymentMethods?.[index];
+                    return (
+                      <div key={index} className="relative group">
+                        <div className={cn(
+                          "w-40 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all",
+                          imageUrl ? "border-transparent bg-white shadow-sm" : "border-slate-100 bg-slate-50/50"
+                        )}>
+                          {imageUrl ? (
+                            <img src={imageUrl} alt={`Pago ${index + 1}`} className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="flex flex-col items-center gap-2 opacity-20">
+                              <CreditCard className="w-6 h-6" />
+                              <span className="text-[8px] font-black uppercase tracking-widest">Disponible</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {isAuthenticated && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl gap-2 backdrop-blur-sm">
+                            <button 
+                              onClick={() => handlePaymentImageUpload(index)}
+                              className="p-2 bg-white rounded-full text-slate-900 hover:scale-110 transition-transform shadow-lg"
+                              disabled={isUploading === index}
+                            >
+                              <Camera className="w-4 h-4" />
+                            </button>
+                            {imageUrl && (
+                              <button 
+                                onClick={() => removePaymentImage(index)}
+                                className="p-2 bg-rose-500 rounded-full text-white hover:scale-110 transition-transform shadow-lg"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        
+                        {isUploading === index && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
+                            <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent animate-spin rounded-full" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>

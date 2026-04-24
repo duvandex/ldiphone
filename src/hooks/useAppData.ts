@@ -25,7 +25,8 @@ export function useAppData() {
     settings: {
       companyName: 'LDIPHONE',
       warrantyTerms: 'La garantía cubre defectos de fábrica. No cubre daños por humedad, golpes o mal uso.',
-      defaultWarrantyMonths: 3
+      defaultWarrantyMonths: 3,
+      paymentMethods: []
     }
   });
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,7 @@ export function useAppData() {
             companyLogo: snapData.companyLogo,
             warrantyTerms: snapData.warrantyTerms || prev.settings.warrantyTerms,
             defaultWarrantyMonths: snapData.defaultWarrantyMonths || prev.settings.defaultWarrantyMonths,
+            paymentMethods: snapData.paymentMethods || [],
           }
         }));
       }

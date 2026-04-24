@@ -81,10 +81,15 @@
     },
     "Settings": {
       "title": "Settings",
-      "description": "Application wide settings like invoice counter",
+      "description": "Application wide settings like invoice counter and payment methods",
       "type": "object",
       "properties": {
-        "invoiceCounter": { "type": "number" }
+        "invoiceCounter": { "type": "number" },
+        "companyName": { "type": "string" },
+        "companyLogo": { "type": "string" },
+        "warrantyTerms": { "type": "string" },
+        "defaultWarrantyMonths": { "type": "number" },
+        "paymentMethods": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["invoiceCounter"]
     }

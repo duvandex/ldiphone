@@ -6,7 +6,7 @@ export interface CoInvestor {
   percentage: number;
 }
 
-export type Category = 'iPhone' | 'Pro' | 'Watch' | 'AirPods' | 'iPad' | 'Accessory' | 'Other';
+export type Category = 'Celulares' | 'Tablet' | 'Watch' | 'Auriculares' | 'Accesorio' | 'Other';
 
 export interface Product {
   id: string;
@@ -78,6 +78,7 @@ export interface AppSettings {
   companyLogo?: string; // base64
   warrantyTerms: string;
   defaultWarrantyMonths: number;
+  paymentMethods?: string[]; // base64 images
 }
 
 export interface AppData {

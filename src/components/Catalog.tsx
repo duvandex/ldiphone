@@ -3,22 +3,41 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone } from 'lucide-react';
+import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
 import { motion, AnimatePresence } from 'motion/react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Product } from '../types';
 
 export default function Catalog() {
   const { data } = useAppData();
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const publicProducts = data.products.filter(p => 
-    p.status === 'stock' && 
-    (p.name?.toLowerCase() || '').includes(search.toLowerCase())
-  );
+  const publicProducts = data.products
+    .filter(p => 
+      (p.status === 'stock' || !p.status) && 
+      (p.name?.toLowerCase() || '').includes(search.toLowerCase()) &&
+      (category === 'all' || 
+       p.category === category || 
+       (p.name?.toLowerCase().includes(category.toLowerCase())))
+    )
+    .sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
+
+  const categories = [
+    { id: 'all', name: 'Todos', icon: ShoppingBag },
+    { id: 'iPhone', name: 'iPhone', icon: Smartphone },
+    { id: 'Pro', name: 'iPhone Pro', icon: Smartphone },
+    { id: 'Watch', name: 'Apple Watch', icon: Smartphone },
+    { id: 'AirPods', name: 'AirPods', icon: Smartphone },
+    { id: 'Accessory', name: 'Accesorios', icon: Apple },
+  ];
 
   const container = {
     hidden: { opacity: 0 },
@@ -31,6 +50,11 @@ export default function Catalog() {
   const item = {
     hidden: { opacity: 0, y: 30 },
     show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 100 } }
+  };
+
+  const getWhatsAppLink = (p: Product) => {
+    const message = `Hola! Estoy interesado en este equipo que vi en su catálogo:%0A%0A📱 *${p.name}*%0A💰 *Precio:* ${fmt(p.salePrice || 0)}%0A📍 *Ref:* ${p.id.slice(0, 8)}%0A%0A¿Sigue disponible?`;
+    return `https://wa.me/573012949934?text=${message}`;
   };
 
   return (
@@ -118,6 +142,50 @@ export default function Catalog() {
               Tu próximo dispositivo.<br/>
               <span className="text-slate-300">Sin complicaciones.</span>
             </h2>
+
+            <div className="flex flex-col items-center gap-8 pt-4">
+              <div className="flex items-center gap-4 w-full max-w-md">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200"></div>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 whitespace-nowrap">Medios de Pago</span>
+                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200"></div>
+              </div>
+              
+              <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 opacity-90 hover:opacity-100 transition-opacity bg-white/50 px-8 py-6 rounded-[2rem] border border-slate-100 shadow-sm backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Plataforma Aliada</span>
+                  <img 
+                    src="https://logos-download.com/wp-content/uploads/2022/01/Addi_Logo.png" 
+                    alt="Addi Logo" 
+                    className="h-6 md:h-8 w-auto object-contain drop-shadow-sm hover:scale-105 transition-transform" 
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="hidden md:block w-px h-12 bg-slate-200"></div>
+                <div className="flex flex-col items-center gap-3">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Otros Medios de Pago</span>
+                  <div className="flex items-center gap-6">
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Logo_Nequi.png/1200px-Logo_Nequi.png" 
+                      alt="Nequi" 
+                      className="h-6 md:h-8 w-auto grayscale group-hover:grayscale-0 transition-all"
+                      referrerPolicy="no-referrer"
+                    />
+                    <img 
+                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Logo_Bancolombia.png/1200px-Logo_Bancolombia.png" 
+                      alt="Bancolombia" 
+                      className="h-5 md:h-6 w-auto grayscale group-hover:grayscale-0 transition-all"
+                      referrerPolicy="no-referrer"
+                    />
+                    <img 
+                      src="https://www.wompi.com/assets/img/logos/logo-wompi.png" 
+                      alt="Wompi" 
+                      className="h-5 md:h-6 w-auto grayscale group-hover:grayscale-0 transition-all"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
             <p className="max-w-2xl text-slate-500 font-medium text-lg md:text-xl leading-relaxed">
               Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
             </p>
@@ -128,6 +196,25 @@ export default function Catalog() {
       {/* Grid */}
       <main className="flex-1 px-4 py-12 md:px-8">
         <div className="max-w-7xl mx-auto">
+          {/* Categories */}
+          <div className="flex items-center gap-3 mb-12 overflow-x-auto pb-4 no-scrollbar">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all duration-300 font-black text-[10px] uppercase tracking-widest",
+                  category === cat.id 
+                    ? "bg-slate-900 text-white shadow-xl shadow-slate-900/10 scale-105" 
+                    : "bg-white text-slate-400 hover:text-slate-900 hover:bg-slate-50 border border-slate-100"
+                )}
+              >
+                <cat.icon className="w-4 h-4" />
+                {cat.name}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center justify-between mb-10">
             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-3">
                Colección Disponible
@@ -145,7 +232,13 @@ export default function Catalog() {
             {publicProducts.map((p) => (
               <motion.div key={p.id} variants={item}>
                 <Card className="group card-premium rounded-3xl overflow-hidden border-none h-full flex flex-col">
-                  <div className="aspect-[4/5] relative flex items-center justify-center bg-slate-50 overflow-hidden">
+                  <div 
+                    className="aspect-[4/5] relative flex items-center justify-center bg-slate-50 overflow-hidden cursor-pointer"
+                    onClick={() => {
+                        setSelectedProduct(p);
+                        setActiveImageIndex(0);
+                    }}
+                  >
                     {p.images && p.images.length > 0 ? (
                       <img src={p.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
                     ) : (
@@ -155,23 +248,17 @@ export default function Catalog() {
                       </div>
                     )}
                     
-                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                       <Badge className="bg-white/80 backdrop-blur-md text-slate-900 border-none text-[9px] font-black px-2 shadow-sm rounded-full tracking-widest">
-                         {p.investor}
-                       </Badge>
-                    </div>
-
                     {p.images && p.images.length > 1 && (
-                      <div className="absolute bottom-4 right-4 bg-black/40 text-white text-[9px] font-bold px-3 py-1.5 rounded-full backdrop-blur-lg border border-white/10 group-hover:bg-primary transition-colors">
-                        +{p.images.length} MULTIMEDIA
+                      <div className="absolute bottom-4 right-4 bg-black/40 text-white text-[9px] font-bold px-3 py-1.5 rounded-full backdrop-blur-lg border border-white/10 group-hover:bg-slate-900 transition-colors uppercase tracking-widest">
+                        +{p.images.length} FOTOS
                       </div>
                     )}
                   </div>
 
                   <CardContent className="p-6 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2">
-                       <h3 className="font-black text-xl tracking-tight text-slate-900 leading-none group-hover:text-primary transition-colors">{p.name}</h3>
-                       <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5">STOCK</Badge>
+                       <h3 className="font-black text-xl tracking-tight text-slate-900 leading-none group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
+                       <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">DISPONIBLE</Badge>
                     </div>
 
                     {p.description && (
@@ -189,12 +276,12 @@ export default function Catalog() {
 
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-0.5">Inversión Final</span>
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 mb-0.5">Precio Especial</span>
                                 <span className="text-2xl font-black text-slate-900 tracking-tighter">{fmt(p.salePrice || 0)}</span>
                             </div>
                             
                             <a 
-                                href={`https://wa.me/573012949934?text=Hola! Estoy interesado en el ${p.name}`}
+                                href={getWhatsAppLink(p)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="bg-emerald-500 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-all text-white group/wa"
@@ -229,6 +316,108 @@ export default function Catalog() {
           )}
         </div>
       </main>
+
+      {/* Product View Modal */}
+      <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
+         <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none rounded-[2rem] gap-0">
+            {selectedProduct && (
+                <div className="flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-nonw overflow-y-auto md:overflow-hidden">
+                    {/* Image Gallery */}
+                    <div className="w-full md:w-3/5 bg-slate-900 relative group aspect-square md:aspect-auto">
+                        <AnimatePresence mode="wait">
+                            <motion.img 
+                                key={activeImageIndex}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                src={selectedProduct.images?.[activeImageIndex] || ''} 
+                                className="w-full h-full object-contain"
+                                alt={selectedProduct.name}
+                            />
+                        </AnimatePresence>
+                        
+                        {selectedProduct.images && selectedProduct.images.length > 1 && (
+                            <>
+                                <button 
+                                    onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1)}
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-xl rounded-full text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                    <ChevronLeft className="w-6 h-6" />
+                                </button>
+                                <button 
+                                    onClick={() => setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-xl rounded-full text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                    <ChevronRight className="w-6 h-6" />
+                                </button>
+                                <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2">
+                                    {selectedProduct.images.map((_, i) => (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => setActiveImageIndex(i)}
+                                            className={cn(
+                                                "w-2 h-2 rounded-full transition-all",
+                                                activeImageIndex === i ? "bg-white w-6" : "bg-white/30"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Details */}
+                    <div className="w-full md:w-2/5 p-8 flex flex-col bg-white">
+                        <div className="mb-6">
+                            <Badge className="bg-blue-50 text-blue-600 border-none text-[9px] font-black uppercase tracking-widest mb-3 px-2 py-1">Stock Disponible</Badge>
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-tight">{selectedProduct.name}</h2>
+                            <div className="text-3xl font-black text-emerald-600 tracking-tighter mt-2">{fmt(selectedProduct.salePrice || 0)}</div>
+                        </div>
+
+                        <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">
+                           <div className="space-y-2">
+                              <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción</h4>
+                              <p className="text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
+                                 {selectedProduct.description || 'Sin descripción disponible para este equipo.'}
+                              </p>
+                           </div>
+                           
+                           {selectedProduct.warrantyMonths && (
+                               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-1">
+                                   <div className="flex items-center gap-2 text-blue-600">
+                                       <ShieldCheck className="w-4 h-4" />
+                                       <span className="text-[10px] font-black uppercase tracking-widest">Garantía Asegurada</span>
+                                   </div>
+                                   <p className="text-sm font-black text-slate-900">{selectedProduct.warrantyMonths} MESES DE COBERTURA</p>
+                                   <p className="text-[9px] text-slate-400 font-medium uppercase leading-tight">Certificado oficial en cada compra.</p>
+                               </div>
+                           )}
+                        </div>
+
+                        <div className="pt-8 space-y-3">
+                            <a 
+                                href={getWhatsAppLink(selectedProduct)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/20 transition-all active:scale-95"
+                            >
+                                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                </svg>
+                                COMPRAR POR WHATSAPP
+                            </a>
+                            <button 
+                                onClick={() => setSelectedProduct(null)}
+                                className="w-full h-12 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-widest transition-colors"
+                            >
+                                SEGUIR NAVEGANDO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+         </DialogContent>
+      </Dialog>
 
       {/* Trust Banner */}
       <section className="bg-slate-950 py-16">

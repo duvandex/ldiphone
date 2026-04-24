@@ -15,7 +15,13 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
   const sold = (data.products || []).filter(p => p.status === 'sold');
   
   const totalProfit = sold.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
-  const stockValue = stock.reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0);
+  
+  // Stock value should ONLY count internal stock capital (ignore external products)
+  const stockValue = stock.reduce((acc, p) => {
+    if (p.isExternal) return acc;
+    return acc + (p.purchasePrice * (p.quantity || 1));
+  }, 0);
+  
   const totalStockUnits = stock.reduce((acc, p) => acc + (p.quantity || 1), 0);
   
   const pendingDebts = data.debtors.reduce((acc, d) => {
@@ -25,17 +31,52 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
 
   const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
   const investorStats = investors.map(inv => {
-    const invProds = data.products.filter(p => p.investor === inv);
-    const invSold = invProds.filter(p => p.status === 'sold');
-    const invStock = invProds.filter(p => p.status === 'stock');
+    let capital = 0;
+    let profit = 0;
+    let sales = 0;
+    let stockCount = 0;
+
+    data.products.forEach(p => {
+      // Logic for Co-Investment
+      if (p.coInvestors && p.coInvestors.length > 0) {
+        const coMatch = p.coInvestors.find(c => c.investor === inv);
+        if (coMatch) {
+          const share = coMatch.percentage / 100;
+          if (p.status === 'stock') {
+            capital += p.purchasePrice * p.quantity * share;
+            stockCount += p.quantity * share;
+          } else if (p.status === 'sold') {
+            sales += (p.salePrice || 0) * p.quantity * share;
+            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity * share;
+          }
+        }
+      } 
+      // Logic for External (Only Duvan gets profit, capital is always 0)
+      else if (p.isExternal) {
+        if (inv === 'Duvan' && p.status === 'sold') {
+          sales += (p.salePrice || 0) * p.quantity;
+          profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
+        }
+      }
+      // Standard single investor
+      else if (p.investor === inv) {
+        if (p.status === 'stock') {
+          capital += p.purchasePrice * p.quantity;
+          stockCount += p.quantity;
+        } else if (p.status === 'sold') {
+          sales += (p.salePrice || 0) * p.quantity;
+          profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
+        }
+      }
+    });
     
     return {
       name: inv,
-      capital: invProds.reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0),
-      sales: invSold.reduce((acc, p) => acc + ((p.salePrice || 0) * (p.quantity || 1)), 0),
-      profit: invSold.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0),
+      capital,
+      sales,
+      profit,
       balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + a.balance, 0),
-      stockCount: invStock.reduce((acc, p) => acc + (p.quantity || 1), 0)
+      stockCount
     };
   });
 

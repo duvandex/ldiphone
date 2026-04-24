@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// Version: 1.2.0 - Inventory Categories, External Products & Co-Investment Logic
+// Optimized for deployment and automatic change detection.
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon } from 'lucide-react';
 import { cn } from './lib/utils';

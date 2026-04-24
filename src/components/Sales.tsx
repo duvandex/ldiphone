@@ -317,6 +317,16 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                 />
               </div>
             </div>
+
+            <div className="grid gap-2">
+              <Label className="text-rose-600">Términos de Garantía Específicos</Label>
+              <textarea 
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={editingSale?.warrantyTerms || ''} 
+                placeholder="Deja en blanco para usar los generales de configuración..."
+                onChange={e => setEditingSale(prev => prev ? ({...prev, warrantyTerms: e.target.value}) : null)} 
+              />
+            </div>
           </div>
           <Button onClick={handleUpdateSale} className="w-full bg-slate-900 h-12 rounded-xl font-bold">Actualizar Información</Button>
         </DialogContent>

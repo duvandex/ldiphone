@@ -1,9 +1,17 @@
 export type Investor = 'Duvan' | 'Lina' | 'Santiago' | 'Johana' | 'Pool' | 'Santa Maria' | 'Thomas';
 export type PaymentMethod = 'Efectivo' | 'Bancolombia' | 'Nequi' | 'Banco de Bogota' | 'none';
 
+export interface CoInvestor {
+  investor: Investor;
+  percentage: number;
+}
+
+export type Category = 'iPhone' | 'Pro' | 'Watch' | 'AirPods' | 'iPad' | 'Accessory' | 'Other';
+
 export interface Product {
   id: string;
   name: string;
+  category?: Category;
   imei?: string;
   provider?: string;
   investor: Investor;
@@ -25,6 +33,8 @@ export interface Product {
   customerName?: string;
   originalProductId?: string; // Reference to original product for partial sales
   description?: string;
+  isExternal?: boolean; // If true, not counted in physical stock value, profit to Duvan
+  coInvestors?: CoInvestor[]; // For split ownership
 }
 
 export interface FinancialAccount {

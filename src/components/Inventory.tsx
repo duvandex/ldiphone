@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck } from 'lucide-react';
+import { Checkbox } from './ui/checkbox';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
-import { Investor, Product, PaymentMethod } from '../types';
+import { Investor, Product, PaymentMethod, CoInvestor } from '../types';
 import { fmt, cn } from '../lib/utils';
 import IMEIScanner from './IMEIScanner';
 
@@ -23,6 +24,7 @@ const ImageUploader = ({
   onUpload: (base64: string) => void, 
   onRemove: (index: number) => void 
 }) => {
+// ... existing ImageUploader content ...
   const localFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,7 +43,7 @@ const ImageUploader = ({
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const max_size = 1000; // Optimal size for storage vs quality
+          const max_size = 1000; 
 
           if (width > height) {
             if (width > max_size) {
@@ -60,7 +62,7 @@ const ImageUploader = ({
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); // 60% quality is plenty for mobile preview
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
           onUpload(compressedBase64);
         };
         img.src = event.target?.result as string;
@@ -73,7 +75,7 @@ const ImageUploader = ({
 
   return (
     <div className="space-y-3">
-      <Label>Fotos del Producto (Máx 4)</Label>
+      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fotos del Producto (Máx 4)</Label>
       <div className="grid grid-cols-4 gap-2">
         {images.map((img, i) => (
           <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
@@ -91,10 +93,10 @@ const ImageUploader = ({
           <button
             type="button"
             onClick={() => localFileInputRef.current?.click()}
-            className="aspect-square flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-400 gap-1 transition-colors"
+            className="aspect-square flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-400 gap-1 transition-colors"
           >
             <ImagePlus className="w-5 h-5" />
-            <span className="text-[10px] uppercase font-bold">Subir</span>
+            <span className="text-[9px] uppercase font-black">Subir</span>
           </button>
         )}
       </div>
@@ -109,6 +111,7 @@ const ImageUploader = ({
     </div>
   );
 };
+
 export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data, addProduct, deleteProduct, updateProduct, generateInvoiceNumber } = appData;
   const [search, setSearch] = useState('');
@@ -122,6 +125,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeScannerMode, setActiveScannerMode] = useState<'add' | 'edit' | null>(null);
 
+  const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+
   // Form states
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     name: '',
@@ -134,23 +139,94 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     quantity: 1,
     status: 'stock',
     images: [],
-    purchaseMethod: 'none',
-    warrantyMonths: 0,
+    purchaseMethod: 'Efectivo',
+    warrantyMonths: 3,
     warrantyExpiration: '',
     description: '',
+    category: 'iPhone',
+    isExternal: false,
+    coInvestors: []
+  });
+
+  const [useCoInvestment, setUseCoInvestment] = useState(false);
+  const [coInvList, setCoInvList] = useState<CoInvestor[]>([
+    { investor: 'Duvan', percentage: 100 }
+  ]);
+
+  const addCoInvestor = () => {
+    setCoInvList([...coInvList, { investor: 'Lina', percentage: 0 }]);
+  };
+
+  const removeCoInvestor = (idx: number) => {
+    setCoInvList(coInvList.filter((_, i) => i !== idx));
+  };
+
+  const updateCoInv = (idx: number, updates: Partial<CoInvestor>) => {
+    const newList = [...coInvList];
+    newList[idx] = { ...newList[idx], ...updates };
+    setCoInvList(newList);
+  };
+
+  const handleAddProduct = () => {
+    if (!newProduct.name || !newProduct.purchasePrice) return;
+    
+    let finalProduct = { ...newProduct };
+    if (useCoInvestment) {
+      const totalPct = coInvList.reduce((a, b) => a + b.percentage, 0);
+      if (Math.abs(totalPct - 100) > 0.01) {
+        alert("La suma de los porcentajes debe ser exactamente 100%");
+        return;
+      }
+      finalProduct.coInvestors = coInvList;
+      finalProduct.investor = coInvList[0].investor; // Primary reference
+    } else {
+      finalProduct.coInvestors = [];
+    }
+
+    if (finalProduct.isExternal) {
+      finalProduct.investor = 'Duvan'; // Earnings to Duvan
+    }
+
+    addProduct(finalProduct as any);
+    setIsAddOpen(false);
+    // Reset
+    setNewProduct({
+      name: '', imei: '', provider: '', investor: 'Duvan', 
+      purchaseDate: new Date().toISOString().split('T')[0],
+      purchasePrice: 0, salePrice: 0, quantity: 1, status: 'stock',
+      category: 'iPhone',
+      images: [], purchaseMethod: 'Efectivo', warrantyMonths: 3,
+      warrantyExpiration: '', description: '', isExternal: false, coInvestors: []
+    });
+    setUseCoInvestment(false);
+    setCoInvList([{ investor: 'Duvan', percentage: 100 }]);
+  };
+
+  // ... (keeping search/filter logic same)
+  const filteredProducts = data.products.filter(p => {
+    if (p.status === 'sold') return false;
+
+    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
+                         (p.imei || '').includes(search) ||
+                         (p.provider || '').toLowerCase().includes(search.toLowerCase()) ||
+                         (p.category || '').toLowerCase().includes(search.toLowerCase());
+    
+    // Check if investorFilter is in any of the coinvestors or the main investor
+    const matchesInvestor = investorFilter === 'all' || 
+                           (p.investor === investorFilter) || 
+                           (p.coInvestors?.some(c => c.investor === investorFilter));
+    
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter || (!p.status && statusFilter === 'stock');
+    return matchesSearch && matchesInvestor && matchesStatus;
   });
 
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 
-  // Initialize new product with defaults from settings
-  React.useEffect(() => {
-    if (isAddOpen) {
-      setNewProduct(prev => ({
-        ...prev,
-        warrantyMonths: data.settings.defaultWarrantyMonths
-      }));
-    }
-  }, [isAddOpen, data.settings.defaultWarrantyMonths]);
+  const handleEditProduct = async () => {
+    if (!editProductState) return;
+    await updateProduct(editProductState.id, editProductState);
+    setIsEditOpen(false);
+  };
 
   const [sellData, setSellData] = useState<{
     salePrice: number | string;
@@ -166,86 +242,48 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     buyer: '',
     sellQuantity: 1,
     saleMethod: 'Efectivo',
-    warrantyMonths: data.settings.defaultWarrantyMonths,
+    warrantyMonths: 3,
     warrantyExpiration: '',
   });
 
-  // Calculate warranty expiration when months change
-  React.useEffect(() => {
-    if (sellData.warrantyMonths > 0) {
-      const date = new Date(sellData.saleDate || new Date());
-      date.setMonth(date.getMonth() + sellData.warrantyMonths);
-      setSellData(prev => ({ ...prev, warrantyExpiration: date.toISOString().split('T')[0] }));
-    }
-  }, [sellData.warrantyMonths, sellData.saleDate]);
-
-  const filteredProducts = data.products.filter(p => {
-    if (p.status === 'sold') return false;
-
-    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
-                         (p.imei || '').includes(search) ||
-                         (p.provider || '').toLowerCase().includes(search.toLowerCase());
-    const matchesInvestor = investorFilter === 'all' || p.investor === investorFilter;
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
-    return matchesSearch && matchesInvestor && matchesStatus;
-  });
-
-  const handleAddProduct = () => {
-    if (!newProduct.name || !newProduct.purchasePrice) return;
-    addProduct(newProduct as any);
-    setNewProduct({
-      name: '',
-      imei: '',
-      provider: '',
-      investor: 'Duvan',
-      purchaseDate: new Date().toISOString().split('T')[0],
-      purchasePrice: 0,
-      salePrice: 0,
-      quantity: 1,
-      images: [],
-      purchaseMethod: 'none',
-      warrantyMonths: 0,
-      warrantyExpiration: '',
-      description: '',
-    });
-    setIsAddOpen(false);
-  };
-
-  const handleEditProduct = async () => {
-    if (!editProductState) return;
-    try {
-      await updateProduct(editProductState.id, editProductState);
-      setIsEditOpen(false);
-      setEditProductState(null);
-    } catch (err: any) {
-      alert("Error al actualizar producto: " + err.message);
-    }
+  const sellErrors = {
+    price: !sellData.salePrice || Number(sellData.salePrice) <= 0,
+    qty: !sellData.sellQuantity || Number(sellData.sellQuantity) <= 0 || Number(sellData.sellQuantity) > (selectedProduct?.quantity || 0)
   };
 
   const handleSellProduct = async () => {
     const sPrice = typeof sellData.salePrice === 'string' ? parseFloat(sellData.salePrice) : sellData.salePrice;
     const sQty = typeof sellData.sellQuantity === 'string' ? parseInt(sellData.sellQuantity) : sellData.sellQuantity;
+    
+    if (!selectedProduct) return;
 
-    if (!selectedProduct || isNaN(sPrice) || sPrice <= 0) {
-      alert("Por favor completa un precio de venta válido.");
+    if (isNaN(sPrice) || sPrice <= 0) {
+      alert("Por favor ingresa un precio de venta válido.");
+      return;
+    }
+
+    if (isNaN(sQty) || sQty <= 0) {
+      alert("La cantidad debe ser mayor a 0.");
+      return;
+    }
+
+    if (sQty > (selectedProduct.quantity || 0)) {
+      alert(`No hay suficiente stock disponible. (Stock actual: ${selectedProduct.quantity})`);
       return;
     }
     
     try {
-      // El número de factura ahora se genera automáticamente dentro de la transacción en updateProduct
       await updateProduct(selectedProduct.id, {
         ...sellData,
         salePrice: sPrice,
-        sellQuantity: isNaN(sQty) ? 1 : sQty,
+        sellQuantity: sQty,
         status: 'sold',
-        warrantyMonths: sellData.warrantyMonths,
-        warrantyExpiration: sellData.warrantyExpiration,
         warrantyTerms: data.settings.warrantyTerms,
       });
       setIsSellOpen(false);
       setSelectedProduct(null);
     } catch (err: any) {
-      alert("No se pudo completar la venta: " + err.message);
+      alert("Error al procesar la venta: " + err.message);
     }
   };
 
@@ -351,6 +389,21 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
+                  <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría</Label>
+                  <Select value={newProduct.category} onValueChange={v => setNewProduct({...newProduct, category: v as Category})}>
+                    <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="rounded-2xl border-slate-100">
+                      <SelectItem value="iPhone">iPhone</SelectItem>
+                      <SelectItem value="Pro">iPhone Pro</SelectItem>
+                      <SelectItem value="Watch">Apple Watch</SelectItem>
+                      <SelectItem value="AirPods">AirPods</SelectItem>
+                      <SelectItem value="iPad">iPad</SelectItem>
+                      <SelectItem value="Accessory">Accesorio</SelectItem>
+                      <SelectItem value="Other">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI / Serial</Label>
                   <div className="flex gap-2">
                     <Input id="imei" placeholder="15 dígitos" className="rounded-xl border-slate-100 h-11 flex-1" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} />
@@ -365,39 +418,113 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </Button>
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
-                  <Input id="provider" placeholder="Origen" className="rounded-xl border-slate-100 h-11" value={newProduct.provider} onChange={e => setNewProduct({...newProduct, provider: e.target.value})} />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
+                <Input id="provider" placeholder="Origen" className="rounded-xl border-slate-100 h-11" value={newProduct.provider} onChange={e => setNewProduct({...newProduct, provider: e.target.value})} />
+              </div>
+
+              <div className="flex flex-wrap gap-6 border-t border-slate-50 pt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="is-external" 
+                    checked={newProduct.isExternal} 
+                    onCheckedChange={(v) => setNewProduct({...newProduct, isExternal: !!v})} 
+                  />
+                  <Label htmlFor="is-external" className="text-[10px] font-black uppercase tracking-widest text-rose-500 flex items-center gap-1.5 cursor-pointer">
+                    <ExternalLink className="w-3 h-3" /> Producto Externo (Sin Stock)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="is-co-inv" 
+                    checked={useCoInvestment} 
+                    onCheckedChange={(v) => setUseCoInvestment(!!v)} 
+                  />
+                  <Label htmlFor="is-co-inv" className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1.5 cursor-pointer">
+                    <Users className="w-3 h-3" /> Inversión Compartida
+                  </Label>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversor *</Label>
-                  <Select value={newProduct.investor} onValueChange={v => setNewProduct({...newProduct, investor: v as Investor})}>
-                    <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent className="rounded-2xl border-slate-100 transition-all">
-                      <SelectItem value="Duvan">Duvan</SelectItem>
-                      <SelectItem value="Lina">Lina</SelectItem>
-                      <SelectItem value="Santiago">Santiago</SelectItem>
-                      <SelectItem value="Johana">Johana</SelectItem>
-                    </SelectContent>
-                  </Select>
+              {!newProduct.isExternal && !useCoInvestment && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversor *</Label>
+                    <Select value={newProduct.investor} onValueChange={v => setNewProduct({...newProduct, investor: v as Investor})}>
+                      <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl border-slate-100 transition-all">
+                        {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método Pago</Label>
+                    <Select value={newProduct.purchaseMethod} onValueChange={v => setNewProduct({...newProduct, purchaseMethod: v as PaymentMethod})}>
+                      <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl border-slate-100">
+                        <SelectItem value="none">Ninguno / Efectivo</SelectItem>
+                        <SelectItem value="Bancolombia">Bancolombia</SelectItem>
+                        <SelectItem value="Nequi">Nequi</SelectItem>
+                        <SelectItem value="Banco de Bogota">Banco de Bogotá</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+              )}
+
+              {useCoInvestment && !newProduct.isExternal && (
+                <div className="space-y-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-blue-600">Reparto de Inversión (%)</Label>
+                    <Button type="button" variant="ghost" size="sm" onClick={addCoInvestor} className="h-7 text-[9px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-100 px-3">
+                      <Plus className="w-3 h-3 mr-1" /> Añadir Socio
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {coInvList.map((co, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <Select value={co.investor} onValueChange={v => updateCoInv(idx, { investor: v as Investor })}>
+                          <SelectTrigger className="flex-1 rounded-lg border-blue-100 h-9 font-bold text-[11px] bg-white"><SelectValue /></SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <div className="relative w-24">
+                          <Input 
+                            type="number" 
+                            className="rounded-lg border-blue-100 h-9 font-black text-xs pl-3 pr-6 bg-white" 
+                            value={co.percentage} 
+                            onChange={e => updateCoInv(idx, { percentage: parseFloat(e.target.value) || 0 })}
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-400">%</span>
+                        </div>
+                        {coInvList.length > 1 && (
+                          <Button variant="ghost" size="icon" onClick={() => removeCoInvestor(idx)} className="h-9 w-9 text-rose-500 hover:bg-rose-50 rounded-lg">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className={cn(
+                    "text-[10px] font-black text-center pt-1 uppercase tracking-widest",
+                    Math.abs(coInvList.reduce((a, b) => a + b.percentage, 0) - 100) < 0.01 ? "text-emerald-600" : "text-rose-500"
+                  )}>
+                    Total: {coInvList.reduce((a, b) => a + b.percentage, 0)}% / 100%
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha Compra</Label>
                   <Input id="date" type="date" className="rounded-xl border-slate-100 h-11" value={newProduct.purchaseDate} onChange={e => setNewProduct({...newProduct, purchaseDate: e.target.value})} />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="pc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversión (u) *</Label>
-                  <Input id="pc" type="number" placeholder="0" className="rounded-xl border-slate-100 h-11" value={newProduct.purchasePrice || ''} onChange={e => setNewProduct({...newProduct, purchasePrice: parseFloat(e.target.value) || 0})} />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="qty" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cantidad *</Label>
-                  <Input id="qty" type="number" min="1" className="rounded-xl border-slate-100 h-11" value={newProduct.quantity} onChange={e => setNewProduct({...newProduct, quantity: parseInt(e.target.value) || 1})} />
+                  <Label htmlFor="pc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Costo Unitario *</Label>
+                  <Input id="pc" type="number" placeholder="0" className="rounded-xl border-slate-100 h-11 font-black" value={newProduct.purchasePrice || ''} onChange={e => setNewProduct({...newProduct, purchasePrice: parseFloat(e.target.value) || 0})} />
                 </div>
               </div>
 
@@ -457,10 +584,20 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                             </div>
                           )}
                         </div>
-                        <div className="space-y-0.5">
+                         <div className="space-y-0.5">
                           <div className="font-black text-slate-900 tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                             {p.investor}
+                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex flex-wrap items-center gap-2">
+                             {p.isExternal ? (
+                               <span className="text-rose-500 flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
+                             ) : p.coInvestors && p.coInvestors.length > 0 ? (
+                               p.coInvestors.map((c, i) => (
+                                 <span key={i} className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md text-[8px]">
+                                   {c.investor} ({c.percentage}%)
+                                 </span>
+                               ))
+                             ) : (
+                               <span>{p.investor}</span>
+                             )}
                              <span className="w-1 h-1 rounded-full bg-slate-200"></span>
                              {p.purchaseDate}
                           </div>
@@ -477,8 +614,23 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                       <div className="text-xs font-bold text-slate-600 font-mono tracking-tighter">{p.imei || p.id.slice(0,8).toUpperCase()}</div>
                     </TableCell>
                     <TableCell className="py-5 text-right">
-                      <div className="text-sm font-black text-slate-900">{fmt(p.purchasePrice)}</div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Total: {fmt(p.purchasePrice * (p.quantity || 1))}</div>
+                      <div className="text-sm font-black text-slate-900">
+                        {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
+                          <>
+                            {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
+                            <span className="ml-1 text-[10px] text-blue-500">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
+                          </>
+                        ) : (
+                          fmt(p.purchasePrice)
+                        )}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        Total {p.quantity > 1 ? '(u)' : 'Costo'}: {
+                          p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' 
+                          ? fmt((p.purchasePrice * (p.quantity || 1)) * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)
+                          : fmt(p.purchasePrice * (p.quantity || 1))
+                        }
+                      </div>
                     </TableCell>
                     <TableCell className="py-5 text-right">
                        <div className="text-sm font-black text-emerald-600">+{fmt(totalProfit)}</div>
@@ -680,10 +832,27 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   </Button>
                 </div>
               </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría</Label>
+                <Select value={editProductState?.category || 'iPhone'} onValueChange={v => setEditProductState(prev => prev ? ({...prev, category: v as Category}) : null)}>
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-100">
+                    <SelectItem value="iPhone">iPhone</SelectItem>
+                    <SelectItem value="Pro">iPhone Pro</SelectItem>
+                    <SelectItem value="Watch">Apple Watch</SelectItem>
+                    <SelectItem value="AirPods">AirPods</SelectItem>
+                    <SelectItem value="iPad">iPad</SelectItem>
+                    <SelectItem value="Accessory">Accesorio</SelectItem>
+                    <SelectItem value="Other">Otro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="e-provider" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Proveedor</Label>
                 <Input id="e-provider" className="rounded-xl border-slate-100 h-11" value={editProductState?.provider || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, provider: e.target.value}) : null)} />
               </div>
+            </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -783,10 +952,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   type="number" 
                   min="1" 
                   max={selectedProduct?.quantity || 1}
-                  className="rounded-xl border-slate-100 h-11"
+                  className={cn("rounded-xl border-slate-100 h-11", sellErrors.qty && "border-rose-500 bg-rose-50")}
                   value={sellData.sellQuantity} 
                   onChange={e => setSellData({...sellData, sellQuantity: e.target.value})}
                 />
+                {sellErrors.qty && (
+                  <span className="text-[9px] font-black uppercase text-rose-500 px-1">
+                    {Number(sellData.sellQuantity) > (selectedProduct?.quantity || 0) ? 'Excede stock disponible' : 'Cantidad inválida'}
+                  </span>
+                )}
               </div>
             )}
 
@@ -795,7 +969,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <Input 
                 id="sell-price" 
                 type="number" 
-                className="rounded-xl border-slate-100 h-11 font-black text-emerald-600"
+                className={cn("rounded-xl border-slate-100 h-11 font-black text-emerald-600", sellErrors.price && "border-rose-500 bg-rose-50")}
                 value={sellData.salePrice} 
                 onChange={e => setSellData({...sellData, salePrice: e.target.value})}
                 placeholder="0"
@@ -860,7 +1034,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               />
             </div>
 
-            <Button onClick={handleSellProduct} className="w-full bg-emerald-600 hover:bg-emerald-700 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/10 mt-2">
+            <Button 
+              onClick={handleSellProduct} 
+              disabled={sellErrors.price || sellErrors.qty}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:bg-slate-200 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/10 mt-2"
+            >
               Confirmar Venta
             </Button>
           </div>

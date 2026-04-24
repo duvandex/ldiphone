@@ -164,34 +164,51 @@ export function useAppData() {
       };
 
       await runTransaction(db, async (transaction) => {
-        // --- 1. LECTURAS ---
-        let accountDoc = null;
-        let accountRef = null;
-        if (newProduct.purchaseMethod && newProduct.purchaseMethod !== 'none') {
-          const accountId = `${newProduct.investor}-${newProduct.purchaseMethod}`;
-          accountRef = doc(db, 'accounts', accountId);
-          accountDoc = await transaction.get(accountRef);
-        }
+        // Only deduct capital if it's NOT an external product
+        if (!newProduct.isExternal) {
+          // If there are co-investors, handle split capital deduction
+          if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
+            for (const co of newProduct.coInvestors) {
+              const accountId = `${co.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
+              const accountRef = doc(db, 'accounts', accountId);
+              const accountDoc = await transaction.get(accountRef);
+              const amount = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
 
-        // --- 2. ESCRITURAS ---
-        transaction.set(docRef, newProduct);
-        
-        if (accountRef) {
-          const amount = newProduct.purchasePrice * newProduct.quantity;
-          if (accountDoc && accountDoc.exists()) {
-            transaction.update(accountRef, {
-              balance: accountDoc.data().balance - amount
-            });
+              if (accountDoc.exists()) {
+                transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
+              } else {
+                transaction.set(accountRef, {
+                  id: accountId,
+                  investor: co.investor,
+                  method: newProduct.purchaseMethod || 'Efectivo',
+                  name: newProduct.purchaseMethod || 'Efectivo',
+                  balance: -amount
+                });
+              }
+            }
           } else {
-            transaction.set(accountRef, {
-              id: accountRef.id,
-              investor: newProduct.investor,
-              method: newProduct.purchaseMethod!,
-              name: newProduct.purchaseMethod!,
-              balance: -amount
-            });
+            // Standard single investor
+            const accountId = `${newProduct.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
+            const accountRef = doc(db, 'accounts', accountId);
+            const accountDoc = await transaction.get(accountRef);
+            const amount = newProduct.purchasePrice * newProduct.quantity;
+
+            if (accountDoc.exists()) {
+              transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
+            } else {
+              transaction.set(accountRef, {
+                id: accountId,
+                investor: newProduct.investor,
+                method: newProduct.purchaseMethod || 'Efectivo',
+                name: newProduct.purchaseMethod || 'Efectivo',
+                balance: -amount
+              });
+            }
           }
         }
+
+        // --- ESCRITURA ---
+        transaction.set(docRef, newProduct);
       });
     } catch (err) {
       handleFirestoreError(err, 'create', 'products');
@@ -201,13 +218,11 @@ export function useAppData() {
   const updateProduct = async (id: string, updates: Partial<Product> & { sellQuantity?: number }) => {
     try {
       await runTransaction(db, async (transaction) => {
-        // --- 1. TODOS LOS "GET" (LECTURAS) AL PRINCIPIO ---
         const productRef = doc(db, 'products', id);
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists()) return;
 
         const product = productDoc.data() as Product;
-        const inv = updates.investor || product.investor;
         const sellQty = updates.sellQuantity || 1;
 
         let settingsDoc = null;
@@ -216,16 +231,6 @@ export function useAppData() {
           settingsDoc = await transaction.get(settingsRef);
         }
 
-        let accountDoc = null;
-        let accountRef = null;
-        if (updates.status === 'sold' && updates.saleMethod && updates.saleMethod !== 'none') {
-          const accountId = `${inv}-${updates.saleMethod}`;
-          accountRef = doc(db, 'accounts', accountId);
-          accountDoc = await transaction.get(accountRef);
-        }
-
-        // --- 2. TODAS LAS ESCRITURAS DESPUÉS ---
-        
         // Manejar Número de Factura
         let finalInvoiceNumber = updates.invoiceNumber;
         if (updates.status === 'sold' && !finalInvoiceNumber) {
@@ -236,9 +241,9 @@ export function useAppData() {
 
         if (updates.status === 'sold') {
           const currentQty = product.quantity || 1;
+          const isSalePartial = sellQty < currentQty;
 
-          if (sellQty < currentQty) {
-            // Venta PARCIAL
+          if (isSalePartial) {
             transaction.update(productRef, {
               quantity: currentQty - sellQty,
               status: 'stock'
@@ -255,35 +260,72 @@ export function useAppData() {
               buyer: updates.buyer,
               invoiceNumber: finalInvoiceNumber,
               saleMethod: updates.saleMethod,
-              originalProductId: id, // Guardamos la referencia para devoluciones
+              originalProductId: id,
             };
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
-            // Venta TOTAL
             const { sellQuantity, ...cleanUpdates } = updates;
             cleanUpdates.invoiceNumber = finalInvoiceNumber;
             transaction.update(productRef, cleanUpdates);
           }
 
-          // Actualizar Saldo
-          if (accountRef && updates.salePrice) {
-            const profit = updates.salePrice * sellQty;
-            if (accountDoc && accountDoc.exists()) {
-              transaction.update(accountRef, {
-                balance: accountDoc.data().balance + profit
-              });
+          // --- LOGICA DE REPARTO DE DINERO ---
+          const totalRevenue = (updates.salePrice || 0) * sellQty;
+
+          if (product.isExternal) {
+            // Todo el dinero a Duvan (independientemente de quién aparezca como responsable en el form)
+            const accountId = `Duvan-${updates.saleMethod || 'Efectivo'}`;
+            const accountRef = doc(db, 'accounts', accountId);
+            const accountDoc = await transaction.get(accountRef);
+            if (accountDoc.exists()) {
+              transaction.update(accountRef, { balance: accountDoc.data().balance + totalRevenue });
             } else {
               transaction.set(accountRef, {
-                id: `${inv}-${updates.saleMethod}`,
-                investor: inv,
-                method: updates.saleMethod,
-                name: updates.saleMethod,
-                balance: profit
+                id: accountId,
+                investor: 'Duvan',
+                method: updates.saleMethod || 'Efectivo',
+                name: updates.saleMethod || 'Efectivo',
+                balance: totalRevenue
+              });
+            }
+          } else if (product.coInvestors && product.coInvestors.length > 0) {
+            // Reparto proporcional entre socios
+            for (const co of product.coInvestors) {
+              const accountId = `${co.investor}-${updates.saleMethod || 'Efectivo'}`;
+              const accountRef = doc(db, 'accounts', accountId);
+              const accountDoc = await transaction.get(accountRef);
+              const share = totalRevenue * (co.percentage / 100);
+
+              if (accountDoc.exists()) {
+                transaction.update(accountRef, { balance: accountDoc.data().balance + share });
+              } else {
+                transaction.set(accountRef, {
+                  id: accountId,
+                  investor: co.investor,
+                  method: updates.saleMethod || 'Efectivo',
+                  name: updates.saleMethod || 'Efectivo',
+                  balance: share
+                });
+              }
+            }
+          } else {
+            // Único inversor
+            const accountId = `${product.investor}-${updates.saleMethod || 'Efectivo'}`;
+            const accountRef = doc(db, 'accounts', accountId);
+            const accountDoc = await transaction.get(accountRef);
+            if (accountDoc.exists()) {
+              transaction.update(accountRef, { balance: accountDoc.data().balance + totalRevenue });
+            } else {
+              transaction.set(accountRef, {
+                id: accountId,
+                investor: product.investor,
+                method: updates.saleMethod || 'Efectivo',
+                name: updates.saleMethod || 'Efectivo',
+                balance: totalRevenue
               });
             }
           }
         } else {
-          // Edición normal
           const { sellQuantity, ...cleanUpdates } = updates;
           transaction.update(productRef, cleanUpdates);
         }

@@ -265,6 +265,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                     <SelectItem value="Bancolombia">Bancolombia</SelectItem>
                     <SelectItem value="Nequi">Nequi</SelectItem>
                     <SelectItem value="Banco de Bogota">Banco de Bogota</SelectItem>
+                    {editingSale?.investor === 'Duvan' && <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

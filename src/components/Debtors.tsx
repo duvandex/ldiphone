@@ -6,15 +6,19 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-import { Plus, Trash2, HandCoins } from 'lucide-react';
+import { Plus, Trash2, HandCoins, UserPlus } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 export default function Debtors({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addDebtor, addPayment, deleteDebtor } = appData;
+  const { data, addDebtor, addPayment, deleteDebtor, updateDebtor } = appData;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isExtraOpen, setIsExtraOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [selectedDebtorId, setSelectedDebtorId] = useState<string | null>(null);
+  const [debtorToDelete, setDebtorToDelete] = useState<string | null>(null);
 
   const [newDebtor, setNewDebtor] = useState({
     name: '',
@@ -24,6 +28,7 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
   });
 
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [extraAmount, setExtraAmount] = useState(0);
 
   const handleAddDebtor = () => {
     if (!newDebtor.name || !newDebtor.totalAmount) return;
@@ -45,6 +50,35 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
     setIsPaymentOpen(false);
     setSelectedDebtorId(null);
   };
+
+  const handleAddExtraDebt = () => {
+    if (!selectedDebtorId || !extraAmount) return;
+    const debtor = data.debtors.find(d => d.id === selectedDebtorId);
+    if (debtor) {
+      updateDebtor(selectedDebtorId, {
+        totalAmount: debtor.totalAmount + extraAmount,
+        status: 'pending'
+      });
+    }
+    setExtraAmount(0);
+    setIsExtraOpen(false);
+    setSelectedDebtorId(null);
+  };
+
+  const confirmDelete = () => {
+    if (debtorToDelete) {
+      deleteDebtor(debtorToDelete);
+      setDebtorToDelete(null);
+      setIsConfirmDeleteOpen(false);
+    }
+  };
+
+  const totalPending = data.debtors.reduce((sum, d) => {
+    const paid = d.payments.reduce((a, b) => a + b, 0);
+    return sum + (d.totalAmount - paid);
+  }, 0);
+  const totalDebtorsAmount = data.debtors.reduce((sum, d) => sum + d.totalAmount, 0);
+  const totalDebtorsPaid = data.debtors.reduce((sum, d) => sum + d.payments.reduce((a, b) => a + b, 0), 0);
 
   return (
     <div className="space-y-6">
@@ -135,11 +169,24 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
                     </TableCell>
                     <TableCell className="py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Agregar más duda"
+                          onClick={() => {
+                            setSelectedDebtorId(d.id);
+                            setIsExtraOpen(true);
+                          }}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
                         {d.status === 'pending' && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            title="Registrar abono"
                             onClick={() => {
                               setSelectedDebtorId(d.id);
                               setIsPaymentOpen(true);
@@ -152,7 +199,10 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                          onClick={() => deleteDebtor(d.id)}
+                          onClick={() => {
+                            setDebtorToDelete(d.id);
+                            setIsConfirmDeleteOpen(true);
+                          }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -161,6 +211,15 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
                   </TableRow>
                 );
               })}
+              {data.debtors.length > 0 && (
+                <TableRow className="bg-slate-50/50 font-black">
+                  <TableCell className="py-4 pl-6" colSpan={2}>TOTALES CONSOLIDADOS</TableCell>
+                  <TableCell className="py-4 text-right font-mono">{fmt(totalDebtorsAmount)}</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-emerald-600">{fmt(totalDebtorsPaid)}</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-rose-600">{fmt(totalPending)}</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+              )}
               {data.debtors.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-slate-400">
@@ -193,6 +252,43 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
           <Button onClick={handleAddPayment} className="w-full bg-emerald-600 hover:bg-emerald-700">Guardar Abono</Button>
         </DialogContent>
       </Dialog>
+
+      {/* Extra Debt Dialog */}
+      <Dialog open={isExtraOpen} onOpenChange={setIsExtraOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Agregar más deuda</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="e-amount">Monto de la nueva deuda *</Label>
+              <Input 
+                id="e-amount" 
+                type="number" 
+                value={extraAmount || 0} 
+                onChange={e => setExtraAmount(parseFloat(e.target.value) || 0)} 
+              />
+            </div>
+          </div>
+          <Button onClick={handleAddExtraDebt} className="w-full bg-blue-600 hover:bg-blue-700">Aumentar Deuda</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deletion Confirmation */}
+      <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setIsConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al deudor y todos sus registros de pagos de nuestros servidores.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700">Eliminar definitivamente</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

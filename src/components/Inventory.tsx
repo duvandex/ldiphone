@@ -11,7 +11,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
-import { Investor, Product, PaymentMethod, CoInvestor } from '../types';
+import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
 import { fmt, cn } from '../lib/utils';
 import IMEIScanner from './IMEIScanner';
 
@@ -467,6 +467,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         <SelectItem value="Bancolombia">Bancolombia</SelectItem>
                         <SelectItem value="Nequi">Nequi</SelectItem>
                         <SelectItem value="Banco de Bogota">Banco de Bogotá</SelectItem>
+                        <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -994,6 +995,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     <SelectItem value="Bancolombia">Bancolombia</SelectItem>
                     <SelectItem value="Nequi">Nequi</SelectItem>
                     <SelectItem value="Banco de Bogota">Banco de Bogota</SelectItem>
+                    {(selectedProduct?.investor === 'Duvan' || selectedProduct?.isExternal) && <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>

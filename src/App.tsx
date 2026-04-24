@@ -25,7 +25,7 @@ import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 import Logo from './components/Logo';
 
 function Login() {
-  const [email, setEmail] = useState('duvanmarinj@gmail.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

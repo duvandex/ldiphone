@@ -6,15 +6,19 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-import { Plus, Trash2, HandCoins } from 'lucide-react';
+import { Plus, Trash2, HandCoins, UserPlus } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 export default function Liabilities({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addLiability, addLiabilityPayment, deleteLiability } = appData;
+  const { data, addLiability, addLiabilityPayment, deleteLiability, updateLiability } = appData;
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+  const [isExtraOpen, setIsExtraOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [selectedLiabilityId, setSelectedLiabilityId] = useState<string | null>(null);
+  const [liabilityToDelete, setLiabilityToDelete] = useState<string | null>(null);
 
   const [newLiability, setNewLiability] = useState({
     creditor: '',
@@ -24,6 +28,7 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
   });
 
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [extraAmount, setExtraAmount] = useState(0);
 
   const handleAddLiability = () => {
     if (!newLiability.creditor || !newLiability.totalAmount) return;
@@ -45,6 +50,35 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
     setIsPaymentOpen(false);
     setSelectedLiabilityId(null);
   };
+
+  const handleAddExtraDebt = () => {
+    if (!selectedLiabilityId || !extraAmount) return;
+    const liability = data.liabilities.find(l => l.id === selectedLiabilityId);
+    if (liability) {
+      updateLiability(selectedLiabilityId, {
+        totalAmount: liability.totalAmount + extraAmount,
+        status: 'pending'
+      });
+    }
+    setExtraAmount(0);
+    setIsExtraOpen(false);
+    setSelectedLiabilityId(null);
+  };
+
+  const confirmDelete = () => {
+    if (liabilityToDelete) {
+      deleteLiability(liabilityToDelete);
+      setLiabilityToDelete(null);
+      setIsConfirmDeleteOpen(false);
+    }
+  };
+
+  const totalPending = data.liabilities.reduce((sum, l) => {
+    const paid = l.payments.reduce((a, b) => a + b, 0);
+    return sum + (l.totalAmount - paid);
+  }, 0);
+  const totalLiabilitiesAmount = data.liabilities.reduce((sum, l) => sum + l.totalAmount, 0);
+  const totalLiabilitiesPaid = data.liabilities.reduce((sum, l) => sum + l.payments.reduce((a, b) => a + b, 0), 0);
 
   return (
     <div className="space-y-6">
@@ -135,6 +169,18 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                     </TableCell>
                     <TableCell className="py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          title="Aumentar deuda"
+                          onClick={() => {
+                            setSelectedLiabilityId(l.id);
+                            setIsExtraOpen(true);
+                          }}
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
                         {l.status === 'pending' && (
                           <Button 
                             variant="ghost" 
@@ -152,7 +198,10 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                           variant="ghost" 
                           size="icon" 
                           className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                          onClick={() => deleteLiability(l.id)}
+                          onClick={() => {
+                            setLiabilityToDelete(l.id);
+                            setIsConfirmDeleteOpen(true);
+                          }}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -161,6 +210,15 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                   </TableRow>
                 );
               })}
+              {data.liabilities.length > 0 && (
+                <TableRow className="bg-rose-50/30 font-black">
+                  <TableCell className="py-4 pl-6" colSpan={2}>TOTALES PASIVOS</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-slate-900">{fmt(totalLiabilitiesAmount)}</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-emerald-600">{fmt(totalLiabilitiesPaid)}</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-rose-600">{fmt(totalPending)}</TableCell>
+                  <TableCell colSpan={2}></TableCell>
+                </TableRow>
+              )}
               {data.liabilities.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-slate-400">
@@ -193,6 +251,43 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
           <Button onClick={handleAddPayment} className="w-full bg-emerald-600 hover:bg-emerald-700">Guardar Pago</Button>
         </DialogContent>
       </Dialog>
+
+      {/* Extra Debt Dialog */}
+      <Dialog open={isExtraOpen} onOpenChange={setIsExtraOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Aumentar deuda pendiente</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="le-amount">Monto de la nueva deuda *</Label>
+              <Input 
+                id="le-amount" 
+                type="number" 
+                value={extraAmount || 0} 
+                onChange={e => setExtraAmount(parseFloat(e.target.value) || 0)} 
+              />
+            </div>
+          </div>
+          <Button onClick={handleAddExtraDebt} className="w-full bg-blue-600 hover:bg-blue-700">Aumentar Deuda</Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deletion Confirmation */}
+      <AlertDialog open={isConfirmDeleteOpen} onOpenChange={setIsConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro de eliminar esta obligación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará permanentemente el registro del pasivo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-rose-600 hover:bg-rose-700">Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

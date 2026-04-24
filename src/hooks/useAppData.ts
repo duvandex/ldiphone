@@ -30,6 +30,24 @@ export function useAppData() {
     }
   });
   const [loading, setLoading] = useState(true);
+  const [usdtRate, setUsdtRate] = useState<number>(4000);
+
+  useEffect(() => {
+    const fetchRate = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cop');
+        const data = await response.json();
+        if (data.tether && data.tether.cop) {
+          setUsdtRate(data.tether.cop);
+        }
+      } catch (err) {
+        console.error("Error fetching USDT rate", err);
+      }
+    };
+    fetchRate();
+    const interval = setInterval(fetchRate, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -119,10 +137,11 @@ export function useAppData() {
 
         // Init Accounts
         const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
-        const methods: PaymentMethod[] = ['Efectivo', 'Bancolombia', 'Nequi', 'Banco de Bogota'];
+        const methods: PaymentMethod[] = ['Efectivo', 'Bancolombia', 'Nequi', 'Banco de Bogota', 'Cripto (USDT)'];
         
         investors.forEach(inv => {
           methods.forEach(met => {
+            if (met === 'Cripto (USDT)' && inv !== 'Duvan') return;
             const id = `${inv}-${met}`;
             transaction.set(doc(db, 'accounts', id), {
               id,
@@ -174,7 +193,8 @@ export function useAppData() {
               const accountId = `${co.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
               const accountRef = doc(db, 'accounts', accountId);
               const accountDoc = await transaction.get(accountRef);
-              const amount = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
+              const totalCOP = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
+              const amount = newProduct.purchaseMethod === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
 
               if (accountDoc.exists()) {
                 transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
@@ -193,7 +213,8 @@ export function useAppData() {
             const accountId = `${newProduct.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
             const accountRef = doc(db, 'accounts', accountId);
             const accountDoc = await transaction.get(accountRef);
-            const amount = newProduct.purchasePrice * newProduct.quantity;
+            const totalCOP = newProduct.purchasePrice * newProduct.quantity;
+            const amount = newProduct.purchaseMethod === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
 
             if (accountDoc.exists()) {
               transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
@@ -273,6 +294,7 @@ export function useAppData() {
 
           // --- LOGICA DE REPARTO DE DINERO ---
           const totalRevenue = (updates.salePrice || 0) * sellQty;
+          const adjustedRevenue = updates.saleMethod === 'Cripto (USDT)' ? totalRevenue / usdtRate : totalRevenue;
 
           if (product.isExternal) {
             // Todo el dinero a Duvan (independientemente de quién aparezca como responsable en el form)
@@ -280,14 +302,14 @@ export function useAppData() {
             const accountRef = doc(db, 'accounts', accountId);
             const accountDoc = await transaction.get(accountRef);
             if (accountDoc.exists()) {
-              transaction.update(accountRef, { balance: accountDoc.data().balance + totalRevenue });
+              transaction.update(accountRef, { balance: accountDoc.data().balance + adjustedRevenue });
             } else {
               transaction.set(accountRef, {
                 id: accountId,
                 investor: 'Duvan',
                 method: updates.saleMethod || 'Efectivo',
                 name: updates.saleMethod || 'Efectivo',
-                balance: totalRevenue
+                balance: adjustedRevenue
               });
             }
           } else if (product.coInvestors && product.coInvestors.length > 0) {
@@ -296,7 +318,7 @@ export function useAppData() {
               const accountId = `${co.investor}-${updates.saleMethod || 'Efectivo'}`;
               const accountRef = doc(db, 'accounts', accountId);
               const accountDoc = await transaction.get(accountRef);
-              const share = totalRevenue * (co.percentage / 100);
+              const share = adjustedRevenue * (co.percentage / 100);
 
               if (accountDoc.exists()) {
                 transaction.update(accountRef, { balance: accountDoc.data().balance + share });
@@ -316,14 +338,14 @@ export function useAppData() {
             const accountRef = doc(db, 'accounts', accountId);
             const accountDoc = await transaction.get(accountRef);
             if (accountDoc.exists()) {
-              transaction.update(accountRef, { balance: accountDoc.data().balance + totalRevenue });
+              transaction.update(accountRef, { balance: accountDoc.data().balance + adjustedRevenue });
             } else {
               transaction.set(accountRef, {
                 id: accountId,
                 investor: product.investor,
                 method: updates.saleMethod || 'Efectivo',
                 name: updates.saleMethod || 'Efectivo',
-                balance: totalRevenue
+                balance: adjustedRevenue
               });
             }
           }
@@ -350,9 +372,11 @@ export function useAppData() {
 
         // --- 2. ESCRITURAS ---
         transaction.set(expenseRef, { ...expense, id });
+        const adjustedAmount = expense.method === 'Cripto (USDT)' ? expense.amount / usdtRate : expense.amount;
+
         if (accountDoc.exists()) {
           transaction.update(accountRef, {
-            balance: accountDoc.data().balance - expense.amount
+            balance: accountDoc.data().balance - adjustedAmount
           });
         } else {
           transaction.set(accountRef, {
@@ -360,7 +384,7 @@ export function useAppData() {
             investor: expense.investor,
             method: expense.method,
             name: expense.method,
-            balance: -expense.amount
+            balance: -adjustedAmount
           });
         }
       });
@@ -378,6 +402,8 @@ export function useAppData() {
         if (!expenseDoc.exists()) return;
 
         const expense = expenseDoc.data() as Expense;
+        const adjustedAmount = expense.method === 'Cripto (USDT)' ? expense.amount / usdtRate : expense.amount;
+
         const accountRef = doc(db, 'accounts', `${expense.investor}-${expense.method}`);
         const accountDoc = await transaction.get(accountRef);
 
@@ -385,7 +411,7 @@ export function useAppData() {
         transaction.delete(expenseRef);
         if (accountDoc.exists()) {
           transaction.update(accountRef, {
-            balance: accountDoc.data().balance + expense.amount
+            balance: accountDoc.data().balance + adjustedAmount
           });
         }
       });
@@ -396,7 +422,15 @@ export function useAppData() {
 
   const updateAccountBalance = async (accountId: string, newBalance: number) => {
     try {
-      await updateDoc(doc(db, 'accounts', accountId), { balance: newBalance });
+      const accountRef = doc(db, 'accounts', accountId);
+      const [investor, method] = accountId.split('-');
+      await setDoc(accountRef, { 
+        balance: newBalance,
+        investor,
+        method,
+        name: method,
+        id: accountId
+      }, { merge: true });
     } catch (err) {
       handleFirestoreError(err, 'update', `accounts/${accountId}`);
     }
@@ -447,6 +481,14 @@ export function useAppData() {
     }
   };
 
+  const updateDebtor = async (id: string, updates: Partial<Debtor>) => {
+    try {
+      await updateDoc(doc(db, 'debtors', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, 'update', `debtors/${id}`);
+    }
+  };
+
   const addLiability = async (liability: Omit<Liability, 'id'>) => {
     try {
       const id = Math.random().toString(36).substr(2, 9);
@@ -481,6 +523,14 @@ export function useAppData() {
       await deleteDoc(doc(db, 'liabilities', id));
     } catch (err) {
       handleFirestoreError(err, 'delete', `liabilities/${id}`);
+    }
+  };
+
+  const updateLiability = async (id: string, updates: Partial<Liability>) => {
+    try {
+      await updateDoc(doc(db, 'liabilities', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, 'update', `liabilities/${id}`);
     }
   };
 
@@ -524,7 +574,8 @@ export function useAppData() {
         let accountDoc = null;
         let accountRef = null;
         if (sale.saleMethod && sale.salePrice && sale.saleMethod !== 'none') {
-          const accountId = `${sale.investor}-${sale.saleMethod}`;
+          const targetInvestor = sale.isExternal ? 'Duvan' : sale.investor;
+          const accountId = `${targetInvestor}-${sale.saleMethod}`;
           accountRef = doc(db, 'accounts', accountId);
           accountDoc = await transaction.get(accountRef);
         }
@@ -565,8 +616,9 @@ export function useAppData() {
         // Revertir el dinero de las cuentas
         if (accountRef && accountDoc && accountDoc.exists()) {
           const amount = (sale.salePrice || 0) * (sale.quantity || 1);
+          const adjustedAmountValue = sale.saleMethod === 'Cripto (USDT)' ? amount / usdtRate : amount;
           transaction.update(accountRef, {
-            balance: accountDoc.data().balance - amount
+            balance: accountDoc.data().balance - adjustedAmountValue
           });
         }
       });
@@ -589,11 +641,14 @@ export function useAppData() {
     addLiability,
     addLiabilityPayment,
     deleteLiability,
+    updateLiability,
     addExpense,
     deleteExpense,
     updateAccountBalance,
     updateSettings,
     generateInvoiceNumber,
     initializeDatabase,
+    updateDebtor,
+    usdtRate,
   };
 }

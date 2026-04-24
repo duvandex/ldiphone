@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Package, ShoppingCart, TrendingUp, Wallet, CreditCard, RefreshCw, ChevronRight, Activity } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, TrendingDown, Wallet, CreditCard, RefreshCw, ChevronRight, Activity } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { useAppData } from '../hooks/useAppData';
@@ -8,7 +8,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { motion } from 'motion/react';
 
 export default function Dashboard({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, user, initializeDatabase } = appData;
+  const { data, user, initializeDatabase, usdtRate } = appData;
+
+  const getAccountBalanceCOP = (acc: any) => {
+    if (acc.method === 'Cripto (USDT)') {
+      return acc.balance * usdtRate;
+    }
+    return acc.balance;
+  };
   const isDuvan = user?.email === 'duvanmarinj@gmail.com';
   const isDbEmpty = data.products.length === 0;
   const stock = (data.products || []).filter(p => p.status === 'stock');
@@ -75,19 +82,24 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
       capital,
       sales,
       profit,
-      balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + a.balance, 0),
+      balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + getAccountBalanceCOP(a), 0),
       stockCount
     };
   });
 
-  const totalCapital = data.accounts.reduce((acc, a) => acc + a.balance, 0);
+  const totalCapital = data.accounts.reduce((acc, a) => acc + getAccountBalanceCOP(a), 0);
+
+  const totalLiabilities = data.liabilities.reduce((acc, l) => {
+    const paid = l.payments.reduce((a, b) => a + b, 0);
+    return acc + (l.totalAmount - paid);
+  }, 0);
 
   const stats = [
     { label: 'Unidades Stock', value: totalStockUnits, icon: Package, color: 'bg-blue-50 text-blue-600' },
     { label: 'Ganancia Total', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' },
-    { label: 'Capital en Stock', value: fmt(stockValue), icon: Wallet, color: 'bg-slate-50 text-slate-600' },
+    { label: 'Cuentas x Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-50 text-amber-600' },
+    { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-50 text-rose-600' },
     { label: 'Capital Disponible', value: fmt(totalCapital), icon: Activity, color: 'bg-indigo-50 text-indigo-600' },
-    { label: 'Por Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-50 text-amber-600' },
   ];
 
   const container = {

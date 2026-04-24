@@ -1,5 +1,5 @@
 export type Investor = 'Duvan' | 'Lina' | 'Santiago' | 'Johana' | 'Pool' | 'Santa Maria' | 'Thomas';
-export type PaymentMethod = 'Efectivo' | 'Bancolombia' | 'Nequi' | 'Banco de Bogota' | 'none';
+export type PaymentMethod = 'Efectivo' | 'Bancolombia' | 'Nequi' | 'Banco de Bogota' | 'Cripto (USDT)' | 'none';
 
 export interface CoInvestor {
   investor: Investor;

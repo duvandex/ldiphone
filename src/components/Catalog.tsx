@@ -69,12 +69,12 @@ export default function Catalog() {
     .sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
 
   const categories = [
-    { id: 'all', name: 'Todo', icon: ShoppingBag },
-    { id: 'Celulares', name: 'Celulares', icon: Smartphone },
-    { id: 'Tablet', name: 'Tablet', icon: Tablet },
-    { id: 'Watch', name: 'Watch', icon: Watch },
-    { id: 'Auriculares', name: 'Auriculares', icon: Headphones },
-    { id: 'Accesorio', name: 'Accesorio', icon: Apple },
+    { id: 'all', name: 'TODO', icon: ShoppingBag },
+    { id: 'CELULARES', name: 'CELULARES', icon: Smartphone },
+    { id: 'TABLETS', name: 'TABLETS', icon: Tablet },
+    { id: 'RELOJ INTELIGENTES', name: 'RELOJ INTELIGENTES', icon: Watch },
+    { id: 'AURICULARES', name: 'AURICULARES', icon: Headphones },
+    { id: 'ACCESORIOS', name: 'ACCESORIOS', icon: Apple },
   ];
 
   const container = {

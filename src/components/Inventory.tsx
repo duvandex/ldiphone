@@ -143,7 +143,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     warrantyMonths: 3,
     warrantyExpiration: '',
     description: '',
-    category: 'Celulares',
+    category: 'CELULARES',
     isExternal: false,
     coInvestors: []
   });
@@ -194,7 +194,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       name: '', imei: '', provider: '', investor: 'Duvan', 
       purchaseDate: new Date().toISOString().split('T')[0],
       purchasePrice: 0, salePrice: 0, quantity: 1, status: 'stock',
-      category: 'Celulares',
+      category: 'CELULARES',
       images: [], purchaseMethod: 'Efectivo', warrantyMonths: 3,
       warrantyExpiration: '', description: '', isExternal: false, coInvestors: []
     });
@@ -393,11 +393,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   <Select value={newProduct.category} onValueChange={v => setNewProduct({...newProduct, category: v as Category})}>
                     <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent className="rounded-2xl border-slate-100">
-                      <SelectItem value="Celulares">Celulares</SelectItem>
-                      <SelectItem value="Tablet">Tablet</SelectItem>
-                      <SelectItem value="Watch">Watch</SelectItem>
-                      <SelectItem value="Auriculares">Auriculares</SelectItem>
-                      <SelectItem value="Accesorio">Accesorio</SelectItem>
+                      <SelectItem value="CELULARES">CELULARES</SelectItem>
+                      <SelectItem value="TABLETS">TABLETS</SelectItem>
+                      <SelectItem value="RELOJ INTELIGENTES">RELOJ INTELIGENTES</SelectItem>
+                      <SelectItem value="AURICULARES">AURICULARES</SelectItem>
+                      <SelectItem value="ACCESORIOS">ACCESORIOS</SelectItem>
                       <SelectItem value="Other">Otro</SelectItem>
                     </SelectContent>
                   </Select>
@@ -834,14 +834,14 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Categoría</Label>
-                <Select value={editProductState?.category || 'Celulares'} onValueChange={v => setEditProductState(prev => prev ? ({...prev, category: v as Category}) : null)}>
+                <Select value={editProductState?.category || 'CELULARES'} onValueChange={v => setEditProductState(prev => prev ? ({...prev, category: v as Category}) : null)}>
                   <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent className="rounded-2xl border-slate-100">
-                    <SelectItem value="Celulares">Celulares</SelectItem>
-                    <SelectItem value="Tablet">Tablet</SelectItem>
-                    <SelectItem value="Watch">Watch</SelectItem>
-                    <SelectItem value="Auriculares">Auriculares</SelectItem>
-                    <SelectItem value="Accesorio">Accesorio</SelectItem>
+                    <SelectItem value="CELULARES">CELULARES</SelectItem>
+                    <SelectItem value="TABLETS">TABLETS</SelectItem>
+                    <SelectItem value="RELOJ INTELIGENTES">RELOJ INTELIGENTES</SelectItem>
+                    <SelectItem value="AURICULARES">AURICULARES</SelectItem>
+                    <SelectItem value="ACCESORIOS">ACCESORIOS</SelectItem>
                     <SelectItem value="Other">Otro</SelectItem>
                   </SelectContent>
                 </Select>

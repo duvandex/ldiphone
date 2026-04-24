@@ -6,7 +6,7 @@ export interface CoInvestor {
   percentage: number;
 }
 
-export type Category = 'Celulares' | 'Tablet' | 'Watch' | 'Auriculares' | 'Accesorio' | 'Other';
+export type Category = 'CELULARES' | 'TABLETS' | 'RELOJ INTELIGENTES' | 'AURICULARES' | 'ACCESORIOS' | 'Other';
 
 export interface Product {
   id: string;

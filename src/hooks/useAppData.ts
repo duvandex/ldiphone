@@ -34,18 +34,44 @@ export function useAppData() {
 
   useEffect(() => {
     const fetchRate = async () => {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cop');
-        const data = await response.json();
-        if (data.tether && data.tether.cop) {
-          setUsdtRate(data.tether.cop);
+      // Intentamos con varios proveedores para mayor fiabilidad
+      const providers = [
+        async () => {
+          const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cop');
+          const json = await res.json();
+          return json.tether?.cop;
+        },
+        async () => {
+          // Binance API es muy estable
+          const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTCOP');
+          const json = await res.json();
+          return parseFloat(json.price);
+        },
+        async () => {
+          // CryptoCompare como respaldo final
+          const res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=USDT&tsyms=COP');
+          const json = await res.json();
+          return json.COP;
         }
-      } catch (err) {
-        console.error("Error fetching USDT rate", err);
+      ];
+
+      for (const getRate of providers) {
+        try {
+          const rate = await getRate();
+          if (rate && !isNaN(rate) && rate > 0) {
+            setUsdtRate(rate);
+            return; // Éxito, salimos del bucle
+          }
+        } catch (err) {
+          console.warn("Un proveedor de tasa USDT falló, intentando el siguiente...");
+        }
       }
+      
+      console.error("Todos los proveedores de tasa USDT fallaron.");
     };
+
     fetchRate();
-    const interval = setInterval(fetchRate, 30 * 60 * 1000);
+    const interval = setInterval(fetchRate, 15 * 60 * 1000); // Cada 15 min
     return () => clearInterval(interval);
   }, []);
 

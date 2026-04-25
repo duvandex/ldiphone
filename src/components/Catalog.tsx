@@ -176,7 +176,7 @@ export default function Catalog() {
             <Badge variant="outline" className="rounded-full border-slate-200 bg-white px-4 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 shadow-sm shadow-slate-100">
                Catálogo Premium 2026
             </Badge>
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-none">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[1.1]">
               Tu próximo dispositivo.<br/>
               <span className="text-slate-300">Sin complicaciones.</span>
             </h2>
@@ -373,16 +373,17 @@ export default function Catalog() {
 
       {/* Product View Modal */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-         <DialogContent className="sm:max-w-4xl p-0 overflow-hidden border-none rounded-[2rem] gap-0">
+          <DialogContent className="sm:max-w-5xl p-0 overflow-hidden border-none rounded-[2rem] gap-0 h-[92vh] sm:h-auto overflow-y-auto sm:overflow-hidden">
             {selectedProduct && (
-                <div className="flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-nonw overflow-y-auto md:overflow-hidden">
+                <div className="flex flex-col md:flex-row min-h-full">
                     {/* Image Gallery */}
-                    <div className="w-full md:w-3/5 bg-slate-900 relative group aspect-square md:aspect-auto">
+                    <div className="w-full md:w-[60%] bg-slate-950 relative group aspect-square md:aspect-auto flex items-center justify-center">
                         <AnimatePresence mode="wait">
                             <motion.img 
                                 key={activeImageIndex}
                                 drag="x"
                                 dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.2}
                                 onDragEnd={(_, info) => {
                                     if (!selectedProduct.images) return;
                                     const threshold = 50;
@@ -396,8 +397,9 @@ export default function Catalog() {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
+                                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                                 src={selectedProduct.images?.[activeImageIndex] || ''} 
-                                className="w-full h-full object-contain cursor-grab touch-pan-y"
+                                className="w-full h-full object-contain cursor-grab touch-pan-y pointer-events-auto"
                                 alt={selectedProduct.name}
                                 draggable="false"
                             />
@@ -407,25 +409,28 @@ export default function Catalog() {
                             <>
                                 <button 
                                     onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1)}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-xl rounded-full text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-slate-900/60 backdrop-blur-xl rounded-full text-white hover:bg-slate-900/80 transition-all z-10 shadow-lg border border-white/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-90"
+                                    aria-label="Previous image"
                                 >
                                     <ChevronLeft className="w-6 h-6" />
                                 </button>
                                 <button 
                                     onClick={() => setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-white/10 backdrop-blur-xl rounded-full text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-slate-900/60 backdrop-blur-xl rounded-full text-white hover:bg-slate-900/80 transition-all z-10 shadow-lg border border-white/10 opacity-100 md:opacity-0 md:group-hover:opacity-100 active:scale-90"
+                                    aria-label="Next image"
                                 >
                                     <ChevronRight className="w-6 h-6" />
                                 </button>
-                                <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2">
+                                <div className="absolute bottom-6 inset-x-0 flex justify-center gap-3">
                                     {selectedProduct.images.map((_, i) => (
                                         <button 
                                             key={i} 
                                             onClick={() => setActiveImageIndex(i)}
                                             className={cn(
-                                                "w-2 h-2 rounded-full transition-all",
-                                                activeImageIndex === i ? "bg-white w-6" : "bg-white/30"
+                                                "h-2 rounded-full transition-all duration-300 active:scale-125",
+                                                activeImageIndex === i ? "bg-white w-8 shadow-sm" : "bg-white/30 w-2 hover:bg-white/50"
                                             )}
+                                            aria-label={`Go to image ${i + 1}`}
                                         />
                                     ))}
                                 </div>

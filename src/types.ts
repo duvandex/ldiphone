@@ -4,6 +4,7 @@ export type PaymentMethod = 'Efectivo' | 'Bancolombia' | 'Nequi' | 'Banco de Bog
 export interface CoInvestor {
   investor: Investor;
   percentage: number;
+  method?: PaymentMethod;
 }
 
 export type Category = 'CELULARES' | 'TABLETS' | 'RELOJ INTELIGENTES' | 'AURICULARES' | 'ACCESORIOS' | 'Other';

@@ -31,49 +31,33 @@ export function useAppData() {
   });
   const [loading, setLoading] = useState(true);
   const [usdtRate, setUsdtRate] = useState<number>(4000);
+  const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
 
   useEffect(() => {
     const fetchRate = async () => {
-      // Intentamos con varios proveedores para mayor fiabilidad
-      const providers = [
-        async () => {
-          const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cop');
-          const json = await res.json();
-          return json.tether?.cop;
-        },
-        async () => {
-          // Binance API es muy estable
-          const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTCOP');
-          const json = await res.json();
-          return parseFloat(json.price);
-        },
-        async () => {
-          // CryptoCompare como respaldo final
-          const res = await fetch('https://min-api.cryptocompare.com/data/price?fsym=USDT&tsyms=COP');
-          const json = await res.json();
-          return json.COP;
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=cop');
+        if (!response.ok) throw new Error('API response not ok');
+        const data = await response.json();
+        if (data.tether && data.tether.cop) {
+          setUsdtRate(data.tether.cop);
         }
-      ];
-
-      for (const getRate of providers) {
-        try {
-          const rate = await getRate();
-          if (rate && !isNaN(rate) && rate > 0) {
-            setUsdtRate(rate);
-            return; // Éxito, salimos del bucle
-          }
-        } catch (err) {
-          console.warn("Un proveedor de tasa USDT falló, intentando el siguiente...");
-        }
+      } catch (err) {
+        console.warn("Error fetching USDT rate, using fallback", err);
+        // Fallback to a reasonable default if API fails
+        setUsdtRate(prev => prev || 4000);
       }
-      
-      console.error("Todos los proveedores de tasa USDT fallaron.");
     };
-
     fetchRate();
-    const interval = setInterval(fetchRate, 15 * 60 * 1000); // Cada 15 min
+    const interval = setInterval(fetchRate, 30 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleQuotaError = (err: any) => {
+    if (err?.code === 'resource-exhausted' || err?.message?.includes('Quota')) {
+      setIsQuotaExceeded(true);
+    }
+  };
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
@@ -90,8 +74,10 @@ export function useAppData() {
       const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setData(prev => ({ ...prev, products }));
       setLoading(false);
+      setIsQuotaExceeded(false);
     }, (err) => {
       console.error("Products fallback error:", err);
+      handleQuotaError(err);
       setLoading(false);
     });
 
@@ -104,22 +90,26 @@ export function useAppData() {
     const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
       const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));
       setData(prev => ({ ...prev, debtors }));
-    });
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
 
     const unsubLiabilities = onSnapshot(collection(db, 'liabilities'), (snapshot) => {
       const liabilities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Liability));
       setData(prev => ({ ...prev, liabilities }));
-    });
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
 
     const unsubAccounts = onSnapshot(collection(db, 'accounts'), (snapshot) => {
       const accounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialAccount));
       setData(prev => ({ ...prev, accounts }));
-    });
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
 
     const unsubExpenses = onSnapshot(collection(db, 'expenses'), (snapshot) => {
       const expenses = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
       setData(prev => ({ ...prev, expenses }));
-    });
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
 
     const unsubSettings = onSnapshot(doc(db, 'app_settings', 'global'), (snapshot) => {
       if (snapshot.exists()) {
@@ -136,7 +126,8 @@ export function useAppData() {
           }
         }));
       }
-    });
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
 
     return () => {
       unsubDebtors();
@@ -216,11 +207,12 @@ export function useAppData() {
           // If there are co-investors, handle split capital deduction
           if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
             for (const co of newProduct.coInvestors) {
-              const accountId = `${co.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
+              const methodUsed = co.method || newProduct.purchaseMethod || 'Efectivo';
+              const accountId = `${co.investor}-${methodUsed}`;
               const accountRef = doc(db, 'accounts', accountId);
               const accountDoc = await transaction.get(accountRef);
               const totalCOP = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
-              const amount = newProduct.purchaseMethod === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
+              const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
 
               if (accountDoc.exists()) {
                 transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
@@ -228,8 +220,8 @@ export function useAppData() {
                 transaction.set(accountRef, {
                   id: accountId,
                   investor: co.investor,
-                  method: newProduct.purchaseMethod || 'Efectivo',
-                  name: newProduct.purchaseMethod || 'Efectivo',
+                  method: methodUsed,
+                  name: methodUsed,
                   balance: -amount
                 });
               }
@@ -676,5 +668,6 @@ export function useAppData() {
     initializeDatabase,
     updateDebtor,
     usdtRate,
+    isQuotaExceeded,
   };
 }

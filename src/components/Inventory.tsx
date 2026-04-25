@@ -150,11 +150,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const [useCoInvestment, setUseCoInvestment] = useState(false);
   const [coInvList, setCoInvList] = useState<CoInvestor[]>([
-    { investor: 'Duvan', percentage: 100 }
+    { investor: 'Duvan', percentage: 100, method: 'Efectivo' }
   ]);
 
   const addCoInvestor = () => {
-    setCoInvList([...coInvList, { investor: 'Lina', percentage: 0 }]);
+    setCoInvList([...coInvList, { investor: 'Lina', percentage: 0, method: 'Efectivo' }]);
   };
 
   const removeCoInvestor = (idx: number) => {
@@ -482,29 +482,44 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                       <Plus className="w-3 h-3 mr-1" /> Añadir Socio
                     </Button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {coInvList.map((co, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <Select value={co.investor} onValueChange={v => updateCoInv(idx, { investor: v as Investor })}>
-                          <SelectTrigger className="flex-1 rounded-lg border-blue-100 h-9 font-bold text-[11px] bg-white"><SelectValue /></SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <div className="relative w-24">
-                          <Input 
-                            type="number" 
-                            className="rounded-lg border-blue-100 h-9 font-black text-xs pl-3 pr-6 bg-white" 
-                            value={co.percentage} 
-                            onChange={e => updateCoInv(idx, { percentage: parseFloat(e.target.value) || 0 })}
-                          />
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-400">%</span>
+                      <div key={idx} className="space-y-2 p-3 bg-white rounded-2xl border border-blue-50 shadow-sm">
+                        <div className="flex gap-2">
+                          <Select value={co.investor} onValueChange={v => updateCoInv(idx, { investor: v as Investor })}>
+                            <SelectTrigger className="flex-1 rounded-xl border-blue-100 h-10 font-bold text-[11px] bg-slate-50/50"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <div className="relative w-24">
+                            <Input 
+                              type="number" 
+                              className="rounded-xl border-blue-100 h-10 font-black text-xs pl-3 pr-6 bg-slate-50/50" 
+                              value={co.percentage} 
+                              onChange={e => updateCoInv(idx, { percentage: parseFloat(e.target.value) || 0 })}
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-400">%</span>
+                          </div>
+                          {coInvList.length > 1 && (
+                            <Button variant="ghost" size="icon" onClick={() => removeCoInvestor(idx)} className="h-10 w-10 text-rose-500 hover:bg-rose-50 rounded-xl">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
-                        {coInvList.length > 1 && (
-                          <Button variant="ghost" size="icon" onClick={() => removeCoInvestor(idx)} className="h-9 w-9 text-rose-500 hover:bg-rose-50 rounded-lg">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-2 px-1">
+                          <Label className="text-[9px] font-black uppercase text-slate-400 whitespace-nowrap">Origen del Capital:</Label>
+                          <Select value={co.method} onValueChange={v => updateCoInv(idx, { method: v as PaymentMethod })}>
+                            <SelectTrigger className="flex-1 h-8 rounded-lg border-blue-50 bg-white text-[10px] font-bold"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Efectivo">Efectivo</SelectItem>
+                              <SelectItem value="Bancolombia">Bancolombia</SelectItem>
+                              <SelectItem value="Nequi">Nequi</SelectItem>
+                              <SelectItem value="Banco de Bogota">Banco de Bogotá</SelectItem>
+                              {co.investor === 'Duvan' && <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -738,7 +753,14 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="space-y-1">
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Inversión</div>
-                      <div className="text-sm font-black text-slate-900">{fmt(p.purchasePrice)}</div>
+                      <div className="text-sm font-black text-slate-900">
+                        {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
+                          <>
+                            {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
+                            <span className="ml-1 text-[10px] text-blue-500">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
+                          </>
+                        ) : fmt(p.purchasePrice)}
+                      </div>
                     </div>
                     <div className="space-y-1">
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Stock Disp.</div>

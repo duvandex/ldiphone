@@ -216,9 +216,23 @@ function LoadingScreen() {
   );
 }
 
+function QuotaWarning() {
+  return (
+    <div className="bg-amber-50 border-y border-amber-200 p-4 text-center animate-in fade-in slide-in-from-top duration-500">
+      <div className="flex items-center justify-center gap-2 text-amber-800 text-sm font-bold uppercase tracking-wider">
+        <Lock className="w-4 h-4" />
+        <span>Límite de Acceso Diario Alcanzado</span>
+      </div>
+      <p className="text-amber-600 text-xs mt-1 max-w-lg mx-auto">
+        No te preocupes, <strong>tus datos están seguros</strong>. Sin embargo, hemos alcanzado el límite de lecturas gratuitas permitidas para hoy. La aplicación volverá a funcionar normalmente mañana cuando se reinicie la cuota.
+      </p>
+    </div>
+  );
+}
+
 export default function App() {
   const appData = useAppData();
-  const { user, loading } = appData;
+  const { user, loading, isQuotaExceeded } = appData;
 
   const handleLogout = async () => {
     await logout();
@@ -234,6 +248,7 @@ export default function App() {
     <Router>
       <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
         {isAuthenticated && <Navigation onLogout={handleLogout} />}
+        {isQuotaExceeded && <QuotaWarning />}
         <Routes>
           {/* Public Routes */}
           <Route path="/catalog" element={<Catalog />} />

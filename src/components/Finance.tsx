@@ -138,16 +138,32 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
             } as FinancialAccount;
           });
 
-          const investorProducts = data.products.filter(p => p.investor === investor);
+          const investorProducts = data.products.filter(p => 
+            p.investor === investor || 
+            (p.coInvestors && p.coInvestors.some(co => co.investor === investor))
+          );
           const investorExpenses = data.expenses.filter(e => e.investor === investor);
           
           const invCapital = accountsToRender.reduce((s, a) => s + getAccountBalanceCOP(a), 0);
+          
           const invInventory = investorProducts
-            .filter(p => p.status === 'stock')
-            .reduce((s, p) => s + (p.purchasePrice * (p.quantity || 1)), 0);
+            .filter(p => p.status === 'stock' && !p.isExternal)
+            .reduce((s, p) => {
+              const share = p.coInvestors && p.coInvestors.length > 0 
+                ? (p.coInvestors.find(co => co.investor === investor)?.percentage || 0) / 100
+                : 1;
+              return s + (p.purchasePrice * share * (p.quantity || 1));
+            }, 0);
+
           const invGain = investorProducts
             .filter(p => p.status === 'sold')
-            .reduce((s, p) => s + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
+            .reduce((s, p) => {
+              const share = p.coInvestors && p.coInvestors.length > 0 
+                ? (p.coInvestors.find(co => co.investor === investor)?.percentage || 0) / 100
+                : 1;
+              const pGain = (p.salePrice || 0) - p.purchasePrice;
+              return s + (pGain * share * (p.quantity || 1));
+            }, 0);
           const invExpensesTotal = investorExpenses.reduce((s, e) => s + e.amount, 0);
 
           return (

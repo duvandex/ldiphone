@@ -12,16 +12,33 @@ import Logo from './Logo';
 
 export default function WarrantyPage() {
   const { id } = useParams();
-  const { data } = useAppData();
+  const { data, findProductPublicly, searchedProduct, loading } = useAppData();
   const [search, setSearch] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
   
-  // Try to find by ID (direct link) or by search (Invoice/IMEI)
-  const product = data.products.find(p => 
-    (id && p.id === id) || 
-    (!id && search && (p.invoiceNumber === search || p.imei === search))
-  ) && data.products.find(p => (id && p.id === id) || (!id && search && (p.invoiceNumber === search || p.imei === search)))?.status === 'sold' 
-    ? data.products.find(p => (id && p.id === id) || (!id && search && (p.invoiceNumber === search || p.imei === search)))
-    : null;
+  // Direct ID check on mount
+  React.useEffect(() => {
+    if (id) {
+       findProductPublicly(id);
+    }
+  }, [id]);
+
+  const handleSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!search) return;
+    await findProductPublicly(search);
+    setHasSearched(true);
+  };
+
+  const product = searchedProduct || data.products.find(p => (id && p.id === id) || (search && (p.invoiceNumber === search || p.imei === search)));
+
+  if (loading && !product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    );
+  }
 
   if (!id && !product) {
     return (
@@ -32,19 +49,24 @@ export default function WarrantyPage() {
             <CardTitle className="text-xl font-bold uppercase tracking-tight">Consulta de Garantía</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">IMEI o Número de Factura</Label>
-              <div className="flex gap-2">
-                <Input 
-                  id="search"
-                  placeholder="Ej: LDI-15 o 3546..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-slate-50 border-none uppercase"
-                />
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="search">IMEI o Número de Factura</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    id="search"
+                    placeholder="Ej: LDI-15 o 3546..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="bg-slate-50 border-none uppercase"
+                  />
+                  <Button type="submit" size="icon" className="shrink-0 bg-slate-900">
+                    <ShieldCheck className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-            {!product && search.length > 3 && (
+            </form>
+            {hasSearched && !product && (
               <p className="text-center text-xs font-bold text-rose-500">No se encontró ningún registro</p>
             )}
             <div className="pt-4 border-t">

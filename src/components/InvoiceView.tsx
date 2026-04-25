@@ -16,16 +16,24 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { data } = appData;
+  const { data, findProductPublicly, searchedProduct, loading } = appData;
   
   const [selectedId, setSelectedId] = useState<string>(id || searchParams.get('id') || '');
   const [imeiSearch, setImeiSearch] = useState('');
   const [copied, setCopied] = useState(false);
 
-  // Sync selectedId with URL param
+  // Sync selectedId with URL param and fetch if needed
   useEffect(() => {
-    if (id) setSelectedId(id);
-  }, [id]);
+    const tid = id || searchParams.get('id');
+    if (tid) {
+      setSelectedId(tid);
+      // If not in memory, fetch it
+      const found = data.products.find(p => p.id === tid);
+      if (!found) {
+        findProductPublicly(tid);
+      }
+    }
+  }, [id, searchParams, data.products]);
 
   // Auto-detect product by IMEI
   useEffect(() => {
@@ -33,6 +41,9 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
       const found = data.products.find(p => p.status === 'sold' && p.imei === imeiSearch);
       if (found) {
         setSelectedId(found.id);
+      } else {
+        // Search in DB
+        findProductPublicly(imeiSearch);
       }
     }
   }, [imeiSearch, data.products]);
@@ -48,7 +59,7 @@ export default function InvoiceView({ appData, isPublic = false }: { appData: Re
     }
   }
 
-  const product = publicInvoiceData || data.products.find(p => p.id === selectedId);
+  const product = publicInvoiceData || data.products.find(p => p.id === selectedId) || (searchedProduct?.id === selectedId ? searchedProduct : null) || searchedProduct;
 
   const generatePublicLink = () => {
     if (!product) return '';

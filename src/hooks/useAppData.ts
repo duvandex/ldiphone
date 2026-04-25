@@ -6,7 +6,13 @@ import {
   setDoc, 
   updateDoc, 
   deleteDoc,
-  runTransaction
+  runTransaction,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDoc,
+  getDocs
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
@@ -32,6 +38,7 @@ export function useAppData() {
   const [loading, setLoading] = useState(true);
   const [usdtRate, setUsdtRate] = useState<number>(4000);
   const [isQuotaExceeded, setIsQuotaExceeded] = useState(false);
+  const [searchedProduct, setSearchedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     const fetchRate = async () => {
@@ -70,22 +77,59 @@ export function useAppData() {
   }, []);
 
   useEffect(() => {
-    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
-      const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-      setData(prev => ({ ...prev, products }));
+    // PUBLIC LISTENER: Only Stock
+    const qStock = query(collection(db, 'products'), where('status', '==', 'stock'));
+    const unsubStock = onSnapshot(qStock, (snapshot) => {
+      const stock = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setData(prev => {
+        // Keep sold products if they are already there (from the admin listener)
+        const sold = prev.products.filter(p => p.status === 'sold');
+        return { ...prev, products: [...stock, ...sold] };
+      });
       setLoading(false);
       setIsQuotaExceeded(false);
     }, (err) => {
-      console.error("Products fallback error:", err);
+      console.error("Stock Products error:", err);
       handleQuotaError(err);
       setLoading(false);
     });
 
-    return () => unsubProducts();
+    return () => unsubStock();
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Clear sold products when logged out
+      setData(prev => ({
+        ...prev,
+        products: prev.products.filter(p => p.status === 'stock')
+      }));
+      return;
+    }
+
+    // ADMIN LISTENER: Sold Products (Maybe limited to last 200 for now to avoid huge reads)
+    // If a user is logged in, they get the full history for dashboard/sales
+    const qSold = query(
+      collection(db, 'products'), 
+      where('status', '==', 'sold'),
+      orderBy('saleDate', 'desc'),
+      limit(300) // Safety limit
+    );
+
+    const unsubSold = onSnapshot(qSold, (snapshot) => {
+      const sold = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      setData(prev => {
+        const stock = prev.products.filter(p => p.status === 'stock');
+        // Merge without duplicates (using Map for speed and safety)
+        const allMap = new Map();
+        [...stock, ...sold].forEach(p => allMap.set(p.id, p));
+        return { ...prev, products: Array.from(allMap.values()) };
+      });
+      setIsQuotaExceeded(false);
+    }, (err) => {
+      console.error("Sold Products error:", err);
+      handleQuotaError(err);
+    });
 
     const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
       const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));
@@ -130,6 +174,7 @@ export function useAppData() {
     }, handleQuotaError);
 
     return () => {
+      unsubSold();
       unsubDebtors();
       unsubLiabilities();
       unsubAccounts();
@@ -564,6 +609,63 @@ export function useAppData() {
     }
   };
 
+  const fetchProductById = async (productId: string) => {
+    try {
+      const snap = await getDoc(doc(db, 'products', productId));
+      if (snap.exists()) {
+        const prod = { id: snap.id, ...snap.data() } as Product;
+        setSearchedProduct(prod);
+        return prod;
+      }
+      return null;
+    } catch (err) {
+      console.error("Error fetching product by ID", err);
+      return null;
+    }
+  };
+
+  const findProductPublicly = async (search: string) => {
+    try {
+      setLoading(true);
+      // 1. Try by ID
+      const direct = await getDoc(doc(db, 'products', search));
+      if (direct.exists()) {
+        const prod = { id: direct.id, ...direct.data() } as Product;
+        setSearchedProduct(prod);
+        setLoading(false);
+        return prod;
+      }
+
+      // 2. Try by Invoice
+      const qInv = query(collection(db, 'products'), where('invoiceNumber', '==', search), limit(1));
+      const snapInv = await getDocs(qInv);
+      if (!snapInv.empty) {
+        const prod = { id: snapInv.docs[0].id, ...snapInv.docs[0].data() } as Product;
+        setSearchedProduct(prod);
+        setLoading(false);
+        return prod;
+      }
+
+      // 3. Try by IMEI
+      const qImei = query(collection(db, 'products'), where('imei', '==', search), limit(1));
+      const snapImei = await getDocs(qImei);
+      if (!snapImei.empty) {
+        const prod = { id: snapImei.docs[0].id, ...snapImei.docs[0].data() } as Product;
+        setSearchedProduct(prod);
+        setLoading(false);
+        return prod;
+      }
+
+      setSearchedProduct(null);
+      setLoading(false);
+      return null;
+    } catch (err) {
+      console.error("Error searching product", err);
+      setLoading(false);
+      return null;
+    }
+  };
+
   const generateInvoiceNumber = async () => {
     const num = data.invoiceCounter || 1;
     try {
@@ -673,5 +775,7 @@ export function useAppData() {
     updateDebtor,
     usdtRate,
     isQuotaExceeded,
+    findProductPublicly,
+    searchedProduct,
   };
 }

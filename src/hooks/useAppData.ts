@@ -202,53 +202,59 @@ export function useAppData() {
       };
 
       await runTransaction(db, async (transaction) => {
-        // Only deduct capital if it's NOT an external product
+        // Collect all potential account references to read FIRST
+        const accountOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
+        
         if (!newProduct.isExternal) {
-          // If there are co-investors, handle split capital deduction
           if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
             for (const co of newProduct.coInvestors) {
               const methodUsed = co.method || newProduct.purchaseMethod || 'Efectivo';
               const accountId = `${co.investor}-${methodUsed}`;
-              const accountRef = doc(db, 'accounts', accountId);
-              const accountDoc = await transaction.get(accountRef);
               const totalCOP = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
               const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
-
-              if (accountDoc.exists()) {
-                transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
-              } else {
-                transaction.set(accountRef, {
-                  id: accountId,
-                  investor: co.investor,
-                  method: methodUsed,
-                  name: methodUsed,
-                  balance: -amount
-                });
-              }
-            }
-          } else {
-            // Standard single investor
-            const accountId = `${newProduct.investor}-${newProduct.purchaseMethod || 'Efectivo'}`;
-            const accountRef = doc(db, 'accounts', accountId);
-            const accountDoc = await transaction.get(accountRef);
-            const totalCOP = newProduct.purchasePrice * newProduct.quantity;
-            const amount = newProduct.purchaseMethod === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
-
-            if (accountDoc.exists()) {
-              transaction.update(accountRef, { balance: accountDoc.data().balance - amount });
-            } else {
-              transaction.set(accountRef, {
-                id: accountId,
-                investor: newProduct.investor,
-                method: newProduct.purchaseMethod || 'Efectivo',
-                name: newProduct.purchaseMethod || 'Efectivo',
-                balance: -amount
+              accountOps.push({ 
+                ref: doc(db, 'accounts', accountId), 
+                amount, 
+                id: accountId, 
+                investor: co.investor, 
+                method: methodUsed 
               });
             }
+          } else {
+            const methodUsed = newProduct.purchaseMethod || 'Efectivo';
+            const accountId = `${newProduct.investor}-${methodUsed}`;
+            const totalCOP = newProduct.purchasePrice * newProduct.quantity;
+            const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
+            accountOps.push({ 
+              ref: doc(db, 'accounts', accountId), 
+              amount, 
+              id: accountId, 
+              investor: newProduct.investor, 
+              method: methodUsed 
+            });
           }
         }
 
-        // --- ESCRITURA ---
+        // 1. Perform all READS
+        const accountSnapshots = await Promise.all(accountOps.map(op => transaction.get(op.ref)));
+
+        // 2. Perform all WRITES
+        accountOps.forEach((op, idx) => {
+          const accountDoc = accountSnapshots[idx];
+          if (accountDoc.exists()) {
+            const currentBalance = (accountDoc.data() as any).balance || 0;
+            transaction.update(op.ref, { balance: currentBalance - op.amount });
+          } else {
+            transaction.set(op.ref, {
+              id: op.id,
+              investor: op.investor,
+              method: op.method,
+              name: op.method,
+              balance: -op.amount
+            });
+          }
+        });
+
         transaction.set(docRef, newProduct);
       });
     } catch (err) {
@@ -260,24 +266,63 @@ export function useAppData() {
     try {
       await runTransaction(db, async (transaction) => {
         const productRef = doc(db, 'products', id);
-        const productDoc = await transaction.get(productRef);
+        const productDoc = await transaction.get(productRef); // READ
         if (!productDoc.exists()) return;
-
         const product = productDoc.data() as Product;
-        const sellQty = updates.sellQuantity || 1;
 
-        let settingsDoc = null;
-        if (updates.status === 'sold' && !updates.invoiceNumber) {
-          const settingsRef = doc(db, 'app_settings', 'global');
-          settingsDoc = await transaction.get(settingsRef);
+        const settingsRef = doc(db, 'app_settings', 'global');
+        const settingsDoc = await transaction.get(settingsRef); // READ
+
+        const sellQty = updates.sellQuantity || 1;
+        const totalRevenue = (updates.salePrice || 0) * sellQty;
+        const saleMethod = updates.saleMethod || 'Efectivo';
+        const adjustedRevenue = saleMethod === 'Cripto (USDT)' ? totalRevenue / usdtRate : totalRevenue;
+
+        const incomeOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
+
+        if (updates.status === 'sold') {
+          if (product.isExternal) {
+            const accountId = `Duvan-${saleMethod}`;
+            incomeOps.push({
+              ref: doc(db, 'accounts', accountId),
+              amount: adjustedRevenue,
+              id: accountId,
+              investor: 'Duvan',
+              method: saleMethod
+            });
+          } else if (product.coInvestors && product.coInvestors.length > 0) {
+            for (const co of product.coInvestors) {
+              const accountId = `${co.investor}-${saleMethod}`;
+              const share = adjustedRevenue * (co.percentage / 100);
+              incomeOps.push({
+                ref: doc(db, 'accounts', accountId),
+                amount: share,
+                id: accountId,
+                investor: co.investor,
+                method: saleMethod
+              });
+            }
+          } else {
+            const accountId = `${product.investor}-${saleMethod}`;
+            incomeOps.push({
+              ref: doc(db, 'accounts', accountId),
+              amount: adjustedRevenue,
+              id: accountId,
+              investor: product.investor,
+              method: saleMethod
+            });
+          }
         }
 
-        // Manejar Número de Factura
+        // Perform all READS for accounts
+        const incomeSnapshots = await Promise.all(incomeOps.map(op => transaction.get(op.ref)));
+
+        // --- WRITES ---
         let finalInvoiceNumber = updates.invoiceNumber;
         if (updates.status === 'sold' && !finalInvoiceNumber) {
-          const currentCounter = settingsDoc && settingsDoc.exists() ? settingsDoc.data().invoiceCounter || 1 : 1;
+          const currentCounter = settingsDoc.exists() ? (settingsDoc.data() as any).invoiceCounter || 1 : 1;
           finalInvoiceNumber = `FAC-${String(currentCounter).padStart(3, '0')}`;
-          transaction.set(doc(db, 'app_settings', 'global'), { invoiceCounter: currentCounter + 1 }, { merge: true });
+          transaction.set(settingsRef, { invoiceCounter: currentCounter + 1 }, { merge: true });
         }
 
         if (updates.status === 'sold') {
@@ -310,63 +355,22 @@ export function useAppData() {
             transaction.update(productRef, cleanUpdates);
           }
 
-          // --- LOGICA DE REPARTO DE DINERO ---
-          const totalRevenue = (updates.salePrice || 0) * sellQty;
-          const adjustedRevenue = updates.saleMethod === 'Cripto (USDT)' ? totalRevenue / usdtRate : totalRevenue;
-
-          if (product.isExternal) {
-            // Todo el dinero a Duvan (independientemente de quién aparezca como responsable en el form)
-            const accountId = `Duvan-${updates.saleMethod || 'Efectivo'}`;
-            const accountRef = doc(db, 'accounts', accountId);
-            const accountDoc = await transaction.get(accountRef);
+          // Apply account updates
+          incomeOps.forEach((op, idx) => {
+            const accountDoc = incomeSnapshots[idx];
             if (accountDoc.exists()) {
-              transaction.update(accountRef, { balance: accountDoc.data().balance + adjustedRevenue });
+              const currentBalance = (accountDoc.data() as any).balance || 0;
+              transaction.update(op.ref, { balance: currentBalance + op.amount });
             } else {
-              transaction.set(accountRef, {
-                id: accountId,
-                investor: 'Duvan',
-                method: updates.saleMethod || 'Efectivo',
-                name: updates.saleMethod || 'Efectivo',
-                balance: adjustedRevenue
+              transaction.set(op.ref, {
+                id: op.id,
+                investor: op.investor,
+                method: op.method,
+                name: op.method,
+                balance: op.amount
               });
             }
-          } else if (product.coInvestors && product.coInvestors.length > 0) {
-            // Reparto proporcional entre socios
-            for (const co of product.coInvestors) {
-              const accountId = `${co.investor}-${updates.saleMethod || 'Efectivo'}`;
-              const accountRef = doc(db, 'accounts', accountId);
-              const accountDoc = await transaction.get(accountRef);
-              const share = adjustedRevenue * (co.percentage / 100);
-
-              if (accountDoc.exists()) {
-                transaction.update(accountRef, { balance: accountDoc.data().balance + share });
-              } else {
-                transaction.set(accountRef, {
-                  id: accountId,
-                  investor: co.investor,
-                  method: updates.saleMethod || 'Efectivo',
-                  name: updates.saleMethod || 'Efectivo',
-                  balance: share
-                });
-              }
-            }
-          } else {
-            // Único inversor
-            const accountId = `${product.investor}-${updates.saleMethod || 'Efectivo'}`;
-            const accountRef = doc(db, 'accounts', accountId);
-            const accountDoc = await transaction.get(accountRef);
-            if (accountDoc.exists()) {
-              transaction.update(accountRef, { balance: accountDoc.data().balance + adjustedRevenue });
-            } else {
-              transaction.set(accountRef, {
-                id: accountId,
-                investor: product.investor,
-                method: updates.saleMethod || 'Efectivo',
-                name: updates.saleMethod || 'Efectivo',
-                balance: adjustedRevenue
-              });
-            }
-          }
+          });
         } else {
           const { sellQuantity, ...cleanUpdates } = updates;
           transaction.update(productRef, cleanUpdates);

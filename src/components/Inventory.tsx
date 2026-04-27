@@ -9,7 +9,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
@@ -20,11 +20,13 @@ const ImageUploader = ({
   images, 
   onUpload, 
   onRemove,
+  onReorder,
   uploading
 }: { 
   images: string[], 
   onUpload: (urls: string[]) => void, 
   onRemove: (index: number) => void,
+  onReorder?: (index: number, direction: 'left' | 'right') => void,
   uploading: boolean
 }) => {
   const localFileInputRef = useRef<HTMLInputElement>(null);
@@ -55,18 +57,67 @@ const ImageUploader = ({
 
   return (
     <div className="space-y-3">
-      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fotos del Producto (Máx 4)</Label>
+      <div className="flex justify-between items-end">
+        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fotos del Producto (Máx 4)</Label>
+        <span className="text-[9px] text-slate-400 font-bold uppercase italic">La primera foto es la principal</span>
+      </div>
       <div className="grid grid-cols-4 gap-2">
         {images.map((img, i) => (
-          <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+          <div key={i} className={cn(
+            "relative aspect-square rounded-lg overflow-hidden bg-slate-100 border transition-all",
+            i === 0 ? "border-blue-500 ring-2 ring-blue-500/20" : "border-slate-200"
+          )}>
             <img src={img} className="w-full h-full object-cover" alt="preview" />
-            <button 
-              type="button"
-              onClick={() => onRemove(i)}
-              className="absolute top-1 right-1 p-1 bg-white/80 rounded-full shadow-sm hover:bg-white text-rose-500"
-            >
-              <X className="w-3 h-3" />
-            </button>
+            
+            {/* Main Label */}
+            {i === 0 && (
+              <div className="absolute bottom-0 left-0 right-0 bg-blue-500 text-white text-[8px] font-black uppercase text-center py-0.5">
+                Principal
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="absolute top-1 right-1 flex flex-col gap-1">
+              <button 
+                type="button"
+                onClick={() => onRemove(i)}
+                className="p-1 bg-white/90 rounded-full shadow-sm hover:bg-white text-rose-500 transition-colors"
+                title="Eliminar"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            </div>
+
+            {/* Reorder Buttons */}
+            {onReorder && images.length > 1 && (
+              <div className="absolute inset-x-0 bottom-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* We'll show these on hover in a better way if needed, for now just show them if it's possible to move */}
+              </div>
+            )}
+
+            {/* Overlay reorder controls */}
+            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
+               {onReorder && i > 0 && (
+                 <button
+                   type="button"
+                   onClick={() => onReorder(i, 'left')}
+                   className="p-1.5 bg-white rounded-full text-slate-700 shadow-lg hover:scale-110 transition-transform"
+                   title="Mover a la izquierda"
+                 >
+                   <ArrowLeft className="w-3 h-3" />
+                 </button>
+               )}
+               {onReorder && i < images.length - 1 && (
+                 <button
+                   type="button"
+                   onClick={() => onReorder(i, 'right')}
+                   className="p-1.5 bg-white rounded-full text-slate-700 shadow-lg hover:scale-110 transition-transform"
+                   title="Mover a la derecha"
+                 >
+                   <ArrowRight className="w-3 h-3" />
+                 </button>
+               )}
+            </div>
           </div>
         ))}
         {images.length < 4 && (
@@ -151,6 +202,38 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     const newList = [...coInvList];
     newList[idx] = { ...newList[idx], ...updates };
     setCoInvList(newList);
+  };
+
+  const handleDuplicate = (p: Product) => {
+    setNewProduct({
+      name: p.name,
+      imei: '',
+      provider: p.provider || '',
+      investor: p.investor,
+      purchaseDate: new Date().toISOString().split('T')[0],
+      purchasePrice: p.purchasePrice,
+      salePrice: p.salePrice || 0,
+      quantity: 1,
+      status: 'stock',
+      images: p.images || [],
+      purchaseMethod: p.purchaseMethod || 'Efectivo',
+      warrantyMonths: p.warrantyMonths || 3,
+      warrantyExpiration: '',
+      description: p.description || '',
+      category: p.category || 'CELULARES',
+      isExternal: p.isExternal || false,
+      coInvestors: p.coInvestors || []
+    });
+    
+    if (p.coInvestors && p.coInvestors.length > 0) {
+      setUseCoInvestment(true);
+      setCoInvList(p.coInvestors);
+    } else {
+      setUseCoInvestment(false);
+      setCoInvList([{ investor: 'Duvan', percentage: 100, method: 'Efectivo' }]);
+    }
+
+    setIsAddOpen(true);
   };
 
   const handleAddProduct = () => {
@@ -300,6 +383,25 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     }
   };
 
+  const reorderImages = (index: number, direction: 'left' | 'right', mode: 'add' | 'edit') => {
+    const list = mode === 'add' ? [...(newProduct.images || [])] : [...(editProductState?.images || [])];
+    if (direction === 'left' && index > 0) {
+      const temp = list[index - 1];
+      list[index - 1] = list[index];
+      list[index] = temp;
+    } else if (direction === 'right' && index < list.length - 1) {
+      const temp = list[index + 1];
+      list[index + 1] = list[index];
+      list[index] = temp;
+    }
+    
+    if (mode === 'add') {
+      setNewProduct(prev => ({ ...prev, images: list }));
+    } else {
+      setEditProductState(prev => prev ? ({ ...prev, images: list }) : null);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header & Controls */}
@@ -361,6 +463,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 images={newProduct.images || []} 
                 onUpload={(urls) => handleImageUploadCloudinary(urls, 'add')} 
                 onRemove={(idx) => removeImage(idx, 'add')} 
+                onReorder={(idx, dir) => reorderImages(idx, dir, 'add')}
                 uploading={uploading}
               />
               
@@ -656,6 +759,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         <Button 
                           variant="ghost" 
                           size="icon" 
+                          className="h-10 w-10 text-slate-400 hover:text-blue-500 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
+                          title="Duplicar publicación"
+                          onClick={() => handleDuplicate(p)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
                           onClick={() => {
                             setEditProductState(p);
@@ -757,6 +869,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
                   <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
                     <Button 
+                      variant="outline"
+                      className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-100 rounded-2xl transition-colors"
+                      onClick={() => handleDuplicate(p)}
+                    >
+                      <Copy className="w-5 h-5" />
+                    </Button>
+                    <Button 
                       className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
                       onClick={() => {
                         setEditProductState(p);
@@ -813,6 +932,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               images={editProductState?.images || []} 
               onUpload={(urls) => handleImageUploadCloudinary(urls, 'edit')} 
               onRemove={(idx) => removeImage(idx, 'edit')} 
+              onReorder={(idx, dir) => reorderImages(idx, dir, 'edit')}
               uploading={uploading}
             />
             

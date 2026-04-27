@@ -25,7 +25,7 @@ export interface Product {
   invoiceNumber?: string;
   quantity: number;
   initialQuantity?: number;
-  images?: string[]; // Max 4 base64 images
+  images?: string[]; // Max 4 image URLs (Cloudinary)
   purchaseMethod?: PaymentMethod;
   saleMethod?: PaymentMethod;
   warrantyMonths?: number;
@@ -76,10 +76,10 @@ export interface Liability {
 
 export interface AppSettings {
   companyName: string;
-  companyLogo?: string; // base64
+  companyLogo?: string; // Cloudinary URL
   warrantyTerms: string;
   defaultWarrantyMonths: number;
-  paymentMethods?: string[]; // base64 images
+  paymentMethods?: string[]; // Cloudinary URLs
 }
 
 export interface AppData {

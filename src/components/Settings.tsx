@@ -5,11 +5,13 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useAppData } from '../hooks/useAppData';
+import { useCloudinary } from '../hooks/useCloudinary';
 import { Building2, ShieldCheck, Camera, Save, RefreshCcw, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export default function Settings() {
   const { data, updateSettings } = useAppData();
+  const { uploadImage, uploading: cloudUploading } = useCloudinary();
   const [formData, setFormData] = useState({
     companyName: '',
     warrantyTerms: '',
@@ -31,41 +33,19 @@ export default function Settings() {
 
   const [loading, setLoading] = useState(false);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const max_size = 800; // Optimal for logo
-
-          if (width > height) {
-            if (width > max_size) {
-              height *= max_size / width;
-              width = max_size;
-            }
-          } else {
-            if (height > max_size) {
-              width *= max_size / height;
-              height = max_size;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-          setFormData(prev => ({ ...prev, companyLogo: compressedBase64 }));
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+      setLoading(true);
+      try {
+        const url = await uploadImage(file, 'ldiphone/settings');
+        setFormData(prev => ({ ...prev, companyLogo: url }));
+      } catch (err) {
+        console.error(err);
+        alert("Error al subir imagen");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

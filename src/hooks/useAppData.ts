@@ -77,59 +77,41 @@ export function useAppData() {
   }, []);
 
   useEffect(() => {
-    // PUBLIC LISTENER: Only Stock
-    const qStock = query(collection(db, 'products'), where('status', '==', 'stock'));
-    const unsubStock = onSnapshot(qStock, (snapshot) => {
-      const stock = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-      setData(prev => {
-        // Keep sold products if they are already there (from the admin listener)
-        const sold = prev.products.filter(p => p.status === 'sold');
-        return { ...prev, products: [...stock, ...sold] };
+    let unsubProducts: () => void;
+
+    if (user) {
+      // ADMIN: See EVERYTHING
+      const qAll = query(collection(db, 'products'), limit(1000));
+      unsubProducts = onSnapshot(qAll, (snapshot) => {
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        setData(prev => ({ ...prev, products }));
+        setLoading(false);
+        setIsQuotaExceeded(false);
+      }, (err) => {
+        console.error("All Products error:", err);
+        handleQuotaError(err);
+        setLoading(false);
       });
-      setLoading(false);
-      setIsQuotaExceeded(false);
-    }, (err) => {
-      console.error("Stock Products error:", err);
-      handleQuotaError(err);
-      setLoading(false);
-    });
-
-    return () => unsubStock();
-  }, []);
-
-  useEffect(() => {
-    if (!user) {
-      // Clear sold products when logged out
-      setData(prev => ({
-        ...prev,
-        products: prev.products.filter(p => p.status === 'stock')
-      }));
-      return;
+    } else {
+      // PUBLIC: Only Stock
+      const qStock = query(collection(db, 'products'), where('status', '==', 'stock'), limit(200));
+      unsubProducts = onSnapshot(qStock, (snapshot) => {
+        const stock = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        setData(prev => ({ ...prev, products: stock }));
+        setLoading(false);
+        setIsQuotaExceeded(false);
+      }, (err) => {
+        console.error("Stock Products error:", err);
+        handleQuotaError(err);
+        setLoading(false);
+      });
     }
 
-    // ADMIN LISTENER: Sold Products (Maybe limited to last 200 for now to avoid huge reads)
-    // If a user is logged in, they get the full history for dashboard/sales
-    const qSold = query(
-      collection(db, 'products'), 
-      where('status', '==', 'sold'),
-      orderBy('saleDate', 'desc'),
-      limit(300) // Safety limit
-    );
+    return () => unsubProducts && unsubProducts();
+  }, [user]);
 
-    const unsubSold = onSnapshot(qSold, (snapshot) => {
-      const sold = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-      setData(prev => {
-        const stock = prev.products.filter(p => p.status === 'stock');
-        // Merge without duplicates (using Map for speed and safety)
-        const allMap = new Map();
-        [...stock, ...sold].forEach(p => allMap.set(p.id, p));
-        return { ...prev, products: Array.from(allMap.values()) };
-      });
-      setIsQuotaExceeded(false);
-    }, (err) => {
-      console.error("Sold Products error:", err);
-      handleQuotaError(err);
-    });
+  useEffect(() => {
+    if (!user) return;
 
     const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
       const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));

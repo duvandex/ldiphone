@@ -156,7 +156,6 @@ export function useAppData() {
     }, handleQuotaError);
 
     return () => {
-      unsubSold();
       unsubDebtors();
       unsubLiabilities();
       unsubAccounts();

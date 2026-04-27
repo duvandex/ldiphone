@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Receipt, Download, Pencil, Trash2 } from 'lucide-react';
+import { Receipt, Download, Pencil, Trash2, Copy } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -139,6 +139,15 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                     </TableCell>
                     <TableCell className="py-4 text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                          title="Duplicar para inventario"
+                          onClick={() => navigate(`/inventory?duplicateProductId=${p.id}`)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                         <Button 
                           variant="ghost" 
                           size="icon" 

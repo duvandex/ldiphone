@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -15,6 +15,7 @@ import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
 import { fmt, cn } from '../lib/utils';
 import IMEIScanner from './IMEIScanner';
+import { useSearchParams } from 'react-router-dom';
 
 const ImageUploader = ({ 
   images, 
@@ -151,6 +152,7 @@ const ImageUploader = ({
 export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data, addProduct, deleteProduct, updateProduct, generateInvoiceNumber } = appData;
   const { uploading } = useCloudinary();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [investorFilter, setInvestorFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -189,6 +191,18 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [coInvList, setCoInvList] = useState<CoInvestor[]>([
     { investor: 'Duvan', percentage: 100, method: 'Efectivo' }
   ]);
+
+  useEffect(() => {
+    const dupId = searchParams.get('duplicateProductId');
+    if (dupId && data.products.length > 0) {
+      const prodToDup = data.products.find(p => p.id === dupId);
+      if (prodToDup) {
+        handleDuplicate(prodToDup);
+        // Clean URL
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, data.products]);
 
   const addCoInvestor = () => {
     setCoInvList([...coInvList, { investor: 'Lina', percentage: 0, method: 'Efectivo' }]);

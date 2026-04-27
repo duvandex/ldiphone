@@ -5,6 +5,7 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send, Tablet, Watch, Headphones, CreditCard } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
+import { useCloudinary } from '../hooks/useCloudinary';
 import { fmt, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
@@ -14,6 +15,7 @@ import { Product } from '../types';
 
 export default function Catalog() {
   const { data, user, updateSettings } = useAppData();
+  const { uploadImage } = useCloudinary();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -30,23 +32,21 @@ export default function Catalog() {
     input.onchange = async (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
-
       setIsUploading(index);
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const base64 = event.target?.result as string;
+      try {
+        const cloudinaryUrl = await uploadImage(file, 'ldiphone/payments');
         const currentMethods = [...(data.settings.paymentMethods || [])];
-        
-        // Ensure array has enough slots
         while (currentMethods.length <= index) {
           currentMethods.push('');
         }
-        
-        currentMethods[index] = base64;
+        currentMethods[index] = cloudinaryUrl;
         await updateSettings({ paymentMethods: currentMethods });
+      } catch (error) {
+        console.error('Error subiendo imagen:', error);
+        alert('Error al subir la imagen. Intenta de nuevo.');
+      } finally {
         setIsUploading(null);
-      };
-      reader.readAsDataURL(file);
+      }
     };
     input.click();
   };

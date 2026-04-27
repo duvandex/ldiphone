@@ -11,6 +11,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
+import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
 import { fmt, cn } from '../lib/utils';
 import IMEIScanner from './IMEIScanner';
@@ -18,57 +19,36 @@ import IMEIScanner from './IMEIScanner';
 const ImageUploader = ({ 
   images, 
   onUpload, 
-  onRemove 
+  onRemove,
+  uploading
 }: { 
   images: string[], 
-  onUpload: (base64: string) => void, 
-  onRemove: (index: number) => void 
+  onUpload: (urls: string[]) => void, 
+  onRemove: (index: number) => void,
+  uploading: boolean
 }) => {
-// ... existing ImageUploader content ...
   const localFileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadMultiple } = useCloudinary();
+  const [internalUploading, setInternalUploading] = useState(false);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
     if (images.length >= 4) return;
     const remainingSlots = 4 - images.length;
-    const filesArray = Array.from(files).slice(0, remainingSlots);
+    const filesArray = Array.from(files).slice(0, remainingSlots) as File[];
 
-    filesArray.forEach((file: File) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          const max_size = 1000; 
-
-          if (width > height) {
-            if (width > max_size) {
-              height *= max_size / width;
-              width = max_size;
-            }
-          } else {
-            if (height > max_size) {
-              width *= max_size / height;
-              height = max_size;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6); 
-          onUpload(compressedBase64);
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
+    setInternalUploading(true);
+    try {
+      const urls = await uploadMultiple(filesArray, 'ldiphone/products');
+      onUpload(urls);
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Error al subir imágenes');
+    } finally {
+      setInternalUploading(false);
+    }
     
     if (localFileInputRef.current) localFileInputRef.current.value = '';
   };
@@ -92,11 +72,16 @@ const ImageUploader = ({
         {images.length < 4 && (
           <button
             type="button"
+            disabled={internalUploading || uploading}
             onClick={() => localFileInputRef.current?.click()}
-            className="aspect-square flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-400 gap-1 transition-colors"
+            className="aspect-square flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-400 gap-1 transition-colors disabled:opacity-50"
           >
-            <ImagePlus className="w-5 h-5" />
-            <span className="text-[9px] uppercase font-black">Subir</span>
+            {internalUploading || uploading ? (
+              <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent animate-spin rounded-full" />
+            ) : (
+              <ImagePlus className="w-5 h-5" />
+            )}
+            <span className="text-[9px] uppercase font-black">{internalUploading || uploading ? 'Subiendo...' : 'Subir'}</span>
           </button>
         )}
       </div>
@@ -114,6 +99,7 @@ const ImageUploader = ({
 
 export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data, addProduct, deleteProduct, updateProduct, generateInvoiceNumber } = appData;
+  const { uploading } = useCloudinary();
   const [search, setSearch] = useState('');
   const [investorFilter, setInvestorFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -298,11 +284,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     }
   };
 
-  const handleImageUpload = (base64: string, mode: 'add' | 'edit') => {
+  const handleImageUploadCloudinary = (urls: string[], mode: 'add' | 'edit') => {
     if (mode === 'add') {
-      setNewProduct(prev => ({ ...prev, images: [...(prev.images || []), base64].slice(0, 4) }));
+      setNewProduct(prev => ({ ...prev, images: [...(prev.images || []), ...urls].slice(0, 4) }));
     } else {
-      setEditProductState(prev => prev ? ({ ...prev, images: [...(prev.images || []), base64].slice(0, 4) }) : null);
+      setEditProductState(prev => prev ? ({ ...prev, images: [...(prev.images || []), ...urls].slice(0, 4) }) : null);
     }
   };
 
@@ -373,8 +359,9 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <div className="grid gap-6">
               <ImageUploader 
                 images={newProduct.images || []} 
-                onUpload={(b64) => handleImageUpload(b64, 'add')} 
+                onUpload={(urls) => handleImageUploadCloudinary(urls, 'add')} 
                 onRemove={(idx) => removeImage(idx, 'add')} 
+                uploading={uploading}
               />
               
               <div className="grid gap-2">
@@ -824,8 +811,9 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           <div className="grid gap-6">
             <ImageUploader 
               images={editProductState?.images || []} 
-              onUpload={(b64) => handleImageUpload(b64, 'edit')} 
+              onUpload={(urls) => handleImageUploadCloudinary(urls, 'edit')} 
               onRemove={(idx) => removeImage(idx, 'edit')} 
+              uploading={uploading}
             />
             
             <div className="grid gap-2">

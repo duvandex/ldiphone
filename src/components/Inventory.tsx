@@ -59,14 +59,14 @@ const ImageUploader = ({
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-end">
-        <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fotos del Producto (Máx 4)</Label>
-        <span className="text-[9px] text-slate-400 font-bold uppercase italic">La primera foto es la principal</span>
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fotos del Producto (Máx 4)</Label>
+        <span className="text-[9px] text-muted-foreground font-bold uppercase italic">La primera foto es la principal</span>
       </div>
       <div className="grid grid-cols-4 gap-2">
         {images.map((img, i) => (
           <div key={i} className={cn(
-            "relative group aspect-square rounded-lg overflow-hidden bg-slate-100 border transition-all",
-            i === 0 ? "border-blue-500 ring-2 ring-blue-500/20" : "border-slate-200"
+            "relative group aspect-square rounded-lg overflow-hidden bg-muted border transition-all",
+            i === 0 ? "border-primary ring-2 ring-primary/20" : "border-border"
           )}>
             <img src={img} className="w-full h-full object-cover" alt="preview" />
             
@@ -452,20 +452,20 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       <div className="flex flex-col gap-6">
         <div className="flex flex-col lg:flex-row gap-4 w-full">
           <div className="relative flex-1 group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-foreground transition-colors" />
             <Input
               placeholder="Buscar por nombre, IMEI o proveedor..."
-              className="pl-11 bg-white border-none shadow-sm h-12 rounded-2xl ring-offset-background focus-visible:ring-2 focus-visible:ring-slate-900 transition-all font-medium"
+              className="pl-11 bg-card border-none shadow-sm h-12 rounded-2xl ring-offset-background focus-visible:ring-2 focus-visible:ring-primary transition-all font-medium"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="flex gap-4">
             <Select value={investorFilter} onValueChange={setInvestorFilter}>
-              <SelectTrigger className="flex-1 lg:w-[180px] bg-white border-none shadow-sm h-12 rounded-2xl font-bold text-xs uppercase tracking-widest px-4">
+              <SelectTrigger className="flex-1 lg:w-[180px] bg-card border-none shadow-sm h-12 rounded-2xl font-bold text-xs uppercase tracking-widest px-4">
                 <SelectValue placeholder="Inversor" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl border-slate-100">
+              <SelectContent className="rounded-2xl border-border">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="Duvan">Duvan</SelectItem>
                 <SelectItem value="Lina">Lina</SelectItem>
@@ -492,15 +492,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger
             render={
-              <Button className="w-full lg:w-fit lg:px-12 bg-slate-900 hover:bg-slate-800 h-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-slate-900/10 transition-all hover:scale-[1.02] active:scale-95 ml-auto">
+              <Button className="w-full lg:w-fit lg:px-12 bg-primary text-primary-foreground h-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl shadow-primary/10 transition-all hover:scale-[1.02] active:scale-95 ml-auto">
                 <Plus className="w-5 h-5 mr-3" /> Nuevo Producto
               </Button>
             }
           />
           {/* ... Dialog content remains mostly same but with rounded-3xl and spacing ... */}
-          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-3xl p-8 border-none shadow-2xl">
+          <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto rounded-3xl p-8 border-none shadow-2xl bg-card">
             <DialogHeader className="mb-4">
-              <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Dispositivo</DialogTitle>
+              <DialogTitle className="text-2xl font-black tracking-tight uppercase text-foreground">Registrar Dispositivo</DialogTitle>
             </DialogHeader>
             <div className="grid gap-6">
               <ImageUploader 
@@ -512,8 +512,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               />
               
               <div className="grid gap-2">
-                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Dispositivo *</Label>
-                <Input id="name" placeholder="Ej: iPhone 15 Pro Max" className="rounded-xl border-slate-100 h-11" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
+                <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del Dispositivo *</Label>
+                <Input id="name" placeholder="Ej: iPhone 15 Pro Max" className="rounded-xl border-border h-11" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} />
               </div>
 
               <div className="grid gap-2">
@@ -702,12 +702,12 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       </div>
 
       {/* Desktop Table View */}
-      <Card className="hidden md:block card-premium border-none shadow-sm rounded-[2rem] overflow-hidden">
+      <Card className="hidden md:block card-premium border-none shadow-sm rounded-[2rem] overflow-hidden bg-card">
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow className="hover:bg-transparent border-b border-slate-100">
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 pl-8 h-14">Detalle Dispositivo</TableHead>
+            <TableHeader className="bg-muted/30">
+              <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-8 h-14">Detalle Dispositivo</TableHead>
                 <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center">Qty</TableHead>
                 <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400">Identificación</TableHead>
                 <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Inversión (u)</TableHead>
@@ -721,49 +721,49 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
                 const totalProfit = profitPerUnit * (p.quantity || 1);
                 return (
-                  <TableRow key={p.id} className="group border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <TableRow key={p.id} className="group border-b border-border hover:bg-muted/30 transition-colors">
                     <TableCell className="py-5 pl-8">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shrink-0 border-2 border-white shadow-sm transition-transform group-hover:scale-105 duration-300">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-card shadow-sm transition-transform group-hover:scale-105 duration-300">
                           {p.images && p.images.length > 0 ? (
                             <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
                           ) : (
-                            <div className="text-slate-300 bg-white w-full h-full flex items-center justify-center">
+                            <div className="text-muted-foreground bg-card w-full h-full flex items-center justify-center">
                                <Smartphone className="w-6 h-6 opacity-30" />
                             </div>
                           )}
                         </div>
                          <div className="space-y-0.5">
-                          <div className="font-black text-slate-900 tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex flex-wrap items-center gap-2">
+                          <div className="font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex flex-wrap items-center gap-2">
                              {p.isExternal ? (
                                <span className="text-rose-500 flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
                              ) : p.coInvestors && p.coInvestors.length > 0 ? (
                                p.coInvestors.map((c, i) => (
-                                 <span key={i} className="bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-md text-[8px]">
+                                 <span key={i} className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[8px]">
                                    {c.investor} ({c.percentage}%)
                                  </span>
                                ))
                              ) : (
                                <span>{p.investor}</span>
                              )}
-                             <span className="w-1 h-1 rounded-full bg-slate-200"></span>
+                             <span className="w-1 h-1 rounded-full bg-muted"></span>
                              {p.purchaseDate}
                           </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="py-5 text-center">
-                      <div className="text-xs font-black bg-white border border-slate-100 shadow-sm px-3 py-1.5 rounded-xl w-fit mx-auto text-slate-900">
+                      <div className="text-xs font-black bg-card border border-border shadow-sm px-3 py-1.5 rounded-xl w-fit mx-auto text-foreground">
                         {p.quantity || 1}
                       </div>
                     </TableCell>
                     <TableCell className="py-5">
-                      <div className="text-[10px] font-black tracking-widest text-slate-400 uppercase mb-1">IMEI / ID</div>
-                      <div className="text-xs font-bold text-slate-600 font-mono tracking-tighter">{p.imei || p.id.slice(0,8).toUpperCase()}</div>
+                      <div className="text-[10px] font-black tracking-widest text-muted-foreground uppercase mb-1">IMEI / ID</div>
+                      <div className="text-xs font-bold text-muted-foreground/80 font-mono tracking-tighter">{p.imei || p.id.slice(0,8).toUpperCase()}</div>
                     </TableCell>
                     <TableCell className="py-5 text-right">
-                      <div className="text-sm font-black text-slate-900">
+                      <div className="text-sm font-black text-foreground">
                         {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
                           <>
                             {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
@@ -803,7 +803,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-10 w-10 text-slate-400 hover:text-blue-500 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
+                          className="h-10 w-10 text-muted-foreground hover:text-blue-500 hover:bg-card rounded-xl shadow-none hover:shadow-sm transition-all"
                           title="Duplicar publicación"
                           onClick={() => handleDuplicate(p)}
                         >
@@ -812,7 +812,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
+                          className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-card rounded-xl shadow-none hover:shadow-sm transition-all"
                           onClick={() => startEditing(p)}
                         >
                           <Pencil className="w-4 h-4" />
@@ -865,13 +865,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           return (
             <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl">
               <div className="flex flex-col">
-                <div className="relative aspect-video bg-slate-50 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
                   {p.images && p.images.length > 0 ? (
                     <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
                   ) : (
-                    <Smartphone className="w-12 h-12 text-slate-200" />
+                    <Smartphone className="w-12 h-12 text-muted-foreground/30" />
                   )}
-                  <Badge className="absolute top-4 right-4 bg-white/90 backdrop-blur-md text-slate-900 border-none font-black text-[9px] tracking-widest px-3 rounded-full">
+                  <Badge className="absolute top-4 right-4 bg-card/90 backdrop-blur-md text-foreground border-none font-black text-[9px] tracking-widest px-3 rounded-full">
                      {p.investor}
                   </Badge>
                 </div>
@@ -879,8 +879,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div className="min-w-0">
-                      <h3 className="font-black text-lg text-slate-900 tracking-tight truncate">{p.name}</h3>
-                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{p.id.slice(0, 8)}</div>
+                      <h3 className="font-black text-lg text-foreground tracking-tight truncate">{p.name}</h3>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">{p.id.slice(0, 8)}</div>
                     </div>
                     <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
                       "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full",
@@ -892,12 +892,12 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="space-y-1">
-                      <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Inversión</div>
-                      <div className="text-sm font-black text-slate-900">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Inversión</div>
+                      <div className="text-sm font-black text-foreground">
                         {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
                           <>
                             {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
-                            <span className="ml-1 text-[10px] text-blue-500">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
+                            <span className="ml-1 text-[10px] text-primary">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
                           </>
                         ) : fmt(p.purchasePrice)}
                       </div>
@@ -908,16 +908,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-4 border-t border-slate-50">
+                  <div className="flex items-center gap-2 pt-4 border-t border-border">
                     <Button 
                       variant="outline"
-                      className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-blue-50 hover:text-blue-500 hover:border-blue-100 rounded-2xl transition-colors"
+                      className="w-12 h-12 border-2 border-border text-muted-foreground hover:bg-muted hover:text-primary hover:border-primary/50 rounded-2xl transition-colors"
                       onClick={() => handleDuplicate(p)}
                     >
                       <Copy className="w-5 h-5" />
                     </Button>
                     <Button 
-                      className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                      className="flex-1 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
                       onClick={() => startEditing(p)}
                     >
                       <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
@@ -975,13 +975,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             />
             
             <div className="grid gap-2">
-              <Label htmlFor="e-name" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Producto</Label>
-              <Input id="e-name" className="rounded-xl border-slate-100 h-11" value={editProductState?.name || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, name: e.target.value}) : null)} />
+              <Label htmlFor="e-name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del Producto</Label>
+              <Input id="e-name" className="rounded-xl border-border h-11" value={editProductState?.name || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, name: e.target.value}) : null)} />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="e-desc" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descripción</Label>
-              <Textarea id="e-desc" className="rounded-xl border-slate-100 min-h-[100px]" value={editProductState?.description || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, description: e.target.value}) : null)} />
+              <Label htmlFor="e-desc" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción</Label>
+              <Textarea id="e-desc" className="rounded-xl border-border min-h-[100px]" value={editProductState?.description || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, description: e.target.value}) : null)} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -1141,7 +1141,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               </div>
             </div>
             
-            <Button onClick={handleEditProduct} className="w-full bg-slate-900 hover:bg-slate-800 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-slate-900/10 mt-2">
+            <Button onClick={handleEditProduct} className="w-full bg-primary text-primary-foreground h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/10 mt-2">
                Aplicar Cambios
             </Button>
           </div>
@@ -1160,10 +1160,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             </DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-4">
-            <p className="text-slate-600">
+            <p className="text-muted-foreground">
               ¿Estás seguro de que deseas eliminar <strong>{selectedProduct?.name}</strong>?
             </p>
-            <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-lg border border-slate-100">
+            <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg border border-border">
               Esta acción es permanente y no se podrá recuperar el registro del inventario.
             </p>
           </div>
@@ -1180,15 +1180,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Venta</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6">
-            <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-               <div className="w-12 h-12 rounded-xl overflow-hidden bg-white shrink-0 border border-slate-100">
+            <div className="flex items-center gap-4 bg-muted p-4 rounded-2xl border border-border">
+               <div className="w-12 h-12 rounded-xl overflow-hidden bg-card shrink-0 border border-border">
                   {selectedProduct?.images?.[0] ? (
                     <img src={selectedProduct.images[0]} className="w-full h-full object-cover" alt={selectedProduct.name} />
-                  ) : <Smartphone className="w-full h-full p-3 text-slate-200" />}
+                  ) : <Smartphone className="w-full h-full p-3 text-muted-foreground/30" />}
                </div>
                <div className="min-w-0">
-                  <div className="font-black text-slate-900 truncate">{selectedProduct?.name}</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stock: {selectedProduct?.quantity}</div>
+                  <div className="font-black text-foreground truncate">{selectedProduct?.name}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Stock: {selectedProduct?.quantity}</div>
                </div>
             </div>
             
@@ -1286,7 +1286,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             <Button 
               onClick={handleSellProduct} 
               disabled={sellErrors.price || sellErrors.qty}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:bg-slate-200 h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/10 mt-2"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:bg-muted h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/10 mt-2"
             >
               Confirmar Venta
             </Button>

@@ -168,38 +168,38 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
 
           return (
             <div key={investor} className="space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
-                <div className="bg-slate-900 text-white p-1.5 rounded-lg">
+              <div className="flex items-center gap-3 border-b border-border pb-2">
+                <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
                   <User className="w-4 h-4" />
                 </div>
-                <h2 className="text-xl font-black uppercase tracking-tight text-slate-900">{investor}</h2>
+                <h2 className="text-xl font-black uppercase tracking-tight text-foreground">{investor}</h2>
                 <div className="ml-auto flex gap-4">
                    <div className="text-right">
-                      <div className="text-[9px] uppercase font-bold text-slate-400">Total Patrimonio</div>
-                      <div className="text-sm font-black text-slate-900">{fmt(invCapital + invInventory)}</div>
+                      <div className="text-[9px] uppercase font-bold text-muted-foreground">Total Patrimonio</div>
+                      <div className="text-sm font-black text-foreground">{fmt(invCapital + invInventory)}</div>
                    </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Investor Stats */}
-                <Card className="border-none shadow-sm bg-white overflow-hidden">
+                <Card className="border-none shadow-sm bg-card overflow-hidden">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Capital en Efectivo</span>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Capital en Efectivo</span>
                       <span className="text-xs font-mono font-bold text-blue-600">{fmt(invCapital)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Inversión en Stock</span>
-                      <span className="text-xs font-mono font-bold text-slate-900">{fmt(invInventory)}</span>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Inversión en Stock</span>
+                      <span className="text-xs font-mono font-bold text-foreground">{fmt(invInventory)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-slate-500">Ganancia Acumulada</span>
+                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Ganancia Acumulada</span>
                       <span className={cn("text-xs font-mono font-bold", invGain >= 0 ? "text-emerald-600" : "text-rose-600")}>
                         {fmt(invGain)}
                       </span>
                     </div>
-                    <div className="pt-2 border-t flex justify-between items-center">
+                    <div className="pt-2 border-t border-border flex justify-between items-center">
                       <span className="text-[10px] font-bold uppercase text-rose-500">Gastos Realizados</span>
                       <span className="text-xs font-mono font-bold text-rose-500">{fmt(invExpensesTotal)}</span>
                     </div>
@@ -209,7 +209,7 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                 {/* Investor Accounts */}
                 <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-5 gap-2">
                   {accountsToRender.map(acc => (
-                    <div key={acc.id} className="p-3 bg-white rounded-lg shadow-sm group relative flex flex-col justify-between">
+                    <div key={acc.id} className="p-3 bg-card border border-border rounded-lg shadow-sm group relative flex flex-col justify-between">
                       <div className="flex justify-between items-start">
                         {accountIcons[acc.method]}
                         <Button 
@@ -222,12 +222,12 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                             setIsAdjustOpen(true);
                           }}
                         >
-                          <Pencil className="w-3 h-3 text-slate-400" />
+                          <Pencil className="w-3 h-3 text-muted-foreground" />
                         </Button>
                       </div>
                       <div className="mt-1">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase truncate">{acc.method}</div>
-                        <div className="text-xs font-mono font-bold truncate">
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase truncate">{acc.method}</div>
+                        <div className="text-xs font-mono font-bold truncate text-foreground">
                           {acc.method === 'Cripto (USDT)' ? (
                             <span title={`${acc.balance} USDT @ ${fmt(usdtRate)}`}>
                               {fmt(acc.balance * usdtRate)}
@@ -241,11 +241,11 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                 </div>
 
                 {/* Expenses and Actions */}
-                <Card className="lg:col-span-2 border-none shadow-sm flex flex-col justify-center p-4 bg-slate-50/50">
+                <Card className="lg:col-span-2 border-none shadow-sm flex flex-col justify-center p-4 bg-muted/50">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
-                      <h4 className="text-xs font-bold uppercase text-slate-500">Operaciones Rápidas</h4>
-                      <p className="text-[11px] text-slate-400">Registra salidas de dinero para {investor}</p>
+                      <h4 className="text-xs font-bold uppercase text-muted-foreground">Operaciones Rápidas</h4>
+                      <p className="text-[11px] text-muted-foreground/60">Registra salidas de dinero para {investor}</p>
                     </div>
                     <Button 
                       size="sm" 
@@ -267,14 +267,14 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
       </div>
 
       {/* Global Summary Section */}
-      <div className="pt-12 border-t-2 border-dashed border-slate-200">
+      <div className="pt-12 border-t-2 border-dashed border-border">
         <div className="flex items-center gap-3 mb-6">
           <div className="bg-blue-600 text-white p-2 rounded-lg">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">Resumen General Consolidad</h2>
-            <p className="text-xs text-slate-500 font-medium">CONSOLIDADO DE TODOS LOS INVERSORES</p>
+            <h2 className="text-2xl font-black uppercase tracking-tight text-foreground">Resumen General Consolidad</h2>
+            <p className="text-xs text-muted-foreground font-medium">CONSOLIDADO DE TODOS LOS INVERSORES</p>
           </div>
         </div>
 
@@ -291,31 +291,31 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-white">
+          <Card className="border-none shadow-sm bg-card">
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-slate-400 mb-1">Inversión Total Stock</p>
-                  <h3 className="text-2xl font-black text-slate-900">{fmt(totalInventory)}</h3>
+                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Inversión Total Stock</p>
+                  <h3 className="text-2xl font-black text-foreground">{fmt(totalInventory)}</h3>
                 </div>
-                <TrendingDown className="w-8 h-8 text-slate-100" />
+                <TrendingDown className="w-8 h-8 text-muted/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-white">
+          <Card className="border-none shadow-sm bg-card">
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-xs font-bold uppercase text-slate-400 mb-1">Ganancia Neta Global</p>
+                  <p className="text-xs font-bold uppercase text-muted-foreground mb-1">Ganancia Neta Global</p>
                   <h3 className="text-2xl font-black text-emerald-600">{fmt(totalGain)}</h3>
                 </div>
-                <TrendingUp className="w-8 h-8 text-emerald-100" />
+                <TrendingUp className="w-8 h-8 text-emerald-500/10" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm bg-slate-900 text-white">
+          <Card className="border-none shadow-sm bg-secondary text-secondary-foreground">
             <CardContent className="p-6">
               <div className="flex justify-between items-start">
                 <div>
@@ -328,38 +328,38 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Card className="border-none shadow-sm bg-amber-50 border-amber-100">
+          <Card className="border-none shadow-sm bg-amber-500/10 border-amber-500/20">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-[10px] font-black uppercase text-amber-600 tracking-widest">Cuentas por Cobrar</p>
-                <h3 className="text-xl font-black text-amber-700">{fmt(totalDebts)}</h3>
+                <h3 className="text-xl font-black text-amber-700 dark:text-amber-500">{fmt(totalDebts)}</h3>
               </div>
-              <CreditCard className="w-8 h-8 text-amber-200" />
+              <CreditCard className="w-8 h-8 text-amber-500/20" />
             </CardContent>
           </Card>
-          <Card className="border-none shadow-sm bg-rose-50 border-rose-100">
+          <Card className="border-none shadow-sm bg-rose-500/10 border-rose-500/20">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-[10px] font-black uppercase text-rose-600 tracking-widest">Pasivos (Deudas)</p>
-                <h3 className="text-xl font-black text-rose-700">{fmt(totalLiabilities)}</h3>
+                <h3 className="text-xl font-black text-rose-700 dark:text-rose-500">{fmt(totalLiabilities)}</h3>
               </div>
-              <TrendingDown className="w-8 h-8 text-rose-200" />
+              <TrendingDown className="w-8 h-8 text-rose-500/20" />
             </CardContent>
           </Card>
         </div>
 
         {/* Expenses History */}
-        <Card className="mt-8 border-none shadow-sm">
+        <Card className="mt-8 border-none shadow-sm bg-card">
           <CardHeader>
-            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
+            <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
               <TrendingDown className="w-4 h-4" /> Historial de Egresos (Gastos)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border border-border overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
+                  <TableRow className="bg-muted/50 border-border">
                     <TableHead className="text-[10px] uppercase font-bold">Fecha</TableHead>
                     <TableHead className="text-[10px] uppercase font-bold">Inversor / Descripción</TableHead>
                     <TableHead className="text-[10px] uppercase font-bold">Cuenta</TableHead>
@@ -369,15 +369,15 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                 </TableHeader>
                 <TableBody>
                   {[...data.expenses].sort((a, b) => b.date.localeCompare(a.date)).map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="text-xs font-mono py-3">{e.date}</TableCell>
+                    <TableRow key={e.id} className="border-border">
+                      <TableCell className="text-xs font-mono py-3 text-foreground">{e.date}</TableCell>
                       <TableCell className="text-xs py-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[8px] font-bold uppercase px-1 py-0">{e.investor}</Badge>
+                        <div className="flex items-center gap-2 text-foreground">
+                          <Badge variant="outline" className="text-[8px] font-bold uppercase px-1 py-0 border-border">{e.investor}</Badge>
                           <span className="font-medium">{e.description}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-[10px] font-bold py-3 uppercase">{e.method}</TableCell>
+                      <TableCell className="text-[10px] font-bold py-3 uppercase text-muted-foreground">{e.method}</TableCell>
                       <TableCell className="text-xs font-mono text-rose-600 font-bold text-right py-3">{fmt(e.amount)}</TableCell>
                       <TableCell className="text-right py-3">
                         <div className="flex items-center justify-end gap-1">
@@ -406,7 +406,7 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                   ))}
                   {data.expenses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-slate-400">Sin gastos reportados</TableCell>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Sin gastos reportados</TableCell>
                     </TableRow>
                   )}
                 </TableBody>
@@ -508,22 +508,23 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold">Ajustar Saldo: {selectedAccount?.investor} - {selectedAccount?.method}</DialogTitle>
+            <DialogTitle className="text-base font-bold text-foreground">Ajustar Saldo: {selectedAccount?.investor} - {selectedAccount?.method}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="adj-balance">
+              <Label htmlFor="adj-balance" className="text-foreground">
                 {selectedAccount?.method === 'Cripto (USDT)' ? 'Nuevo Saldo en USDT' : 'Nuevo Saldo Disponible'}
               </Label>
               <Input 
                 id="adj-balance" 
                 type="number" 
                 step="any"
+                className="bg-background text-foreground border-border"
                 value={newBalance || 0} 
                 onChange={e => setNewBalance(parseFloat(e.target.value) || 0)} 
               />
               {selectedAccount?.method === 'Cripto (USDT)' && (
-                <p className="text-[10px] text-slate-500 font-bold uppercase">
+                <p className="text-[10px] text-muted-foreground font-bold uppercase">
                   Valor Aproximado en COP: {fmt(newBalance * usdtRate)}
                 </p>
               )}
@@ -531,7 +532,7 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => setIsAdjustOpen(false)}>Cancelar</Button>
-            <Button className="flex-1 bg-slate-900 text-white" onClick={handleAdjustBalance}>Guardar Cambios</Button>
+            <Button className="flex-1 bg-primary text-primary-foreground" onClick={handleAdjustBalance}>Guardar Cambios</Button>
           </div>
         </DialogContent>
       </Dialog>

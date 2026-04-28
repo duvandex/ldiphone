@@ -69,33 +69,33 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight">Historial de Ventas</h2>
+        <h2 className="text-xl font-bold tracking-tight text-foreground">Historial de Ventas</h2>
         <Button 
           variant="outline" 
           size="sm" 
           onClick={exportToCSV}
           disabled={soldProducts.length === 0}
-          className="text-xs font-medium"
+          className="text-xs font-medium border-border"
         >
           <Download className="w-4 h-4 mr-2" />
           Exportar CSV
         </Button>
       </div>
 
-      <Card className="border-none shadow-sm">
+      <Card className="border-none shadow-sm bg-card">
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase font-bold pl-6">Producto</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-center">Cant.</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Proveedor</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Fecha Venta</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">P. Compra (u)</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">P. Venta (u)</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">Ganancia Total</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">Factura</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right pr-6">Acciones</TableHead>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="text-[10px] uppercase font-bold pl-6 text-muted-foreground">Producto</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-center text-muted-foreground">Cant.</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-muted-foreground">Proveedor</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Venta</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">P. Compra (u)</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">P. Venta (u)</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">Ganancia Total</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">Factura</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right pr-6 text-muted-foreground">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,24 +103,24 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                 const qty = p.quantity || 1;
                 const profit = ((p.salePrice || 0) - p.purchasePrice) * qty;
                 return (
-                  <TableRow key={p.id}>
-                    <TableCell className="py-4">
-                      <div className="text-sm font-semibold">{p.name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono">{p.invoiceNumber || 'S/N'}</div>
+                  <TableRow key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <TableCell className="py-4 pl-6">
+                      <div className="text-sm font-semibold text-foreground">{p.name}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{p.invoiceNumber || 'S/N'}</div>
                     </TableCell>
                     <TableCell className="py-4 text-center">
-                      <div className="text-xs font-bold bg-slate-50 px-2 py-1 rounded w-fit mx-auto border border-slate-100">
+                      <div className="text-xs font-bold bg-muted px-2 py-1 rounded w-fit mx-auto border border-border text-foreground">
                         {qty}
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="text-sm font-medium text-blue-600">{p.provider || '—'}</div>
+                      <div className="text-sm font-medium text-primary">{p.provider || '—'}</div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="text-xs font-mono text-slate-500">{p.saleDate || '—'}</div>
+                      <div className="text-xs font-mono text-muted-foreground">{p.saleDate || '—'}</div>
                     </TableCell>
-                    <TableCell className="py-4 text-right text-xs font-mono text-slate-500">{fmt(p.purchasePrice)}</TableCell>
-                    <TableCell className="py-4 text-right text-xs font-mono font-semibold">{fmt(p.salePrice || 0)}</TableCell>
+                    <TableCell className="py-4 text-right text-xs font-mono text-muted-foreground">{fmt(p.purchasePrice)}</TableCell>
+                    <TableCell className="py-4 text-right text-xs font-mono font-semibold text-foreground">{fmt(p.salePrice || 0)}</TableCell>
                     <TableCell className="py-4 text-right">
                       <div className={`text-xs font-bold font-mono ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {fmt(profit)}
@@ -130,7 +130,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        className="h-8 text-primary hover:text-primary/80 hover:bg-primary/10"
                         onClick={() => navigate(`/invoice?id=${p.id}`)}
                       >
                         <Receipt className="w-4 h-4 mr-2" />
@@ -142,7 +142,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-blue-400 hover:text-blue-600 hover:bg-blue-50"
+                          className="h-8 w-8 text-primary/60 hover:text-primary hover:bg-primary/10 transition-colors"
                           title="Duplicar para inventario"
                           onClick={() => navigate(`/inventory?duplicateProductId=${p.id}`)}
                         >
@@ -151,7 +151,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                           onClick={() => {
                             setEditingSale({ ...p });
                             setIsEditOpen(true);
@@ -162,7 +162,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                          className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-500/10"
                           onClick={() => {
                             setUndoId(p.id);
                             setIsUndoOpen(true);
@@ -195,7 +195,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
               <Trash2 className="w-5 h-5" /> ¿Eliminar Venta?
             </DialogTitle>
           </DialogHeader>
-          <div className="py-4 text-sm text-slate-600">
+          <div className="py-4 text-sm text-muted-foreground">
             Esta acción revertirá la venta. El equipo volverá al inventario y el dinero se descontará de la cuenta correspondiente.
           </div>
           <div className="flex justify-end gap-3">
@@ -296,12 +296,13 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+            <div className="grid gap-2 border-t border-border pt-4">
               <div className="grid gap-2">
-                <Label className="text-rose-600">Garantía (Meses)</Label>
+                <Label className="text-rose-600 font-bold uppercase text-[10px] tracking-widest">Garantía (Meses)</Label>
                 <Input 
                   type="number" 
                   min="0"
+                  className="rounded-xl border-border h-11"
                   value={editingSale?.warrantyMonths || 0} 
                   onChange={e => {
                     const months = parseInt(e.target.value) || 0;
@@ -319,9 +320,10 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Vencimiento</Label>
+                <Label className="text-muted-foreground font-bold uppercase text-[10px] tracking-widest">Vencimiento</Label>
                 <Input 
                   type="date"
+                  className="rounded-xl border-border h-11"
                   value={editingSale?.warrantyExpiration || ''} 
                   onChange={e => setEditingSale(prev => prev ? ({...prev, warrantyExpiration: e.target.value}) : null)} 
                 />
@@ -338,7 +340,7 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
               />
             </div>
           </div>
-          <Button onClick={handleUpdateSale} className="w-full bg-slate-900 h-12 rounded-xl font-bold">Actualizar Información</Button>
+          <Button onClick={handleUpdateSale} className="w-full bg-primary text-primary-foreground h-12 rounded-xl font-bold uppercase text-xs tracking-widest shadow-lg shadow-primary/10">Actualizar Información</Button>
         </DialogContent>
       </Dialog>
     </div>

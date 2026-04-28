@@ -6,11 +6,13 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { useAppData } from '../hooks/useAppData';
 import { useCloudinary } from '../hooks/useCloudinary';
-import { Building2, ShieldCheck, Camera, Save, RefreshCcw, Image as ImageIcon } from 'lucide-react';
+import { Building2, ShieldCheck, Camera, Save, RefreshCcw, Image as ImageIcon, Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useTheme } from '../hooks/useTheme';
 
 export default function Settings() {
   const { data, updateSettings } = useAppData();
+  const { theme, toggleTheme } = useTheme();
   const { uploadImage, uploading: cloudUploading } = useCloudinary();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -70,14 +72,31 @@ export default function Settings() {
     >
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-slate-900">Configuración</h1>
-          <p className="text-slate-500 font-medium">Personaliza la información de tu empresa y garantía</p>
+          <h1 className="text-3xl font-black uppercase tracking-tight text-foreground">Configuración</h1>
+          <p className="text-muted-foreground font-medium">Personaliza la información de tu empresa y garantía</p>
         </div>
       </div>
 
+      {/* Appearance Quick Toggle */}
+      <Card className="border-none shadow-premium bg-card">
+        <CardContent className="p-6 flex items-center justify-between">
+          <div className="space-y-1">
+            <h3 className="font-black uppercase tracking-tight text-foreground">Apariencia</h3>
+            <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">Alternar entre modo claro y oscuro</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={toggleTheme}
+            className="rounded-full w-14 h-14 border-2 hover:bg-accent transition-all"
+          >
+            {theme === 'dark' ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-blue-600" />}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Company Info */}
-        <Card className="border-none shadow-xl shadow-slate-200/50">
+        <Card className="border-none shadow-premium bg-card">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 bg-blue-50 rounded-lg">
@@ -130,7 +149,7 @@ export default function Settings() {
         </Card>
 
         {/* Warranty Settings */}
-        <Card className="border-none shadow-xl shadow-slate-200/50">
+        <Card className="border-none shadow-premium bg-card">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <div className="p-2 bg-rose-50 rounded-lg">
@@ -160,11 +179,11 @@ export default function Settings() {
               />
             </div>
           </CardContent>
-          <CardFooter className="bg-slate-50 justify-end rounded-b-xl border-t p-4">
+          <CardFooter className="bg-muted/30 justify-end rounded-b-xl border-t border-border p-4">
             <Button 
               disabled={loading}
               onClick={handleSave}
-              className="bg-slate-900 text-white font-black uppercase tracking-widest text-xs px-8"
+              className="bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs px-8"
             >
               <Save className="w-4 h-4 mr-2" />
               {loading ? 'Guardando...' : 'Guardar Cambios'}

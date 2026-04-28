@@ -95,11 +95,11 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
   }, 0);
 
   const stats = [
-    { label: 'Unidades Stock', value: totalStockUnits, icon: Package, color: 'bg-blue-50 text-blue-600' },
-    { label: 'Ganancia Total', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600' },
-    { label: 'Cuentas x Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-50 text-amber-600' },
-    { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-50 text-rose-600' },
-    { label: 'Capital Disponible', value: fmt(totalCapital), icon: Activity, color: 'bg-indigo-50 text-indigo-600' },
+    { label: 'Unidades Stock', value: totalStockUnits, icon: Package, color: 'bg-blue-500/10 text-blue-500' },
+    { label: 'Ganancia Total', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500' },
+    { label: 'Cuentas x Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-500/10 text-amber-500' },
+    { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-500/10 text-rose-500' },
+    { label: 'Capital Disponible', value: fmt(totalCapital), icon: Activity, color: 'bg-indigo-500/10 text-indigo-500' },
   ];
 
   const container = {
@@ -126,11 +126,11 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
     >
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 flex items-center gap-3">
+          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
             Exploración de Datos
-            <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">LIVE</span>
+            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">LIVE</span>
           </h1>
-          <p className="text-slate-500 text-sm font-medium">Control financiero y de inventario centralizado</p>
+          <p className="text-muted-foreground text-sm font-medium">Control financiero y de inventario centralizado</p>
         </div>
       </div>
 
@@ -157,7 +157,7 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
           <motion.div key={stat.label} variants={item}>
             <Card className="card-premium border-none">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-[10px] uppercase tracking-widest font-black text-slate-400">
+                <CardTitle className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">
                   {stat.label}
                 </CardTitle>
                 <div className={cn("p-2 rounded-xl", stat.color)}>
@@ -165,7 +165,7 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-black tracking-tighter text-slate-900">{stat.value}</div>
+                <div className="text-xl font-black tracking-tighter text-foreground">{stat.value}</div>
               </CardContent>
             </Card>
           </motion.div>
@@ -175,8 +175,8 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div variants={item}>
           <Card className="card-premium border-none overflow-hidden h-full">
-            <CardHeader className="border-b border-slate-50">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+            <CardHeader className="border-b border-border">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                 Rendimiento de Inversores
               </CardTitle>
@@ -184,13 +184,13 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
             <CardContent className="pt-6 h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={investorStats}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000000}M`} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis dataKey="name" fontSize={10} fontWeight={700} tickLine={false} axisLine={false} stroke="var(--muted-foreground)" />
+                  <YAxis fontSize={10} fontWeight={700} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v/1000000}M`} stroke="var(--muted-foreground)" />
                   <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '16px', border: '1px solid #f1f5f9', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', padding: '12px' }}
-                    labelStyle={{ fontWeight: 800, marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px' }}
+                    cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
+                    contentStyle={{ borderRadius: '16px', border: '1px solid var(--border)', backgroundColor: 'var(--card)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', padding: '12px' }}
+                    labelStyle={{ fontWeight: 800, marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px', color: 'var(--foreground)' }}
                   />
                   <Bar dataKey="profit" radius={[6, 6, 0, 0]} barSize={32}>
                     {investorStats.map((entry, index) => (
@@ -205,8 +205,8 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
 
         <motion.div variants={item}>
           <Card className="card-premium border-none h-full">
-            <CardHeader className="border-b border-slate-50">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+            <CardHeader className="border-b border-border">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                 Posiciones de Capital
               </CardTitle>
@@ -214,7 +214,7 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="hover:bg-transparent border-none bg-slate-50/50">
+                  <TableRow className="hover:bg-transparent border-none bg-muted/30">
                     <TableHead className="text-[10px] uppercase font-black px-6 h-10">Inversor</TableHead>
                     <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10">Efectivo</TableHead>
                     <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10">Ganancia</TableHead>
@@ -222,9 +222,9 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
                 </TableHeader>
                 <TableBody>
                   {investorStats.map((inv) => (
-                    <TableRow key={inv.name} className="group cursor-default border-slate-50">
+                    <TableRow key={inv.name} className="group cursor-default border-border">
                       <TableCell className="font-bold py-4 px-6 text-sm flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black group-hover:bg-slate-900 group-hover:text-white transition-colors uppercase">
+                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-black group-hover:bg-primary group-hover:text-primary-foreground transition-colors uppercase">
                           {inv.name.substring(0, 2)}
                         </div>
                         {inv.name}
@@ -247,9 +247,9 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
 
       <motion.div variants={item}>
         <Card className="card-premium border-none">
-          <CardHeader className="border-b border-slate-50 flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-slate-900"></span>
+          <CardHeader className="border-b border-border flex flex-row items-center justify-between">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary"></span>
               Stock Reciente
             </CardTitle>
             <Button variant="ghost" className="text-[10px] font-black uppercase h-7 px-2">Ver todo <ChevronRight className="w-3 h-3 ml-1" /></Button>
@@ -257,7 +257,7 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="hover:bg-transparent border-none bg-slate-50/50">
+                <TableRow className="hover:bg-transparent border-none bg-muted/30">
                   <TableHead className="text-[10px] uppercase font-black px-6 h-10">Producto</TableHead>
                   <TableHead className="text-[10px] uppercase font-black text-center h-10">Cant.</TableHead>
                   <TableHead className="text-[10px] uppercase font-black h-10">Inversor</TableHead>
@@ -266,15 +266,15 @@ export default function Dashboard({ appData }: { appData: ReturnType<typeof useA
               </TableHeader>
               <TableBody>
                 {stock.slice(0, 5).map((p) => (
-                  <TableRow key={p.id} className="border-slate-50 group hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-bold py-4 px-6 text-xs text-slate-700">{p.name}</TableCell>
+                  <TableRow key={p.id} className="border-border group hover:bg-muted/50 transition-colors">
+                    <TableCell className="font-bold py-4 px-6 text-xs text-foreground/80">{p.name}</TableCell>
                     <TableCell className="py-4 text-center">
-                      <span className="text-[10px] font-black bg-white border border-slate-200 text-slate-900 px-2.5 py-1 rounded-full shadow-sm">
+                      <span className="text-[10px] font-black bg-card border border-border text-foreground px-2.5 py-1 rounded-full shadow-sm">
                         {p.quantity || 1}
                       </span>
                     </TableCell>
-                    <TableCell className="py-4 text-slate-500 font-bold text-[10px] uppercase tracking-wider">{p.investor}</TableCell>
-                    <TableCell className="text-right py-4 px-6 font-mono text-[11px] font-bold text-slate-900">{fmt(p.purchasePrice)}</TableCell>
+                    <TableCell className="py-4 text-muted-foreground font-bold text-[10px] uppercase tracking-wider">{p.investor}</TableCell>
+                    <TableCell className="text-right py-4 px-6 font-mono text-[11px] font-bold text-foreground">{fmt(p.purchasePrice)}</TableCell>
                   </TableRow>
                 ))}
                 {stock.length === 0 && (

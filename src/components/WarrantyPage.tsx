@@ -34,33 +34,33 @@ export default function WarrantyPage() {
 
   if (loading && !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
       </div>
     );
   }
 
   if (!id && !product) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-        <Card className="max-w-md w-full border-none shadow-xl">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full border-none shadow-xl bg-card">
           <CardHeader className="text-center">
             <Logo size="lg" className="mb-4" />
-            <CardTitle className="text-xl font-bold uppercase tracking-tight">Consulta de Garantía</CardTitle>
+            <CardTitle className="text-xl font-bold uppercase tracking-tight text-foreground">Consulta de Garantía</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleSearch} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="search">IMEI o Número de Factura</Label>
+                <Label htmlFor="search" className="text-foreground">IMEI o Número de Factura</Label>
                 <div className="flex gap-2">
                   <Input 
                     id="search"
                     placeholder="Ej: LDI-15 o 3546..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="bg-slate-50 border-none uppercase"
+                    className="bg-muted border-none uppercase text-foreground"
                   />
-                  <Button type="submit" size="icon" className="shrink-0 bg-slate-900">
+                  <Button type="submit" size="icon" className="shrink-0 bg-primary text-primary-foreground">
                     <ShieldCheck className="w-4 h-4" />
                   </Button>
                 </div>
@@ -69,9 +69,9 @@ export default function WarrantyPage() {
             {hasSearched && !product && (
               <p className="text-center text-xs font-bold text-rose-500">No se encontró ningún registro</p>
             )}
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t border-border">
               <Link to="/catalog">
-                <Button variant="ghost" className="w-full text-slate-400 text-xs font-bold uppercase">Volver al Catálogo</Button>
+                <Button variant="ghost" className="w-full text-muted-foreground text-xs font-bold uppercase hover:text-foreground">Volver al Catálogo</Button>
               </Link>
             </div>
           </CardContent>
@@ -82,13 +82,13 @@ export default function WarrantyPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
-        <Card className="max-w-md w-full text-center p-8 border-none shadow-sm">
-          <Hash className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Garantía No Encontrada</h2>
-          <p className="text-slate-500 mb-6 text-sm">No pudimos encontrar un registro de garantía válido.</p>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full text-center p-8 border-none shadow-sm bg-card">
+          <Hash className="w-12 h-12 text-muted mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2 text-foreground">Garantía No Encontrada</h2>
+          <p className="text-muted-foreground mb-6 text-sm">No pudimos encontrar un registro de garantía válido.</p>
           <Link to="/catalog">
-            <Button variant="outline" className="w-full">Volver al Catálogo</Button>
+            <Button variant="outline" className="w-full border-border">Volver al Catálogo</Button>
           </Link>
         </Card>
       </div>
@@ -96,16 +96,16 @@ export default function WarrantyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+    <div className="min-h-screen bg-background text-foreground p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        <Link to="/catalog" className="inline-flex items-center text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">
+        <Link to="/catalog" className="inline-flex items-center text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
           <ChevronLeft className="w-4 h-4 mr-1" /> VOLVER
         </Link>
 
         {/* Certificate Header */}
-        <Card className="border-none shadow-sm overflow-hidden bg-slate-900 text-white">
+        <Card className="border-none shadow-sm overflow-hidden bg-secondary text-secondary-foreground">
           <CardContent className="p-8 text-center sm:text-left flex flex-col sm:flex-row items-center gap-6">
-            <div className="bg-white p-3 rounded-2xl">
+            <div className="bg-white p-3 rounded-2xl dark:bg-slate-100">
               <Logo size="lg" />
             </div>
             <div className="space-y-1">
@@ -119,46 +119,46 @@ export default function WarrantyPage() {
 
         {/* Details Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="border-none shadow-sm">
+          <Card className="border-none shadow-sm bg-card text-card-foreground">
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4" /> Información del Producto
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label className="text-[10px] uppercase font-bold text-slate-400">Producto</Label>
-                <div className="text-lg font-bold">{product.name}</div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Producto</Label>
+                <div className="text-lg font-bold text-foreground">{product.name}</div>
               </div>
               <div>
-                <Label className="text-[10px] uppercase font-bold text-slate-400">IMEI / Serie</Label>
-                <div className="text-sm font-mono">{product.imei || 'No registrado'}</div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">IMEI / Serie</Label>
+                <div className="text-sm font-mono text-foreground">{product.imei || 'No registrado'}</div>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <Label className="text-[10px] uppercase font-bold text-slate-400">Cantidad</Label>
-                  <div className="text-sm font-bold">{product.quantity}</div>
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Cantidad</Label>
+                  <div className="text-sm font-bold text-foreground">{product.quantity}</div>
                 </div>
                 <div className="flex-1">
-                  <Label className="text-[10px] uppercase font-bold text-slate-400">Valor Unitario</Label>
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Valor Unitario</Label>
                   <div className="text-sm font-mono font-bold text-emerald-600">{fmt(product.salePrice || 0)}</div>
                 </div>
               </div>
               {product.warrantyMonths ? (
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 mt-2">
-                   <div className="text-[10px] uppercase font-bold text-blue-400">Garantía Limitada</div>
-                   <div className="text-sm font-black text-blue-700">{product.warrantyMonths} MESES</div>
+                <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 mt-2">
+                   <div className="text-[10px] uppercase font-bold text-blue-500">Garantía Limitada</div>
+                   <div className="text-sm font-black text-blue-600 dark:text-blue-400">{product.warrantyMonths} MESES</div>
                    {product.warrantyExpiration && (
-                     <div className="text-[9px] font-bold text-blue-500 mt-1 uppercase">VENCE: {product.warrantyExpiration}</div>
+                     <div className="text-[9px] font-bold text-blue-500/70 mt-1 uppercase">VENCE: {product.warrantyExpiration}</div>
                    )}
                 </div>
               ) : null}
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm">
+          <Card className="border-none shadow-sm bg-card text-card-foreground">
             <CardHeader>
-              <CardTitle className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
+              <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4" /> Detalles de Cobertura
               </CardTitle>
             </CardHeader>
@@ -166,19 +166,19 @@ export default function WarrantyPage() {
               <div className="flex items-start gap-3">
                 <Calendar className="w-5 h-5 text-blue-500 shrink-0 mt-1" />
                 <div>
-                  <Label className="text-[10px] uppercase font-bold text-slate-400">Fecha de Venta</Label>
-                  <div className="text-sm font-bold">{product.saleDate}</div>
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Fecha de Venta</Label>
+                  <div className="text-sm font-bold text-foreground">{product.saleDate}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <User className="w-5 h-5 text-blue-500 shrink-0 mt-1" />
                 <div>
-                  <Label className="text-[10px] uppercase font-bold text-slate-400">Comprador</Label>
-                  <div className="text-sm font-bold">{product.buyer || 'Cliente General'}</div>
+                  <Label className="text-[10px] uppercase font-bold text-muted-foreground">Comprador</Label>
+                  <div className="text-sm font-bold text-foreground">{product.buyer || 'Cliente General'}</div>
                 </div>
               </div>
               <div className="pt-2">
-                <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-50 text-xs font-bold py-1 px-3">
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-none hover:bg-emerald-500/20 text-xs font-bold py-1 px-3">
                   Garantía Activa ({product.warrantyMonths || 6} Meses)
                 </Badge>
               </div>
@@ -187,12 +187,12 @@ export default function WarrantyPage() {
         </div>
 
         {/* Terms */}
-        <Card className="border-none shadow-sm overflow-hidden">
-          <CardHeader className="bg-slate-50 border-b">
-            <CardTitle className="text-sm font-bold uppercase text-slate-500">Condiciones y Cobertura</CardTitle>
+        <Card className="border-none shadow-sm overflow-hidden bg-card text-card-foreground">
+          <CardHeader className="bg-muted border-b border-border">
+            <CardTitle className="text-sm font-bold uppercase text-muted-foreground">Condiciones y Cobertura</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <div className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap font-medium">
+            <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap font-medium">
               {product.warrantyTerms || data.settings.warrantyTerms}
             </div>
           </CardContent>
@@ -202,7 +202,7 @@ export default function WarrantyPage() {
         {product.images && product.images.length > 0 && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {product.images.map((img, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden bg-white shadow-sm border p-1">
+              <div key={i} className="aspect-square rounded-xl overflow-hidden bg-card shadow-sm border border-border p-1">
                 <img src={img} className="w-full h-full object-cover rounded-lg" alt={`Product ${i}`} />
               </div>
             ))}

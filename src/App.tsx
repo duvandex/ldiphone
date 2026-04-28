@@ -20,6 +20,7 @@ import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
 import Settings from './components/Settings';
 import { useAppData } from './hooks/useAppData';
+import { useTheme, ThemeProvider } from './hooks/useTheme';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 
 import Logo from './components/Logo';
@@ -177,11 +178,11 @@ function Navigation({ onLogout }: { onLogout: () => void }) {
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap",
                 isActive 
-                  ? "bg-slate-900 text-white shadow-md shadow-slate-200 scale-105" 
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 scale-105" 
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon className={cn("w-3.5 h-3.5", isActive ? "text-blue-400" : "text-slate-400")} />
+              <Icon className={cn("w-3.5 h-3.5", isActive ? "text-primary-foreground/80" : "text-muted-foreground")} />
               {item.label}
             </Link>
           );
@@ -209,9 +210,9 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-      <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
-      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Sincronizando LDIPHONE...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
+      <div className="w-12 h-12 border-4 border-muted border-t-primary rounded-full animate-spin"></div>
+      <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">Sincronizando LDIPHONE...</p>
     </div>
   );
 }
@@ -231,6 +232,14 @@ function QuotaWarning() {
 }
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const appData = useAppData();
   const { user, loading, isQuotaExceeded } = appData;
 
@@ -246,7 +255,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <div className="min-h-screen font-sans">
         {isAuthenticated && <Navigation onLogout={handleLogout} />}
         {isQuotaExceeded && <QuotaWarning />}
         <Routes>

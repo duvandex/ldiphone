@@ -83,11 +83,11 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight text-rose-700 font-serif italic">Pasivos (Deudas por Pagar)</h2>
+        <h2 className="text-xl font-bold tracking-tight text-rose-600 font-serif italic">Pasivos (Deudas por Pagar)</h2>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger
             render={
-              <Button className="bg-rose-900 hover:bg-rose-800">
+              <Button className="bg-rose-600 hover:bg-rose-700 text-white">
                 <Plus className="w-4 h-4 mr-2" /> Agregar Obligación
               </Button>
             }
@@ -121,18 +121,18 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
         </Dialog>
       </div>
 
-      <Card className="border-none shadow-sm">
+      <Card className="border-none shadow-sm bg-card">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase font-bold pl-6">Acreedor</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Descripción</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">Total</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">Pagado</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right">Saldo</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold">Progreso</TableHead>
-                <TableHead className="text-[10px] uppercase font-bold text-right pr-6">Acciones</TableHead>
+              <TableRow className="hover:bg-transparent border-border">
+                <TableHead className="text-[10px] uppercase font-bold pl-6 text-muted-foreground">Acreedor</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-muted-foreground">Descripción</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">Total</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">Pagado</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right text-muted-foreground">Saldo</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-muted-foreground">Progreso</TableHead>
+                <TableHead className="text-[10px] uppercase font-bold text-right pr-6 text-muted-foreground">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -142,24 +142,24 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                 const progress = Math.min(100, Math.round((paid / l.totalAmount) * 100));
                 
                 return (
-                  <TableRow key={l.id}>
-                    <TableCell className="py-4 pl-6 font-medium">{l.creditor}</TableCell>
-                    <TableCell className="py-4 text-xs text-slate-500">{l.description || '—'}</TableCell>
-                    <TableCell className="py-4 text-right text-xs font-mono">{fmt(l.totalAmount)}</TableCell>
+                  <TableRow key={l.id} className="border-border">
+                    <TableCell className="py-4 pl-6 font-medium text-foreground">{l.creditor}</TableCell>
+                    <TableCell className="py-4 text-xs text-muted-foreground">{l.description || '—'}</TableCell>
+                    <TableCell className="py-4 text-right text-xs font-mono text-foreground">{fmt(l.totalAmount)}</TableCell>
                     <TableCell className="py-4 text-right text-xs font-mono text-emerald-600">{fmt(paid)}</TableCell>
                     <TableCell className="py-4 text-right text-xs font-mono text-rose-600 font-bold">{fmt(balance)}</TableCell>
                     <TableCell className="py-4">
                       <div className="w-24">
                         <div className="flex justify-between text-[9px] font-bold mb-1">
-                          <span>{progress}%</span>
+                          <span className="text-foreground">{progress}%</span>
                           <Badge variant="outline" className={cn(
                             "text-[8px] h-3 px-1 border-none",
-                            l.status === 'paid' ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                            l.status === 'paid' ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600"
                           )}>
                             {l.status === 'paid' ? 'Pagado' : 'Pendiente'}
                           </Badge>
                         </div>
-                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
                           <div 
                             className={cn("h-full transition-all duration-500", l.status === 'paid' ? "bg-emerald-500" : "bg-rose-500")} 
                             style={{ width: `${progress}%` }} 
@@ -167,12 +167,12 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-4 text-right pr-6">
+                    <TableCell className="py-4 text-right pr-6 text-foreground">
                       <div className="flex items-center justify-end gap-1">
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="h-8 w-8 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
                           title="Aumentar deuda"
                           onClick={() => {
                             setSelectedLiabilityId(l.id);
@@ -185,7 +185,7 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            className="h-8 w-8 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10"
                             onClick={() => {
                               setSelectedLiabilityId(l.id);
                               setIsPaymentOpen(true);
@@ -197,7 +197,7 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                          className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-500/10"
                           onClick={() => {
                             setLiabilityToDelete(l.id);
                             setIsConfirmDeleteOpen(true);
@@ -211,9 +211,9 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
                 );
               })}
               {data.liabilities.length > 0 && (
-                <TableRow className="bg-rose-50/30 font-black">
-                  <TableCell className="py-4 pl-6" colSpan={2}>TOTALES PASIVOS</TableCell>
-                  <TableCell className="py-4 text-right font-mono text-slate-900">{fmt(totalLiabilitiesAmount)}</TableCell>
+                <TableRow className="bg-rose-500/10 font-black border-border">
+                  <TableCell className="py-4 pl-6 text-foreground" colSpan={2}>TOTALES PASIVOS</TableCell>
+                  <TableCell className="py-4 text-right font-mono text-foreground">{fmt(totalLiabilitiesAmount)}</TableCell>
                   <TableCell className="py-4 text-right font-mono text-emerald-600">{fmt(totalLiabilitiesPaid)}</TableCell>
                   <TableCell className="py-4 text-right font-mono text-rose-600">{fmt(totalPending)}</TableCell>
                   <TableCell colSpan={2}></TableCell>
@@ -221,7 +221,7 @@ export default function Liabilities({ appData }: { appData: ReturnType<typeof us
               )}
               {data.liabilities.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-slate-400">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     No hay obligaciones registradas
                   </TableCell>
                 </TableRow>

@@ -420,17 +420,24 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       return;
     }
 
-    const totalPrice = (selectedProduct.salePrice || 0) * (selectedProduct.quantity || 1);
-    const balance = totalPrice - amount;
+    const currentPayments = selectedProduct.reservationPayments || [];
+    const newPayment = {
+      amount,
+      date: reserveData.date,
+      method: reserveData.method
+    };
+
+    const totalAbonado = currentPayments.reduce((sum, p) => sum + p.amount, 0) + amount;
 
     try {
       await updateProduct(selectedProduct.id, {
         status: 'reserved',
-        reservationAmount: amount,
+        reservationAmount: totalAbonado,
         reservationBuyer: reserveData.buyer,
-        reservationDate: reserveData.date,
-        saleMethod: reserveData.method, // Record how they paid the abono
-        // We keep common fields for when it converts to sale
+        reservationDate: reserveData.date, // Last payment date
+        reservationPayments: [...currentPayments, newPayment],
+        saleMethod: reserveData.method, // Default for account tracking
+        amountToBalance: amount, // Financial trigger
         buyer: reserveData.buyer,
       });
       setIsReserveOpen(false);
@@ -835,9 +842,18 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                       )}>
                         {p.status === 'stock' ? 'DISPONIBLE' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
                       </Badge>
-                      {p.status === 'reserved' && p.reservationAmount && (
-                        <div className="text-[8px] font-black text-orange-500 mt-1 uppercase tracking-tighter">
-                          Debe: {fmt((p.salePrice || 0) * (p.quantity || 1) - p.reservationAmount)}
+                      {p.status === 'reserved' && (
+                        <div className="flex flex-col gap-0.5 mt-1">
+                          {p.reservationAmount && (
+                            <div className="text-[8px] font-black text-orange-500 uppercase tracking-tighter">
+                              Debe: {fmt((p.salePrice || 0) * (p.quantity || 1) - p.reservationAmount)}
+                            </div>
+                          )}
+                          {p.reservationPayments && p.reservationPayments.length > 0 && (
+                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">
+                              {p.reservationPayments.length} {p.reservationPayments.length === 1 ? 'Abono' : 'Abonos'} realizados
+                            </div>
+                          )}
                         </div>
                       )}
                       {p.warrantyMonths && p.status !== 'reserved' ? (
@@ -865,17 +881,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        {p.status === 'stock' && (
+                        {(p.status === 'stock' || p.status === 'reserved') && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="h-10 w-10 text-orange-500 hover:text-white hover:bg-orange-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-orange-500/20 transition-all"
-                            title="Separar / Abono"
+                            title="Abono / Separar"
                             onClick={() => {
                               setSelectedProduct(p);
                               setReserveData({
                                 amount: '',
-                                buyer: '',
+                                buyer: p.reservationBuyer || '',
                                 date: new Date().toISOString().split('T')[0],
                                 method: 'Efectivo',
                               });
@@ -1002,7 +1018,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     >
                       <Copy className="w-5 h-5" />
                     </Button>
-                    {p.status === 'stock' && (
+                    {(p.status === 'stock' || p.status === 'reserved') && (
                         <div className="flex gap-2 w-full">
                             <Button 
                                 variant="outline"
@@ -1011,14 +1027,14 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                                     setSelectedProduct(p);
                                     setReserveData({
                                         amount: '',
-                                        buyer: '',
+                                        buyer: p.reservationBuyer || '',
                                         date: new Date().toISOString().split('T')[0],
                                         method: 'Efectivo',
                                     });
                                     setIsReserveOpen(true);
                                 }}
                             >
-                                <HandCoins className="w-4 h-4 mr-2" /> Separar
+                                <HandCoins className="w-4 h-4 mr-2" /> Abono
                             </Button>
                             <Button 
                                 className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20"
@@ -1027,14 +1043,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                                     setSellData({
                                         salePrice: p.salePrice || 0,
                                         saleDate: new Date().toISOString().split('T')[0],
-                                        buyer: '',
+                                        buyer: p.reservationBuyer || '',
                                         sellQuantity: 1,
                                         saleMethod: 'Efectivo',
+                                        warrantyMonths: 3,
+                                        warrantyExpiration: '',
                                     });
                                     setIsSellOpen(true);
                                 }}
                             >
-                                <ShoppingCart className="w-4 h-4 mr-2" /> Vender
+                                <ShoppingCart className="w-4 h-4 mr-2" /> {p.status === 'reserved' ? 'Liquidar' : 'Vender'}
                             </Button>
                         </div>
                     )}
@@ -1310,8 +1328,28 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               </div>
             </div>
 
+            {(selectedProduct?.reservationPayments?.length || 0) > 0 && (
+               <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                  <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Historial de Abonos</Label>
+                  {selectedProduct?.reservationPayments?.map((p, i) => (
+                    <div key={i} className="flex justify-between items-center text-[10px] font-bold bg-slate-50 p-2 rounded-lg border border-slate-100">
+                       <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
+                          <span className="text-slate-500">{p.date}</span>
+                       </div>
+                       <div className="flex items-center gap-2">
+                          <span className="text-slate-400">{p.method}</span>
+                          <span className="text-orange-600">{fmt(p.amount)}</span>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            )}
+
             <div className="grid gap-2">
-              <Label htmlFor="res-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Monto del Abono / Separación *</Label>
+              <Label htmlFor="res-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                {selectedProduct?.status === 'reserved' ? 'Nuevo Abono' : 'Monto del Abono / Separación'} *
+              </Label>
               <Input 
                 id="res-amount" 
                 type="number" 
@@ -1320,7 +1358,12 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 value={reserveData.amount} 
                 onChange={e => setReserveData({...reserveData, amount: e.target.value})}
               />
-              <p className="text-[9px] font-medium text-slate-400 uppercase italic">El equipo se marcará como SEPARADO en el catálogo.</p>
+              {selectedProduct?.status === 'reserved' && (
+                <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-tight">
+                  <span className="text-slate-400">Total Abonado: {fmt(selectedProduct.reservationAmount || 0)}</span>
+                  <span className="text-emerald-600">Pendiente: {fmt((selectedProduct.salePrice || 0) * (selectedProduct.quantity || 1) - (selectedProduct.reservationAmount || 0))}</span>
+                </div>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">

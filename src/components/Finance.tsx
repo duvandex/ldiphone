@@ -44,7 +44,7 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
 
   const totalCapital = data.accounts.reduce((sum, acc) => sum + getAccountBalanceCOP(acc), 0);
   const totalInventory = data.products
-    .filter(p => p.status === 'stock')
+    .filter(p => p.status === 'stock' || p.status === 'reserved')
     .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
   
   const totalGain = data.products
@@ -55,10 +55,18 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
     }, 0);
 
   const totalExpenses = data.expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  const reservedProducts = data.products.filter(p => p.status === 'reserved');
+  const totalReservedPending = reservedProducts.reduce((sum, p) => {
+    const total = (p.salePrice || 0) * (p.quantity || 1);
+    const paid = p.reservationAmount || 0;
+    return sum + (total - paid);
+  }, 0);
+
   const totalDebts = data.debtors.reduce((sum, d) => {
     const paid = d.payments.reduce((a, b) => a + b, 0);
     return sum + (d.totalAmount - paid);
-  }, 0);
+  }, 0) + totalReservedPending;
   const totalLiabilities = data.liabilities.reduce((sum, l) => {
     const paid = l.payments.reduce((a, b) => a + b, 0);
     return sum + (l.totalAmount - paid);
@@ -147,7 +155,7 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
           const invCapital = accountsToRender.reduce((s, a) => s + getAccountBalanceCOP(a), 0);
           
           const invInventory = investorProducts
-            .filter(p => p.status === 'stock' && !p.isExternal)
+            .filter(p => (p.status === 'stock' || p.status === 'reserved') && !p.isExternal)
             .reduce((s, p) => {
               const share = p.coInvestors && p.coInvestors.length > 0 
                 ? (p.coInvestors.find(co => co.investor === investor)?.percentage || 0) / 100

@@ -25,6 +25,11 @@ export interface Product {
   reservationAmount?: number;
   reservationDate?: string;
   reservationBuyer?: string;
+  reservationPayments?: {
+    amount: number;
+    date: string;
+    method: PaymentMethod;
+  }[];
   invoiceNumber?: string;
   quantity: number;
   initialQuantity?: number;

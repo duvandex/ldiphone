@@ -288,7 +288,7 @@ export function useAppData() {
     }
   };
 
-  const updateProduct = async (id: string, updates: Partial<Product> & { sellQuantity?: number }) => {
+  const updateProduct = async (id: string, updates: Partial<Product> & { sellQuantity?: number; amountToBalance?: number }) => {
     try {
       await runTransaction(db, async (transaction) => {
         const productRef = doc(db, 'products', id);
@@ -300,43 +300,39 @@ export function useAppData() {
         const settingsDoc = await transaction.get(settingsRef); // READ
 
         const sellQty = updates.sellQuantity || 1;
-        const totalRevenue = (updates.salePrice || 0) * sellQty;
-        const saleMethod = updates.saleMethod || 'Efectivo';
-        const adjustedRevenue = saleMethod === 'Cripto (USDT)' ? totalRevenue / usdtRate : totalRevenue;
-
-        const incomeOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
+        
+        // Financial logic: how much money is entering NOW?
+        let incomeAmount = 0;
+        const saleMethod = updates.saleMethod || product.saleMethod || 'Efectivo';
 
         if (updates.status === 'sold') {
+          // If it was reserved, we only add the PENDING balance. 
+          // If it was stock, we add the TOTAL sale price.
+          const totalPrice = (updates.salePrice || product.salePrice || 0) * sellQty;
+          const alreadyPaid = product.status === 'reserved' ? (product.reservationAmount || 0) : 0;
+          incomeAmount = totalPrice - alreadyPaid;
+        } else if (updates.amountToBalance) {
+          // Explicit amount being added (like a new reservation installment)
+          incomeAmount = updates.amountToBalance;
+        }
+
+        const adjustedIncome = saleMethod === 'Cripto (USDT)' ? incomeAmount / usdtRate : incomeAmount;
+        const incomeOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
+
+        if (incomeAmount > 0) {
+          const targetInvestor = product.investor;
           if (product.isExternal) {
             const accountId = `Duvan-${saleMethod}`;
-            incomeOps.push({
-              ref: doc(db, 'accounts', accountId),
-              amount: adjustedRevenue,
-              id: accountId,
-              investor: 'Duvan',
-              method: saleMethod
-            });
+            incomeOps.push({ ref: doc(db, 'accounts', accountId), amount: adjustedIncome, id: accountId, investor: 'Duvan', method: saleMethod });
           } else if (product.coInvestors && product.coInvestors.length > 0) {
             for (const co of product.coInvestors) {
               const accountId = `${co.investor}-${saleMethod}`;
-              const share = adjustedRevenue * (co.percentage / 100);
-              incomeOps.push({
-                ref: doc(db, 'accounts', accountId),
-                amount: share,
-                id: accountId,
-                investor: co.investor,
-                method: saleMethod
-              });
+              const share = adjustedIncome * (co.percentage / 100);
+              incomeOps.push({ ref: doc(db, 'accounts', accountId), amount: share, id: accountId, investor: co.investor, method: saleMethod });
             }
           } else {
-            const accountId = `${product.investor}-${saleMethod}`;
-            incomeOps.push({
-              ref: doc(db, 'accounts', accountId),
-              amount: adjustedRevenue,
-              id: accountId,
-              investor: product.investor,
-              method: saleMethod
-            });
+            const accountId = `${targetInvestor}-${saleMethod}`;
+            incomeOps.push({ ref: doc(db, 'accounts', accountId), amount: adjustedIncome, id: accountId, investor: targetInvestor, method: saleMethod });
           }
         }
 
@@ -358,7 +354,7 @@ export function useAppData() {
           if (isSalePartial) {
             transaction.update(productRef, {
               quantity: currentQty - sellQty,
-              status: 'stock'
+              status: product.status // Keep it status (could be stock or reserved)
             });
 
             const newSoldId = Math.random().toString(36).substr(2, 9);
@@ -367,40 +363,40 @@ export function useAppData() {
               id: newSoldId,
               status: 'sold',
               quantity: sellQty,
-              salePrice: updates.salePrice,
+              salePrice: updates.salePrice || product.salePrice,
               saleDate: updates.saleDate,
-              buyer: updates.buyer,
+              buyer: updates.buyer || product.buyer,
               invoiceNumber: finalInvoiceNumber,
-              saleMethod: updates.saleMethod,
+              saleMethod: updates.saleMethod || product.saleMethod,
               originalProductId: id,
             };
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
-            const { sellQuantity, ...cleanUpdates } = updates;
+            const { sellQuantity, amountToBalance, ...cleanUpdates } = updates;
             cleanUpdates.invoiceNumber = finalInvoiceNumber;
             transaction.update(productRef, cleanUpdates);
           }
-
-          // Apply account updates
-          incomeOps.forEach((op, idx) => {
-            const accountDoc = incomeSnapshots[idx];
-            if (accountDoc.exists()) {
-              const currentBalance = (accountDoc.data() as any).balance || 0;
-              transaction.update(op.ref, { balance: currentBalance + op.amount });
-            } else {
-              transaction.set(op.ref, {
-                id: op.id,
-                investor: op.investor,
-                method: op.method,
-                name: op.method,
-                balance: op.amount
-              });
-            }
-          });
         } else {
-          const { sellQuantity, ...cleanUpdates } = updates;
+          const { sellQuantity, amountToBalance, ...cleanUpdates } = updates;
           transaction.update(productRef, cleanUpdates);
         }
+
+        // Apply account updates
+        incomeOps.forEach((op, idx) => {
+          const accountDoc = incomeSnapshots[idx];
+          if (accountDoc.exists()) {
+            const currentBalance = (accountDoc.data() as any).balance || 0;
+            transaction.update(op.ref, { balance: currentBalance + op.amount });
+          } else {
+            transaction.set(op.ref, {
+              id: op.id,
+              investor: op.investor,
+              method: op.method,
+              name: op.method,
+              balance: op.amount
+            });
+          }
+        });
       });
     } catch (err) {
       handleFirestoreError(err, 'update', `products/${id}`);

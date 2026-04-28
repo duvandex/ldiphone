@@ -65,7 +65,7 @@ const ImageUploader = ({
       <div className="grid grid-cols-4 gap-2">
         {images.map((img, i) => (
           <div key={i} className={cn(
-            "relative aspect-square rounded-lg overflow-hidden bg-slate-100 border transition-all",
+            "relative group aspect-square rounded-lg overflow-hidden bg-slate-100 border transition-all",
             i === 0 ? "border-blue-500 ring-2 ring-blue-500/20" : "border-slate-200"
           )}>
             <img src={img} className="w-full h-full object-cover" alt="preview" />
@@ -305,9 +305,39 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 
+  const startEditing = (p: Product) => {
+    setEditProductState(p);
+    if (p.coInvestors && p.coInvestors.length > 0) {
+      setUseCoInvestment(true);
+      setCoInvList(p.coInvestors);
+    } else {
+      setUseCoInvestment(false);
+      setCoInvList([{ investor: p.investor || 'Duvan', percentage: 100, method: p.purchaseMethod || 'Efectivo' }]);
+    }
+    setIsEditOpen(true);
+  };
+
   const handleEditProduct = async () => {
     if (!editProductState) return;
-    await updateProduct(editProductState.id, editProductState);
+
+    let finalProduct = { ...editProductState };
+    if (useCoInvestment) {
+      const totalPct = coInvList.reduce((a, b) => a + b.percentage, 0);
+      if (Math.abs(totalPct - 100) > 0.01) {
+        alert("La suma de los porcentajes debe ser exactamente 100%");
+        return;
+      }
+      finalProduct.coInvestors = coInvList;
+      // In a co-investment, we designate the first one as primary for simple filtering
+      if (coInvList.length > 0) {
+        finalProduct.investor = coInvList[0].investor;
+      }
+    } else {
+      finalProduct.coInvestors = [];
+      // investor is already in editProductState from the field
+    }
+
+    await updateProduct(editProductState.id, finalProduct);
     setIsEditOpen(false);
   };
 
@@ -783,10 +813,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                           variant="ghost" 
                           size="icon" 
                           className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-white rounded-xl shadow-none hover:shadow-sm transition-all"
-                          onClick={() => {
-                            setEditProductState(p);
-                            setIsEditOpen(true);
-                          }}
+                          onClick={() => startEditing(p)}
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -891,10 +918,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </Button>
                     <Button 
                       className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
-                      onClick={() => {
-                        setEditProductState(p);
-                        setIsEditOpen(true);
-                      }}
+                      onClick={() => startEditing(p)}
                     >
                       <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
                     </Button>
@@ -1023,6 +1047,87 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   <SelectItem value="out_of_stock">Agotado / No disponible</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Ownership Change Section */}
+            <div className="space-y-4 border-t border-slate-50 pt-6">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] font-black uppercase tracking-widest text-slate-900">Propiedad y Socios</Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="e-is-co-inv" 
+                    checked={useCoInvestment} 
+                    onCheckedChange={(v) => setUseCoInvestment(!!v)} 
+                  />
+                  <Label htmlFor="e-is-co-inv" className="text-[10px] font-black uppercase tracking-widest text-blue-600 cursor-pointer">
+                    Co-Inversión
+                  </Label>
+                </div>
+              </div>
+
+              {!useCoInvestment ? (
+                <div className="grid grid-cols-2 gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversionista</Label>
+                    <Select value={editProductState?.investor} onValueChange={v => setEditProductState(prev => prev ? ({...prev, investor: v as Investor}) : null)}>
+                      <SelectTrigger className="rounded-xl border-white h-10 font-bold text-xs shadow-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl border-slate-100">
+                        {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Medio Pago</Label>
+                    <Select value={editProductState?.purchaseMethod} onValueChange={v => setEditProductState(prev => prev ? ({...prev, purchaseMethod: v as PaymentMethod}) : null)}>
+                      <SelectTrigger className="rounded-xl border-white h-10 font-bold text-xs shadow-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-2xl border-slate-100">
+                        <SelectItem value="none">Ninguno / Efectivo</SelectItem>
+                        <SelectItem value="Bancolombia">Bancolombia</SelectItem>
+                        <SelectItem value="Nequi">Nequi</SelectItem>
+                        <SelectItem value="Banco de Bogota">Banco de Bogotá</SelectItem>
+                        <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-blue-600">Reparto de Inversión (%)</Label>
+                    <Button type="button" variant="ghost" size="sm" onClick={addCoInvestor} className="h-7 text-[9px] font-black uppercase tracking-widest text-blue-600 hover:bg-blue-100 px-3">
+                      <Plus className="w-3 h-3 mr-1" /> Añadir Socio
+                    </Button>
+                  </div>
+                  <div className="space-y-4">
+                    {coInvList.map((co, idx) => (
+                      <div key={idx} className="space-y-2 p-3 bg-white rounded-2xl border border-blue-50 shadow-sm">
+                        <div className="flex gap-2">
+                          <Select value={co.investor} onValueChange={v => updateCoInv(idx, { investor: v as Investor })}>
+                            <SelectTrigger className="flex-1 rounded-xl border-blue-100 h-10 font-bold text-[11px] bg-slate-50/50"><SelectValue /></SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              {investors.map(inv => <SelectItem key={inv} value={inv}>{inv}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <div className="relative w-24">
+                            <Input 
+                              type="number" 
+                              className="rounded-xl border-blue-100 h-10 font-bold text-xs pr-7" 
+                              value={co.percentage} 
+                              onChange={e => updateCoInv(idx, { percentage: parseFloat(e.target.value) || 0 })}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">%</span>
+                          </div>
+                          {coInvList.length > 1 && (
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeCoInvestor(idx)} className="h-10 w-10 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">

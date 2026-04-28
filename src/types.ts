@@ -19,9 +19,12 @@ export interface Product {
   purchaseDate: string;
   purchasePrice: number; // Unit price for purchase
   salePrice?: number;    // Unit price for sale
-  status: 'stock' | 'sold' | 'out_of_stock';
+  status: 'stock' | 'sold' | 'reserved' | 'out_of_stock';
   saleDate?: string;
   buyer?: string;
+  reservationAmount?: number;
+  reservationDate?: string;
+  reservationBuyer?: string;
   invoiceNumber?: string;
   quantity: number;
   initialQuantity?: number;

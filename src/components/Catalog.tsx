@@ -60,7 +60,7 @@ export default function Catalog() {
 
   const publicProducts = data.products
     .filter(p => 
-      (p.status === 'stock' || !p.status) && 
+      (p.status === 'stock' || p.status === 'reserved' || !p.status) && 
       (p.name?.toLowerCase() || '').includes(search.toLowerCase()) &&
       (category === 'all' || 
        p.category === category || 
@@ -312,7 +312,11 @@ export default function Catalog() {
                   <CardContent className="p-6 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2">
                        <h3 className="font-black text-xl tracking-tight text-foreground leading-none group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
-                       <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">DISPONIBLE</Badge>
+                       {p.status === 'reserved' ? (
+                           <Badge className="bg-orange-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">SEPARADO</Badge>
+                       ) : (
+                           <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">DISPONIBLE</Badge>
+                       )}
                     </div>
 
                     {p.description && (
@@ -436,9 +440,20 @@ export default function Catalog() {
                     {/* Details */}
                     <div className="w-full md:w-2/5 p-8 flex flex-col bg-card">
                         <div className="mb-6">
-                            <Badge className="bg-primary/10 text-primary border-none text-[9px] font-black uppercase tracking-widest mb-3 px-2 py-1">Stock Disponible</Badge>
+                            <Badge className={cn(
+                                "border-none text-[9px] font-black uppercase tracking-widest mb-3 px-2 py-1",
+                                selectedProduct.status === 'reserved' ? "bg-orange-500/10 text-orange-600" : "bg-primary/10 text-primary"
+                            )}>
+                                {selectedProduct.status === 'reserved' ? 'EQUIPO SEPARADO' : 'Stock Disponible'}
+                            </Badge>
                             <h2 className="text-3xl font-black text-foreground tracking-tighter leading-tight">{selectedProduct.name}</h2>
                             <div className="text-3xl font-black text-emerald-600 tracking-tighter mt-2">{fmt(selectedProduct.salePrice || 0)}</div>
+                            {selectedProduct.status === 'reserved' && (
+                                <div className="mt-2 p-3 bg-orange-50 rounded-xl border border-orange-100">
+                                    <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Estado de Reserva</p>
+                                    <p className="text-xs font-bold text-orange-700">Este equipo ya cuenta con un abono inicial y está reservado.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar">

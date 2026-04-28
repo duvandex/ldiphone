@@ -9,7 +9,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
@@ -158,6 +158,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isSellOpen, setIsSellOpen] = useState(false);
+  const [isReserveOpen, setIsReserveOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -359,6 +360,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     warrantyExpiration: '',
   });
 
+  const [reserveData, setReserveData] = useState({
+    amount: '',
+    buyer: '',
+    date: new Date().toISOString().split('T')[0],
+    method: 'Efectivo' as PaymentMethod
+  });
+
   const sellErrors = {
     price: !sellData.salePrice || Number(sellData.salePrice) <= 0,
     qty: !sellData.sellQuantity || Number(sellData.sellQuantity) <= 0 || Number(sellData.sellQuantity) > (selectedProduct?.quantity || 0)
@@ -397,6 +405,38 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       setSelectedProduct(null);
     } catch (err: any) {
       alert("Error al procesar la venta: " + err.message);
+    }
+  };
+
+  const handleReserveProduct = async () => {
+    if (!selectedProduct || !reserveData.amount || !reserveData.buyer) {
+      alert("Por favor completa los campos obligatorios.");
+      return;
+    }
+    
+    const amount = parseFloat(reserveData.amount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("El abono debe ser mayor a 0.");
+      return;
+    }
+
+    const totalPrice = (selectedProduct.salePrice || 0) * (selectedProduct.quantity || 1);
+    const balance = totalPrice - amount;
+
+    try {
+      await updateProduct(selectedProduct.id, {
+        status: 'reserved',
+        reservationAmount: amount,
+        reservationBuyer: reserveData.buyer,
+        reservationDate: reserveData.date,
+        saleMethod: reserveData.method, // Record how they paid the abono
+        // We keep common fields for when it converts to sale
+        buyer: reserveData.buyer,
+      });
+      setIsReserveOpen(false);
+      setSelectedProduct(null);
+    } catch (err: any) {
+      alert("Error al procesar el abono: " + err.message);
     }
   };
 
@@ -483,6 +523,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <SelectContent className="rounded-2xl border-slate-100">
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="stock">En Stock</SelectItem>
+                <SelectItem value="reserved">Separados</SelectItem>
                 <SelectItem value="out_of_stock">Agotado</SelectItem>
               </SelectContent>
             </Select>
@@ -786,13 +827,20 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Neto Sugerido</div>
                     </TableCell>
                     <TableCell className="py-5 text-center">
-                      <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
+                      <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
                         "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-none shadow-sm",
-                        p.status === 'stock' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
+                        p.status === 'stock' ? "bg-blue-50 text-blue-600" : 
+                        p.status === 'reserved' ? "bg-orange-50 text-orange-600" :
+                        "bg-rose-50 text-rose-600"
                       )}>
-                        {p.status === 'stock' ? 'DISPONIBLE' : 'AGOTADO'}
+                        {p.status === 'stock' ? 'DISPONIBLE' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
                       </Badge>
-                      {p.warrantyMonths ? (
+                      {p.status === 'reserved' && p.reservationAmount && (
+                        <div className="text-[8px] font-black text-orange-500 mt-1 uppercase tracking-tighter">
+                          Debe: {fmt((p.salePrice || 0) * (p.quantity || 1) - p.reservationAmount)}
+                        </div>
+                      )}
+                      {p.warrantyMonths && p.status !== 'reserved' ? (
                         <div className="text-[8px] font-black text-blue-400 mt-1.5 uppercase tracking-tighter flex items-center justify-center gap-1">
                             <ShieldCheck className="w-3 h-3" /> {p.warrantyMonths} MESES
                         </div>
@@ -821,15 +869,38 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                           <Button 
                             variant="ghost" 
                             size="icon" 
+                            className="h-10 w-10 text-orange-500 hover:text-white hover:bg-orange-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-orange-500/20 transition-all"
+                            title="Separar / Abono"
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setReserveData({
+                                amount: '',
+                                buyer: '',
+                                date: new Date().toISOString().split('T')[0],
+                                method: 'Efectivo',
+                              });
+                              setIsReserveOpen(true);
+                            }}
+                          >
+                            <HandCoins className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {(p.status === 'stock' || p.status === 'reserved') && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
                             className="h-10 w-10 text-emerald-500 hover:text-white hover:bg-emerald-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
+                            title={p.status === 'reserved' ? 'Liquidar Venta' : 'Vender'}
                             onClick={() => {
                               setSelectedProduct(p);
                               setSellData({
                                 salePrice: p.salePrice || 0,
                                 saleDate: new Date().toISOString().split('T')[0],
-                                buyer: '',
+                                buyer: p.reservationBuyer || '',
                                 sellQuantity: 1,
                                 saleMethod: 'Efectivo',
+                                warrantyMonths: 3,
+                                warrantyExpiration: '',
                               });
                               setIsSellOpen(true);
                             }}
@@ -882,13 +953,28 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                       <h3 className="font-black text-lg text-foreground tracking-tight truncate">{p.name}</h3>
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">{p.id.slice(0, 8)}</div>
                     </div>
-                    <Badge variant={p.status === 'stock' ? 'secondary' : 'default'} className={cn(
+                    <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
                       "text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full",
-                      p.status === 'stock' ? "bg-blue-50 text-blue-600" : "bg-rose-50 text-rose-600"
+                      p.status === 'stock' ? "bg-blue-50 text-blue-600" : 
+                      p.status === 'reserved' ? "bg-orange-50 text-orange-600" :
+                      "bg-rose-50 text-rose-600"
                     )}>
-                      {p.status === 'stock' ? 'STOCK' : 'OUT'}
+                      {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'OUT'}
                     </Badge>
                   </div>
+                  
+                  {p.status === 'reserved' && (
+                    <div className="mb-4 p-3 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-between">
+                       <div>
+                          <div className="text-[8px] font-black text-orange-400 uppercase tracking-widest">Abonado</div>
+                          <div className="text-sm font-black text-orange-600">{fmt(p.reservationAmount || 0)}</div>
+                       </div>
+                       <div className="text-right">
+                          <div className="text-[8px] font-black text-orange-400 uppercase tracking-widest">Saldo Pendiente</div>
+                          <div className="text-sm font-black text-emerald-600">{fmt(((p.salePrice || 0) * (p.quantity || 1)) - (p.reservationAmount || 0))}</div>
+                       </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="space-y-1">
@@ -916,40 +1002,82 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     >
                       <Copy className="w-5 h-5" />
                     </Button>
-                    <Button 
-                      className="flex-1 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
-                      onClick={() => startEditing(p)}
-                    >
-                      <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                    </Button>
                     {p.status === 'stock' && (
+                        <div className="flex gap-2 w-full">
+                            <Button 
+                                variant="outline"
+                                className="flex-1 border-2 border-orange-100 text-orange-500 hover:bg-orange-50 hover:border-orange-200 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                                onClick={() => {
+                                    setSelectedProduct(p);
+                                    setReserveData({
+                                        amount: '',
+                                        buyer: '',
+                                        date: new Date().toISOString().split('T')[0],
+                                        method: 'Efectivo',
+                                    });
+                                    setIsReserveOpen(true);
+                                }}
+                            >
+                                <HandCoins className="w-4 h-4 mr-2" /> Separar
+                            </Button>
+                            <Button 
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20"
+                                onClick={() => {
+                                    setSelectedProduct(p);
+                                    setSellData({
+                                        salePrice: p.salePrice || 0,
+                                        saleDate: new Date().toISOString().split('T')[0],
+                                        buyer: '',
+                                        sellQuantity: 1,
+                                        saleMethod: 'Efectivo',
+                                    });
+                                    setIsSellOpen(true);
+                                }}
+                            >
+                                <ShoppingCart className="w-4 h-4 mr-2" /> Vender
+                            </Button>
+                        </div>
+                    )}
+                    {p.status === 'reserved' && (
                         <Button 
-                            className="w-12 h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20"
                             onClick={() => {
                                 setSelectedProduct(p);
                                 setSellData({
                                     salePrice: p.salePrice || 0,
                                     saleDate: new Date().toISOString().split('T')[0],
-                                    buyer: '',
+                                    buyer: p.reservationBuyer || '',
                                     sellQuantity: 1,
                                     saleMethod: 'Efectivo',
+                                    warrantyMonths: 3,
+                                    warrantyExpiration: '',
                                 });
                                 setIsSellOpen(true);
                             }}
                         >
-                            <ShoppingCart className="w-5 h-5" />
+                            <ShoppingCart className="w-4 h-4 mr-2" /> Finalizar Venta
                         </Button>
                     )}
-                    <Button 
-                      variant="outline"
-                      className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 rounded-2xl transition-colors"
-                      onClick={() => {
-                        setSelectedProduct(p);
-                        setIsDeleteOpen(true);
-                      }}
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
+                    {(p.status === 'sold' || p.status === 'reserved') && (
+                        <Button 
+                        className="flex-1 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                        onClick={() => startEditing(p)}
+                        >
+                        <Pencil className="w-3.5 h-3.5 mr-2" /> Detalle / Editar
+                        </Button>
+                    )}
+                    {p.status === 'stock' && (
+                        <Button 
+                        variant="outline"
+                        className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 rounded-2xl transition-colors"
+                        onClick={() => {
+                            setSelectedProduct(p);
+                            setIsDeleteOpen(true);
+                        }}
+                        >
+                        <Trash2 className="w-5 h-5" />
+                        </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1044,6 +1172,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="rounded-2xl border-slate-100">
                   <SelectItem value="stock">En Stock</SelectItem>
+                  <SelectItem value="reserved">Separado (Con Abono)</SelectItem>
                   <SelectItem value="out_of_stock">Agotado / No disponible</SelectItem>
                 </SelectContent>
               </Select>
@@ -1143,6 +1272,87 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
             
             <Button onClick={handleEditProduct} className="w-full bg-primary text-primary-foreground h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-primary/10 mt-2">
                Aplicar Cambios
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reserve Product Dialog */}
+      <Dialog open={isReserveOpen} onOpenChange={setIsReserveOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-black tracking-tight uppercase text-orange-600 flex items-center gap-2">
+                <HandCoins className="w-6 h-6" /> Separar Equipo
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6">
+            <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 flex items-center gap-4">
+               <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Smartphone className="w-6 h-6 text-orange-400" />
+               </div>
+               <div>
+                  <div className="font-black text-orange-900 truncate">{selectedProduct?.name}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-orange-400">Total a Pagar: {fmt((selectedProduct?.salePrice || 0) * (selectedProduct?.quantity || 1))}</div>
+               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="res-buyer" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Cliente *</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input 
+                    id="res-buyer" 
+                    placeholder="¿Quién separa el equipo?" 
+                    className="rounded-xl border-slate-100 h-11 pl-10"
+                    value={reserveData.buyer} 
+                    onChange={e => setReserveData({...reserveData, buyer: e.target.value})} 
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="res-amount" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Monto del Abono / Separación *</Label>
+              <Input 
+                id="res-amount" 
+                type="number" 
+                placeholder="0"
+                className="rounded-xl border-orange-100 bg-orange-50/20 h-12 font-black text-orange-600 text-lg"
+                value={reserveData.amount} 
+                onChange={e => setReserveData({...reserveData, amount: e.target.value})}
+              />
+              <p className="text-[9px] font-medium text-slate-400 uppercase italic">El equipo se marcará como SEPARADO en el catálogo.</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="res-date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha de Abono</Label>
+                <Input 
+                  id="res-date" 
+                  type="date" 
+                  className="rounded-xl border-slate-100 h-11"
+                  value={reserveData.date} 
+                  onChange={e => setReserveData({...reserveData, date: e.target.value})} 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método de Pago</Label>
+                <Select value={reserveData.method} onValueChange={v => setReserveData({...reserveData, method: v as PaymentMethod})}>
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-100">
+                    <SelectItem value="Efectivo">Efectivo</SelectItem>
+                    <SelectItem value="Bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="Nequi">Nequi</SelectItem>
+                    <SelectItem value="Banco de Bogota">Banco de Bogota</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <Button 
+              onClick={handleReserveProduct}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white h-14 rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-orange-600/10 mt-2"
+            >
+              Registrar Separación
             </Button>
           </div>
         </DialogContent>

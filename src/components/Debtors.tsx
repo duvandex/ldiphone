@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
-import { Plus, Trash2, HandCoins, UserPlus } from 'lucide-react';
+import { Plus, Trash2, HandCoins, UserPlus, Smartphone, BadgeDollarSign } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { fmt, cn } from '../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
@@ -79,6 +79,13 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
   }, 0);
   const totalDebtorsAmount = data.debtors.reduce((sum, d) => sum + d.totalAmount, 0);
   const totalDebtorsPaid = data.debtors.reduce((sum, d) => sum + d.payments.reduce((a, b) => a + b, 0), 0);
+
+  const reservedProducts = data.products.filter(p => p.status === 'reserved');
+  const totalReservedPending = reservedProducts.reduce((sum, p) => {
+    const total = (p.salePrice || 0) * (p.quantity || 1);
+    const paid = p.reservationAmount || 0;
+    return sum + (total - paid);
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -231,6 +238,60 @@ export default function Debtors({ appData }: { appData: ReturnType<typeof useApp
           </Table>
         </CardContent>
       </Card>
+
+      {reservedProducts.length > 0 && (
+        <div className="space-y-4 pt-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-black uppercase tracking-tight text-orange-600 flex items-center gap-2">
+              <BadgeDollarSign className="w-5 h-5" /> Separaciones Pendientes
+            </h3>
+            <Badge className="bg-orange-500/10 text-orange-600 border-none font-black text-xs px-3 py-1">
+              Saldo Total: {fmt(totalReservedPending)}
+            </Badge>
+          </div>
+
+          <Card className="border-none shadow-sm bg-card overflow-hidden">
+            <Table>
+              <TableHeader className="bg-orange-50/50">
+                <TableRow className="hover:bg-transparent border-orange-100">
+                  <TableHead className="text-[10px] uppercase font-black pl-6 text-orange-600">Cliente</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-orange-600">Equipo</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-right text-orange-600">Valor Venta</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-right text-orange-600">Abonado</TableHead>
+                  <TableHead className="text-[10px] uppercase font-black text-right text-orange-600 pr-6">Saldo Pendiente</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reservedProducts.map((p) => {
+                  const total = (p.salePrice || 0) * (p.quantity || 1);
+                  const paid = p.reservationAmount || 0;
+                  const balance = total - paid;
+                  return (
+                    <TableRow key={p.id} className="border-orange-50/50 hover:bg-orange-50/30 transition-colors">
+                      <TableCell className="py-4 pl-6 font-bold text-foreground">
+                        {p.reservationBuyer || p.buyer || 'Cliente'}
+                        <div className="text-[9px] text-muted-foreground uppercase mt-0.5 tracking-widest">{p.reservationDate || 'Sin fecha'}</div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-2">
+                           <Smartphone className="w-3.5 h-3.5 text-orange-400" />
+                           <span className="text-xs font-bold text-foreground">{p.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4 text-right text-xs font-mono font-medium text-foreground">{fmt(total)}</TableCell>
+                      <TableCell className="py-4 text-right text-xs font-mono font-bold text-orange-600">{fmt(paid)}</TableCell>
+                      <TableCell className="py-4 text-right text-xs font-mono font-black text-emerald-600 pr-6">{fmt(balance)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+            <div className="p-4 bg-orange-50/20 border-t border-orange-100 italic text-[10px] text-orange-600 font-medium">
+               Nota: Estas separaciones se gestionan desde el Inventario al completar el pago o editar el monto.
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* Payment Dialog */}
       <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>

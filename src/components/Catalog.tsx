@@ -312,11 +312,12 @@ export default function Catalog() {
                   <CardContent className="p-6 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2">
                        <h3 className="font-black text-xl tracking-tight text-foreground leading-none group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
-                       {p.status === 'reserved' ? (
-                           <Badge className="bg-orange-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">SEPARADO</Badge>
-                       ) : (
-                           <Badge className="bg-emerald-500 text-white border-none text-[8px] font-black h-5 uppercase tracking-widest px-1.5 shrink-0">DISPONIBLE</Badge>
-                       )}
+                       <Badge variant={p.status === 'reserved' ? 'outline' : 'secondary'} className={cn(
+                           "text-[8px] font-black h-5 rounded-full border-none uppercase tracking-widest px-2 shadow-sm flex items-center justify-center",
+                           p.status === 'reserved' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
+                       )}>
+                           {p.status === 'reserved' ? 'SEPARADO' : 'STOCK'}
+                       </Badge>
                     </div>
 
                     {p.description && (
@@ -441,10 +442,10 @@ export default function Catalog() {
                     <div className="w-full md:w-2/5 p-8 flex flex-col bg-card">
                         <div className="mb-6">
                             <Badge className={cn(
-                                "border-none text-[9px] font-black uppercase tracking-widest mb-3 px-2 py-1",
-                                selectedProduct.status === 'reserved' ? "bg-orange-500/10 text-orange-600" : "bg-primary/10 text-primary"
+                                "border-none text-[9px] font-black uppercase tracking-widest mb-3 px-3 py-1 rounded-full",
+                                selectedProduct.status === 'reserved' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
                             )}>
-                                {selectedProduct.status === 'reserved' ? 'EQUIPO SEPARADO' : 'Stock Disponible'}
+                                {selectedProduct.status === 'reserved' ? 'EQUIPO SEPARADO' : 'STOCK DISPONIBLE'}
                             </Badge>
                             <h2 className="text-3xl font-black text-foreground tracking-tighter leading-tight">{selectedProduct.name}</h2>
                             <div className="text-3xl font-black text-emerald-600 tracking-tighter mt-2">{fmt(selectedProduct.salePrice || 0)}</div>

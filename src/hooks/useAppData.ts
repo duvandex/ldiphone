@@ -320,7 +320,7 @@ export function useAppData() {
         const incomeOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
 
         if (incomeAmount > 0) {
-          const targetInvestor = product.investor;
+          const targetInvestor = product.investor || 'Duvan'; // Fallback to Duvan if investor missing
           if (product.isExternal) {
             const accountId = `Duvan-${saleMethod}`;
             incomeOps.push({ ref: doc(db, 'accounts', accountId), amount: adjustedIncome, id: accountId, investor: 'Duvan', method: saleMethod });

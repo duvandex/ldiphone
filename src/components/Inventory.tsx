@@ -1297,7 +1297,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
       {/* Reserve Product Dialog */}
       <Dialog open={isReserveOpen} onOpenChange={setIsReserveOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-2xl font-black tracking-tight uppercase text-orange-600 flex items-center gap-2">
                 <HandCoins className="w-6 h-6" /> Separar Equipo
@@ -1428,7 +1428,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       </Dialog>
 
       <Dialog open={isSellOpen} onOpenChange={setIsSellOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Venta</DialogTitle>
           </DialogHeader>

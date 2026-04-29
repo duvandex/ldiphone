@@ -98,7 +98,10 @@ export default function Catalog() {
   return (
     <div className="min-h-screen bg-background flex flex-col font-sans selection:bg-primary selection:text-primary-foreground">
       {/* Header */}
-      <header className="glass sticky top-0 z-50 px-4 py-3 border-b border-border shadow-sm">
+      <header className={cn(
+        "glass sticky z-50 px-4 py-3 border-b border-border shadow-sm transition-all duration-300",
+        isAuthenticated ? "top-14" : "top-0"
+      )}>
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="relative md:hidden">
@@ -134,10 +137,10 @@ export default function Catalog() {
             <div className="flex items-center gap-3">
               <Logo size="sm" />
               <div className="hidden sm:block leading-none">
-                <h1 className="text-xl font-black tracking-tighter text-foreground">LDIPHONE</h1>
+                <h1 className="text-xl font-black tracking-tighter text-foreground uppercase">{data.settings.companyName}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Live Collective</p>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Premium Stock</p>
                 </div>
               </div>
             </div>
@@ -287,7 +290,7 @@ export default function Catalog() {
               <motion.div key={p.id} variants={item}>
                 <Card className="group card-premium rounded-3xl overflow-hidden border-none h-full flex flex-col bg-card">
                   <div 
-                    className="aspect-[4/5] relative flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer"
+                    className="aspect-video relative flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer"
                     onClick={() => {
                         setSelectedProduct(p);
                         setActiveImageIndex(0);
@@ -297,11 +300,19 @@ export default function Catalog() {
                       <img src={p.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
                     ) : (
                       <div className="flex flex-col items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity">
-                         <Smartphone className="w-20 h-20 text-foreground" />
-                         <span className="text-[10px] font-black tracking-widest uppercase text-foreground">LDIphone Shop</span>
+                         <Smartphone className="w-16 h-16 text-foreground" />
                       </div>
                     )}
                     
+                    <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
+                      "absolute top-4 right-4 text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full border-none shadow-lg backdrop-blur-md",
+                      p.status === 'stock' ? "bg-blue-50/90 text-blue-600" : 
+                      p.status === 'reserved' ? "bg-orange-50/90 text-orange-600" :
+                      "bg-rose-50/90 text-rose-600"
+                    )}>
+                      {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'OUT'}
+                    </Badge>
+
                     {p.images && p.images.length > 1 && (
                       <div className="absolute bottom-4 right-4 bg-black/40 text-white text-[9px] font-bold px-3 py-1.5 rounded-full backdrop-blur-lg border border-white/10 group-hover:bg-primary transition-colors uppercase tracking-widest">
                         +{p.images.length} FOTOS
@@ -310,14 +321,9 @@ export default function Catalog() {
                   </div>
 
                   <CardContent className="p-6 flex flex-col flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                       <h3 className="font-black text-xl tracking-tight text-foreground leading-none group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
-                       <Badge variant={p.status === 'reserved' ? 'outline' : 'secondary'} className={cn(
-                           "text-[8px] font-black h-5 rounded-full border-none uppercase tracking-widest px-2 shadow-sm flex items-center justify-center",
-                           p.status === 'reserved' ? "bg-orange-50 text-orange-600" : "bg-blue-50 text-blue-600"
-                       )}>
-                           {p.status === 'reserved' ? 'SEPARADO' : 'STOCK'}
-                       </Badge>
+                    <div className="mb-4">
+                       <h3 className="font-black text-xl tracking-tight text-foreground leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
+                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Ref: {p.id.slice(0, 8)}</div>
                     </div>
 
                     {p.description && (
@@ -534,7 +540,7 @@ export default function Catalog() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-4">
                 <Logo size="sm" />
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Premium Apple Stock © 2026</p>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">{data.settings.companyName} © 2026</p>
             </div>
             <div className="flex gap-8">
                 <a href="#" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">Términos</a>

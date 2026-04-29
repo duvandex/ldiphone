@@ -128,11 +128,12 @@ function Login() {
   );
 }
 
-function Navigation({ onLogout }: { onLogout: () => void }) {
+function Navigation({ onLogout, user }: { onLogout: () => void, user: any }) {
   const location = useLocation();
   
-  // Hide navigation on public routes
-  if (location.pathname === '/catalog' || location.pathname.startsWith('/warranty') || location.pathname.startsWith('/view-invoice')) {
+  // Hide navigation on public routes ONLY if the user is not logged in
+  const isPublicRoute = location.pathname === '/catalog' || location.pathname.startsWith('/warranty') || location.pathname.startsWith('/view-invoice');
+  if (!user && isPublicRoute) {
     return null;
   }
   
@@ -256,7 +257,7 @@ function AppContent() {
   return (
     <Router>
       <div className="min-h-screen font-sans">
-        {isAuthenticated && <Navigation onLogout={handleLogout} />}
+        {isAuthenticated && <Navigation onLogout={handleLogout} user={user} />}
         {isQuotaExceeded && <QuotaWarning />}
         <Routes>
           {/* Public Routes */}

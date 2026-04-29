@@ -93,15 +93,15 @@ export function useAppData() {
         setLoading(false);
       });
     } else {
-      // PUBLIC: Only Stock
-      const qStock = query(collection(db, 'products'), where('status', '==', 'stock'), limit(200));
-      unsubProducts = onSnapshot(qStock, (snapshot) => {
-        const stock = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-        setData(prev => ({ ...prev, products: stock }));
+      // PUBLIC: See all products (we filter in Catalog.tsx)
+      const qPublic = query(collection(db, 'products'), limit(500));
+      unsubProducts = onSnapshot(qPublic, (snapshot) => {
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        setData(prev => ({ ...prev, products }));
         setLoading(false);
         setIsQuotaExceeded(false);
       }, (err) => {
-        console.error("Stock Products error:", err);
+        console.error("Public Products error:", err);
         handleQuotaError(err);
         setLoading(false);
       });
@@ -111,7 +111,25 @@ export function useAppData() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
+    const unsubSettings = onSnapshot(doc(db, 'app_settings', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        const snapData = snapshot.data();
+        setData(prev => ({ 
+          ...prev, 
+          invoiceCounter: snapData.invoiceCounter || prev.invoiceCounter,
+          settings: {
+            companyName: snapData.companyName || prev.settings.companyName,
+            companyLogo: snapData.companyLogo,
+            warrantyTerms: snapData.warrantyTerms || prev.settings.warrantyTerms,
+            defaultWarrantyMonths: snapData.defaultWarrantyMonths || prev.settings.defaultWarrantyMonths,
+            paymentMethods: snapData.paymentMethods || [],
+          }
+        }));
+      }
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
+
+    if (!user) return () => unsubSettings();
 
     const unsubDebtors = onSnapshot(collection(db, 'debtors'), (snapshot) => {
       const debtors = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Debtor));
@@ -137,30 +155,12 @@ export function useAppData() {
       setIsQuotaExceeded(false);
     }, handleQuotaError);
 
-    const unsubSettings = onSnapshot(doc(db, 'app_settings', 'global'), (snapshot) => {
-      if (snapshot.exists()) {
-        const snapData = snapshot.data();
-        setData(prev => ({ 
-          ...prev, 
-          invoiceCounter: snapData.invoiceCounter || prev.invoiceCounter,
-          settings: {
-            companyName: snapData.companyName || prev.settings.companyName,
-            companyLogo: snapData.companyLogo,
-            warrantyTerms: snapData.warrantyTerms || prev.settings.warrantyTerms,
-            defaultWarrantyMonths: snapData.defaultWarrantyMonths || prev.settings.defaultWarrantyMonths,
-            paymentMethods: snapData.paymentMethods || [],
-          }
-        }));
-      }
-      setIsQuotaExceeded(false);
-    }, handleQuotaError);
-
     return () => {
-      unsubDebtors();
-      unsubLiabilities();
-      unsubAccounts();
-      unsubExpenses();
-      unsubSettings();
+      unsubDebtors && unsubDebtors();
+      unsubLiabilities && unsubLiabilities();
+      unsubAccounts && unsubAccounts();
+      unsubExpenses && unsubExpenses();
+      unsubSettings && unsubSettings();
     };
   }, [user]);
 
@@ -347,6 +347,16 @@ export function useAppData() {
           transaction.set(settingsRef, { invoiceCounter: currentCounter + 1 }, { merge: true });
         }
 
+        const cleanObject = (obj: any) => {
+          const newObj: any = {};
+          Object.keys(obj).forEach(key => {
+            if (obj[key] !== undefined) {
+              newObj[key] = obj[key];
+            }
+          });
+          return newObj;
+        };
+
         if (updates.status === 'sold') {
           const currentQty = product.quantity || 1;
           const isSalePartial = sellQty < currentQty;
@@ -372,13 +382,13 @@ export function useAppData() {
             };
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
-            const { sellQuantity, amountToBalance, ...cleanUpdates } = updates;
-            cleanUpdates.invoiceNumber = finalInvoiceNumber;
-            transaction.update(productRef, cleanUpdates);
+            const { sellQuantity, amountToBalance, ...updatesToSend } = updates;
+            const finalUpdates = cleanObject({ ...updatesToSend, invoiceNumber: finalInvoiceNumber });
+            transaction.update(productRef, finalUpdates);
           }
         } else {
-          const { sellQuantity, amountToBalance, ...cleanUpdates } = updates;
-          transaction.update(productRef, cleanUpdates);
+          const { sellQuantity, amountToBalance, ...updatesToSend } = updates;
+          transaction.update(productRef, cleanObject(updatesToSend));
         }
 
         // Apply account updates

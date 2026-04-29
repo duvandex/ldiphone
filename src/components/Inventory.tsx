@@ -372,6 +372,19 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     qty: !sellData.sellQuantity || Number(sellData.sellQuantity) <= 0 || Number(sellData.sellQuantity) > (selectedProduct?.quantity || 0)
   };
 
+  const parseError = (err: any) => {
+    try {
+      const info = JSON.parse(err.message);
+      if (info.error) {
+        if (info.error.includes('permissions') || info.error.includes('PERMISSION_DENIED')) {
+          return "No tienes permisos para realizar esta acción. Por favor revisa que seas Administrador.";
+        }
+        return info.error;
+      }
+    } catch (e) {}
+    return err.message || "Error desconocido";
+  };
+
   const handleSellProduct = async () => {
     const sPrice = typeof sellData.salePrice === 'string' ? parseFloat(sellData.salePrice) : sellData.salePrice;
     const sQty = typeof sellData.sellQuantity === 'string' ? parseInt(sellData.sellQuantity) : sellData.sellQuantity;
@@ -404,7 +417,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       setIsSellOpen(false);
       setSelectedProduct(null);
     } catch (err: any) {
-      alert("Error al procesar la venta: " + err.message);
+      alert("Error al procesar la venta: " + parseError(err));
     }
   };
 
@@ -443,7 +456,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       setIsReserveOpen(false);
       setSelectedProduct(null);
     } catch (err: any) {
-      alert("Error al procesar el abono: " + err.message);
+      alert("Error al procesar el abono: " + parseError(err));
     }
   };
 
@@ -454,7 +467,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       setIsDeleteOpen(false);
       setSelectedProduct(null);
     } catch (err: any) {
-      alert("No se pudo eliminar el producto: " + err.message);
+      alert("No se pudo eliminar el producto: " + parseError(err));
     }
   };
 
@@ -835,12 +848,12 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </TableCell>
                     <TableCell className="py-5 text-center">
                       <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
-                        "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border-none shadow-sm",
+                        "text-[9px] font-black h-5 px-3 rounded-full border-none shadow-sm flex items-center justify-center uppercase tracking-widest",
                         p.status === 'stock' ? "bg-blue-50 text-blue-600" : 
-                        p.status === 'reserved' ? "bg-orange-50 text-orange-600" :
-                        "bg-rose-50 text-rose-600"
+                        p.status === 'reserved' ? "bg-orange-50 text-orange-600" : 
+                        "bg-slate-100 text-slate-400"
                       )}>
-                        {p.status === 'stock' ? 'DISPONIBLE' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
+                        {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
                       </Badge>
                       {p.status === 'reserved' && (
                         <div className="flex flex-col gap-0.5 mt-1">
@@ -1297,12 +1310,13 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
       {/* Reserve Product Dialog */}
       <Dialog open={isReserveOpen} onOpenChange={setIsReserveOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-black tracking-tight uppercase text-orange-600 flex items-center gap-2">
-                <HandCoins className="w-6 h-6" /> Separar Equipo
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="max-h-[95vh] overflow-y-auto p-8 custom-scrollbar">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-2xl font-black tracking-tight uppercase text-orange-600 flex items-center gap-2">
+                  <HandCoins className="w-6 h-6" /> Separar Equipo
+              </DialogTitle>
+            </DialogHeader>
           <div className="grid gap-6">
             <div className="bg-orange-50 p-4 rounded-2xl border border-orange-100 flex items-center gap-4">
                <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm">
@@ -1398,8 +1412,9 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               Registrar Separación
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </DialogContent>
+    </Dialog>
 
       {/* Confirm Delete Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={(open) => {
@@ -1428,10 +1443,11 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       </Dialog>
 
       <Dialog open={isSellOpen} onOpenChange={setIsSellOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 border-none shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Venta</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="max-h-[95vh] overflow-y-auto p-8 custom-scrollbar">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-2xl font-black tracking-tight uppercase">Registrar Venta</DialogTitle>
+            </DialogHeader>
           <div className="grid gap-6">
             <div className="flex items-center gap-4 bg-muted p-4 rounded-2xl border border-border">
                <div className="w-12 h-12 rounded-xl overflow-hidden bg-card shrink-0 border border-border">
@@ -1544,8 +1560,9 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               Confirmar Venta
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </DialogContent>
+    </Dialog>
 
       {isScannerOpen && (
         <IMEIScanner 

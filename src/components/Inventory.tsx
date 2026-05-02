@@ -165,7 +165,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeScannerMode, setActiveScannerMode] = useState<'add' | 'edit' | null>(null);
 
-  const [sortBy, setSortBy] = useState<string>('purchaseDate');
+  const [sortBy, setSortBy] = useState<string>('purchasePrice');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const handleSort = (field: string) => {
@@ -888,7 +888,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden xl:table-cell"
                   onClick={() => handleSort('category')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -896,7 +896,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden sm:table-cell"
                   onClick={() => handleSort('investor')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -904,7 +904,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   </div>
                 </TableHead>
                 <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden md:table-cell"
                   onClick={() => handleSort('quantity')}
                 >
                   <div className="flex items-center justify-center gap-1">
@@ -972,12 +972,12 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-5 text-center">
+                    <TableCell className="py-5 text-center hidden xl:table-cell">
                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter bg-card border-none text-muted-foreground">
                           {p.category || 'CELULARES'}
                        </Badge>
                     </TableCell>
-                    <TableCell className="py-5 text-center">
+                    <TableCell className="py-5 text-center hidden sm:table-cell">
                       <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px] mx-auto">
                         {p.isExternal ? (
                           <span className="text-rose-500 text-[8px] font-black uppercase flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
@@ -992,7 +992,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-5 text-center">
+                    <TableCell className="py-5 text-center hidden md:table-cell">
                       <div className="text-xs font-black bg-card border border-border shadow-sm px-3 py-1.5 rounded-xl w-fit mx-auto text-foreground">
                         {p.quantity || 1}
                       </div>
@@ -1185,19 +1185,30 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="space-y-1 p-3 bg-muted/30 rounded-2xl">
                       <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Inversión</div>
                       <div className="text-sm font-black text-foreground">
                         {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
                           <>
                             {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
-                            <span className="ml-1 text-[10px] text-primary">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
+                            <span className="ml-1 text-[8px] text-primary">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
                           </>
                         ) : fmt(p.purchasePrice)}
                       </div>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/30">
+                      <div className="text-[9px] font-black uppercase tracking-widest text-emerald-600">P. Venta</div>
+                      <div className="text-sm font-black text-emerald-700">{fmt(p.salePrice || 0)}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="space-y-1 px-3">
+                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Utilidad Est.</div>
+                       <div className="text-sm font-black text-emerald-600">+{fmt((p.salePrice || 0) * (p.quantity || 1) - (p.purchasePrice * (p.quantity || 1)))}</div>
+                    </div>
+                    <div className="space-y-1 px-3 text-right">
                       <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">Stock Disp.</div>
                       <div className="text-sm font-black text-blue-600">{p.quantity} Unid.</div>
                     </div>

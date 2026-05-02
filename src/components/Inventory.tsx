@@ -9,7 +9,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
@@ -165,6 +165,32 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeScannerMode, setActiveScannerMode] = useState<'add' | 'edit' | null>(null);
 
+  const [sortBy, setSortBy] = useState<string>('purchaseDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const isValidIMEI = (imei: string) => {
+    if (!imei) return true; // Allow empty for other types of products if needed, but if present must be 15 digits
+    return /^\d{15}$/.test(imei);
+  };
+
+  const isIMEIUnique = (imei: string, currentId?: string) => {
+    if (!imei) return true;
+    return !data.products.some(p => 
+      p.id !== currentId && 
+      p.imei === imei && 
+      (p.status === 'stock' || p.status === 'reserved' || !p.status)
+    );
+  };
+
   const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
 
   // Form states
@@ -253,6 +279,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.purchasePrice) return;
+
+    if (newProduct.imei && !isValidIMEI(newProduct.imei)) {
+      alert("El IMEI debe ser un número de 15 dígitos.");
+      return;
+    }
+
+    if (newProduct.imei && !isIMEIUnique(newProduct.imei)) {
+      alert("Este IMEI ya está registrado en un equipo en stock o separado.");
+      return;
+    }
     
     let finalProduct = { ...newProduct };
     if (useCoInvestment) {
@@ -304,6 +340,31 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     return matchesSearch && matchesInvestor && matchesStatus;
   });
 
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    let valA: any;
+    let valB: any;
+
+    if (sortBy === 'profit') {
+      valA = (a.salePrice || 0) - a.purchasePrice;
+      valB = (b.salePrice || 0) - b.purchasePrice;
+    } else if (sortBy === 'investor') {
+      valA = a.investor || (a.coInvestors?.[0]?.investor || '');
+      valB = b.investor || (b.coInvestors?.[0]?.investor || '');
+    } else {
+      valA = (a as any)[sortBy] || '';
+      valB = (b as any)[sortBy] || '';
+    }
+
+    if (typeof valA === 'string') {
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+    }
+
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 
   const startEditing = (p: Product) => {
@@ -320,6 +381,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const handleEditProduct = async () => {
     if (!editProductState) return;
+
+    if (editProductState.imei && !isValidIMEI(editProductState.imei)) {
+      alert("El IMEI debe ser un número de 15 dígitos.");
+      return;
+    }
+
+    if (editProductState.imei && !isIMEIUnique(editProductState.imei, editProductState.id)) {
+      alert("Este IMEI ya está registrado en un equipo en stock o separado.");
+      return;
+    }
 
     let finalProduct = { ...editProductState };
     if (useCoInvestment) {
@@ -550,6 +621,36 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           </div>
         </div>
 
+        <div className="flex gap-4 md:hidden">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="flex-1 bg-card border-none shadow-sm h-12 rounded-2xl font-bold text-xs uppercase tracking-widest px-4">
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="w-3 h-3" />
+                  <SelectValue placeholder="Ordenar por" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border">
+                <SelectItem value="purchaseDate">Fecha Compra</SelectItem>
+                <SelectItem value="name">Nombre</SelectItem>
+                <SelectItem value="category">Categoría</SelectItem>
+                <SelectItem value="investor">Inversor</SelectItem>
+                <SelectItem value="quantity">Cantidad</SelectItem>
+                <SelectItem value="purchasePrice">Valor Inversión</SelectItem>
+                <SelectItem value="salePrice">Precio Venta</SelectItem>
+                <SelectItem value="profit">Ganancia Est.</SelectItem>
+                <SelectItem value="status">Estado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="h-12 w-12 bg-card border-none shadow-sm rounded-2xl text-muted-foreground"
+            >
+                {sortOrder === 'asc' ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </Button>
+        </div>
+
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
           <DialogTrigger
             render={
@@ -600,7 +701,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 <div className="grid gap-2">
                   <Label htmlFor="imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI / Serial</Label>
                   <div className="flex gap-2">
-                    <Input id="imei" placeholder="15 dígitos" className="rounded-xl border-slate-100 h-11 flex-1" value={newProduct.imei} onChange={e => setNewProduct({...newProduct, imei: e.target.value})} />
+                    <Input 
+                      id="imei" 
+                      placeholder="15 dígitos" 
+                      maxLength={15}
+                      className="rounded-xl border-slate-100 h-11 flex-1" 
+                      value={newProduct.imei} 
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '').slice(0, 15);
+                        setNewProduct({...newProduct, imei: val});
+                      }} 
+                    />
                     <Button 
                       type="button" 
                       variant="outline" 
@@ -768,17 +879,76 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-b border-border">
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-8 h-14">Detalle Dispositivo</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center">Qty</TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-8 h-14 cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Detalle Dispositivo {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('category')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Tipo {sortBy === 'category' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('investor')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Inversor {sortBy === 'investor' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('quantity')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Qty {sortBy === 'quantity' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
                 <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400">Identificación</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Inversión (u)</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right">Profit Est.</TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center">Estado</TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('purchasePrice')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Inversión (u) {sortBy === 'purchasePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-emerald-600 text-right cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('salePrice')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    P. Venta {sortBy === 'salePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right cursor-pointer hover:text-foreground transition-colors"
+                  onClick={() => handleSort('profit')}
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    Profit Est. {sortBy === 'profit' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
+                <TableHead 
+                   className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
+                   onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Estado {sortBy === 'status' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                  </div>
+                </TableHead>
                 <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right pr-8">Operaciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((p) => {
+              {sortedProducts.map((p) => {
                 const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
                 const totalProfit = profitPerUnit * (p.quantity || 1);
                 return (
@@ -796,22 +966,30 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         </div>
                          <div className="space-y-0.5">
                           <div className="font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
-                          <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex flex-wrap items-center gap-2">
-                             {p.isExternal ? (
-                               <span className="text-rose-500 flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
-                             ) : p.coInvestors && p.coInvestors.length > 0 ? (
-                               p.coInvestors.map((c, i) => (
-                                 <span key={i} className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[8px]">
-                                   {c.investor} ({c.percentage}%)
-                                 </span>
-                               ))
-                             ) : (
-                               <span>{p.investor}</span>
-                             )}
-                             <span className="w-1 h-1 rounded-full bg-muted"></span>
-                             {p.purchaseDate}
+                          <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
+                              {p.purchaseDate}
                           </div>
                         </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-5 text-center">
+                       <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter bg-card border-none text-muted-foreground">
+                          {p.category || 'CELULARES'}
+                       </Badge>
+                    </TableCell>
+                    <TableCell className="py-5 text-center">
+                      <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px] mx-auto">
+                        {p.isExternal ? (
+                          <span className="text-rose-500 text-[8px] font-black uppercase flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
+                        ) : p.coInvestors && p.coInvestors.length > 0 ? (
+                          p.coInvestors.map((c, i) => (
+                            <span key={i} className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[8px] font-black">
+                              {c.investor}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] font-black uppercase text-muted-foreground">{p.investor}</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="py-5 text-center">
@@ -835,12 +1013,14 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         )}
                       </div>
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        Total {p.quantity > 1 ? '(u)' : 'Costo'}: {
-                          p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' 
-                          ? fmt((p.purchasePrice * (p.quantity || 1)) * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)
-                          : fmt(p.purchasePrice * (p.quantity || 1))
-                        }
+                        Costo {p.quantity > 1 ? 'Unid.' : ''}
                       </div>
+                    </TableCell>
+                    <TableCell className="py-5 text-right">
+                      <div className="text-sm font-black text-emerald-700">
+                        {fmt(p.salePrice || 0)}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Sugerido</div>
                     </TableCell>
                     <TableCell className="py-5 text-right">
                        <div className="text-sm font-black text-emerald-600">+{fmt(totalProfit)}</div>
@@ -960,7 +1140,7 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
       {/* Product List - Mobile View (Cards) */}
       <div className="grid grid-cols-1 md:hidden gap-6">
-        {filteredProducts.map((p) => {
+        {sortedProducts.map((p) => {
           const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
           return (
             <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl">
@@ -1147,7 +1327,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               <div className="grid gap-2">
                 <Label htmlFor="e-imei" className="text-[10px] font-black uppercase tracking-widest text-slate-400">IMEI</Label>
                 <div className="flex gap-2">
-                  <Input id="e-imei" className="rounded-xl border-slate-100 h-11 flex-1" value={editProductState?.imei || ''} onChange={e => setEditProductState(prev => prev ? ({...prev, imei: e.target.value}) : null)} />
+                  <Input 
+                    id="e-imei" 
+                    maxLength={15}
+                    placeholder="15 dígitos"
+                    className="rounded-xl border-slate-100 h-11 flex-1" 
+                    value={editProductState?.imei || ''} 
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '').slice(0, 15);
+                      setEditProductState(prev => prev ? ({...prev, imei: val}) : null);
+                    }} 
+                  />
                   <Button 
                     type="button" 
                     variant="outline" 

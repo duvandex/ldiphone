@@ -368,18 +368,18 @@ export function useAppData() {
             });
 
             const newSoldId = Math.random().toString(36).substr(2, 9);
-            const soldEntry: Product = {
+            const soldEntry: Product = cleanObject({
               ...product,
               id: newSoldId,
               status: 'sold',
               quantity: sellQty,
-              salePrice: updates.salePrice || product.salePrice,
-              saleDate: updates.saleDate,
-              buyer: updates.buyer || product.buyer,
+              salePrice: updates.salePrice ?? product.salePrice,
+              saleDate: updates.saleDate ?? new Date().toISOString().split('T')[0],
+              buyer: updates.buyer ?? product.buyer ?? '',
               invoiceNumber: finalInvoiceNumber,
-              saleMethod: updates.saleMethod || product.saleMethod,
+              saleMethod: updates.saleMethod ?? product.saleMethod ?? 'Efectivo',
               originalProductId: id,
-            };
+            });
             transaction.set(doc(db, 'products', newSoldId), soldEntry);
           } else {
             const { sellQuantity, amountToBalance, ...updatesToSend } = updates;

@@ -431,6 +431,42 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     warrantyExpiration: '',
   });
 
+  // Add effect to sync warranty expiration in sell dialog
+  useEffect(() => {
+    if (isSellOpen && sellData.saleDate && sellData.warrantyMonths !== undefined) {
+      const date = new Date(sellData.saleDate);
+      date.setMonth(date.getMonth() + sellData.warrantyMonths);
+      const expDate = date.toISOString().split('T')[0];
+      if (sellData.warrantyExpiration !== expDate) {
+        setSellData(prev => ({ ...prev, warrantyExpiration: expDate }));
+      }
+    }
+  }, [isSellOpen, sellData.saleDate, sellData.warrantyMonths]);
+
+  // Add similar for new product
+  useEffect(() => {
+    if (newProduct.purchaseDate && newProduct.warrantyMonths !== undefined) {
+      const date = new Date(newProduct.purchaseDate);
+      date.setMonth(date.getMonth() + newProduct.warrantyMonths);
+      const expDate = date.toISOString().split('T')[0];
+      if (newProduct.warrantyExpiration !== expDate) {
+        setNewProduct(prev => ({ ...prev, warrantyExpiration: expDate }));
+      }
+    }
+  }, [newProduct.purchaseDate, newProduct.warrantyMonths]);
+
+  // And for edit
+  useEffect(() => {
+    if (editProductState?.purchaseDate && editProductState?.warrantyMonths !== undefined) {
+      const date = new Date(editProductState.purchaseDate);
+      date.setMonth(date.getMonth() + editProductState.warrantyMonths);
+      const expDate = date.toISOString().split('T')[0];
+      if (editProductState.warrantyExpiration !== expDate) {
+        setEditProductState(prev => prev ? ({ ...prev, warrantyExpiration: expDate }) : null);
+      }
+    }
+  }, [editProductState?.purchaseDate, editProductState?.warrantyMonths]);
+
   const [reserveData, setReserveData] = useState({
     amount: '',
     buyer: '',

@@ -9,7 +9,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
@@ -78,46 +78,53 @@ const ImageUploader = ({
             )}
 
             {/* Actions */}
-            <div className="absolute top-1 right-1 flex flex-col gap-1">
+            <div className="absolute top-1.5 right-1.5 flex flex-col gap-2 z-10">
               <button 
                 type="button"
                 onClick={() => onRemove(i)}
-                className="p-1 bg-white/90 rounded-full shadow-sm hover:bg-white text-rose-500 transition-colors"
+                className="p-2.5 bg-white/95 rounded-full shadow-md active:bg-rose-500 active:text-white text-rose-500 transition-all border border-rose-100"
                 title="Eliminar"
               >
-                <X className="w-2.5 h-2.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Reorder Buttons */}
-            {onReorder && images.length > 1 && (
-              <div className="absolute inset-x-0 bottom-1 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                {/* We'll show these on hover in a better way if needed, for now just show them if it's possible to move */}
-              </div>
-            )}
-
-            {/* Overlay reorder controls */}
-            <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center gap-2 opacity-0 hover:opacity-100">
+            {/* Reorder Buttons - Optimization for mobile (always visible at bottom or significantly better hover) */}
+            <div className="absolute inset-x-0 bottom-0 top-0 bg-black/5 flex items-center justify-center gap-4 opacity-0 sm:group-hover:opacity-100 transition-opacity">
                {onReorder && i > 0 && (
                  <button
                    type="button"
                    onClick={() => onReorder(i, 'left')}
-                   className="p-1.5 bg-white rounded-full text-slate-700 shadow-lg hover:scale-110 transition-transform"
+                   className="p-2 bg-white rounded-full text-slate-700 shadow-xl active:scale-90 transition-transform"
                    title="Mover a la izquierda"
                  >
-                   <ArrowLeft className="w-3 h-3" />
+                   <ArrowLeft className="w-4 h-4" />
                  </button>
                )}
                {onReorder && i < images.length - 1 && (
                  <button
                    type="button"
                    onClick={() => onReorder(i, 'right')}
-                   className="p-1.5 bg-white rounded-full text-slate-700 shadow-lg hover:scale-110 transition-transform"
+                   className="p-2 bg-white rounded-full text-slate-700 shadow-xl active:scale-90 transition-transform"
                    title="Mover a la derecha"
                  >
-                   <ArrowRight className="w-3 h-3" />
+                   <ArrowRight className="w-4 h-4" />
                  </button>
                )}
+            </div>
+            
+            {/* Mobile indicator for reorder - visible touch zone if opacity logic fails */}
+            <div className="md:hidden absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
+                {onReorder && i > 0 && (
+                    <div className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-auto active:scale-90" onClick={() => onReorder(i, 'left')}>
+                        <ChevronLeft className="w-4 h-4 text-white" />
+                    </div>
+                )}
+                {onReorder && i < images.length - 1 && (
+                    <div className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center pointer-events-auto active:scale-90 ml-auto" onClick={() => onReorder(i, 'right')}>
+                        <ChevronRight className="w-4 h-4 text-white" />
+                    </div>
+                )}
             </div>
           </div>
         ))}
@@ -1250,19 +1257,31 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 pt-4 border-t border-border">
+                  <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-border">
                     <Button 
                       variant="outline"
-                      className="w-12 h-12 border-2 border-border text-muted-foreground hover:bg-muted hover:text-primary hover:border-primary/50 rounded-2xl transition-colors"
+                      className="w-12 h-12 border-2 border-border text-muted-foreground hover:bg-muted hover:text-primary hover:border-primary/50 rounded-2xl transition-colors shrink-0"
                       onClick={() => handleDuplicate(p)}
                     >
                       <Copy className="w-5 h-5" />
                     </Button>
+                    
+                    <Button 
+                      variant="outline"
+                      className={cn(
+                        "w-12 h-12 border-2 rounded-2xl transition-colors shrink-0",
+                        p.status === 'stock' ? "border-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100" : "bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white"
+                      )}
+                      onClick={() => p.status === 'stock' ? (setSelectedProduct(p), setIsDeleteOpen(true)) : startEditing(p)}
+                    >
+                      {p.status === 'stock' ? <Trash2 className="w-5 h-5" /> : <Pencil className="w-4 h-4" />}
+                    </Button>
+
                     {(p.status === 'stock' || p.status === 'reserved') && (
-                        <div className="flex gap-2 w-full">
+                        <div className="flex gap-2 flex-1 min-w-0">
                             <Button 
                                 variant="outline"
-                                className="flex-1 border-2 border-orange-100 text-orange-500 hover:bg-orange-50 hover:border-orange-200 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                                className="flex-1 border-2 border-orange-100 text-orange-500 hover:bg-orange-50 hover:border-orange-200 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 px-0"
                                 onClick={() => {
                                     setSelectedProduct(p);
                                     setReserveData({
@@ -1274,10 +1293,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                                     setIsReserveOpen(true);
                                 }}
                             >
-                                <HandCoins className="w-4 h-4 mr-2" /> Abono
+                                <HandCoins className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">Abono</span>
                             </Button>
                             <Button 
-                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20"
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20 px-0"
                                 onClick={() => {
                                     setSelectedProduct(p);
                                     setSellData({
@@ -1292,48 +1311,25 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                                     setIsSellOpen(true);
                                 }}
                             >
-                                <ShoppingCart className="w-4 h-4 mr-2" /> {p.status === 'reserved' ? 'Liquidar' : 'Vender'}
+                                <ShoppingCart className="w-4 h-4 sm:mr-2" /> <span className="hidden sm:inline">{p.status === 'reserved' ? 'Liquidar' : 'Vender'}</span><span className="sm:hidden">{p.status === 'reserved' ? 'Liq.' : 'Ven.'}</span>
                             </Button>
+                            {p.status === 'stock' && (
+                                <Button 
+                                    className="w-12 h-12 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase shrink-0"
+                                    onClick={() => startEditing(p)}
+                                >
+                                    <Pencil className="w-4 h-4" />
+                                </Button>
+                            )}
                         </div>
                     )}
-                    {p.status === 'reserved' && (
+
+                    {p.status === 'sold' && (
                         <Button 
-                            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest h-12 flex shadow-lg shadow-emerald-500/20"
-                            onClick={() => {
-                                setSelectedProduct(p);
-                                setSellData({
-                                    salePrice: p.salePrice || 0,
-                                    saleDate: new Date().toISOString().split('T')[0],
-                                    buyer: p.reservationBuyer || '',
-                                    sellQuantity: 1,
-                                    saleMethod: 'Efectivo',
-                                    warrantyMonths: 3,
-                                    warrantyExpiration: '',
-                                });
-                                setIsSellOpen(true);
-                            }}
+                          className="flex-1 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
+                          onClick={() => startEditing(p)}
                         >
-                            <ShoppingCart className="w-4 h-4 mr-2" /> Finalizar Venta
-                        </Button>
-                    )}
-                    {(p.status === 'sold' || p.status === 'reserved') && (
-                        <Button 
-                        className="flex-1 bg-primary text-primary-foreground hover:opacity-90 rounded-2xl font-black uppercase text-[10px] tracking-widest h-12"
-                        onClick={() => startEditing(p)}
-                        >
-                        <Pencil className="w-3.5 h-3.5 mr-2" /> Detalle / Editar
-                        </Button>
-                    )}
-                    {p.status === 'stock' && (
-                        <Button 
-                        variant="outline"
-                        className="w-12 h-12 border-2 border-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 rounded-2xl transition-colors"
-                        onClick={() => {
-                            setSelectedProduct(p);
-                            setIsDeleteOpen(true);
-                        }}
-                        >
-                        <Trash2 className="w-5 h-5" />
+                          <Pencil className="w-3.5 h-3.5 mr-2" /> Detalle / Editar
                         </Button>
                     )}
                   </div>

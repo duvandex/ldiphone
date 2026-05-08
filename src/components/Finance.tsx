@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Badge } from './ui/badge';
-import { Plus, Trash2, Wallet, Landmark, Banknote, TrendingDown, TrendingUp, PiggyBank, Users, User, Pencil, Save, CreditCard, Bitcoin } from 'lucide-react';
+import { Plus, Trash2, Wallet, Landmark, Banknote, TrendingDown, TrendingUp, PiggyBank, Users, User, Pencil, Save, CreditCard, Bitcoin, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAppData } from '../hooks/useAppData';
 import { PaymentMethod, FinancialAccount, Investor, Expense } from '../types';
 import { fmt, cn } from '../lib/utils';
@@ -23,6 +23,14 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
   const [newBalance, setNewBalance] = useState<number>(0);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editExpenseState, setEditExpenseState] = useState<Expense | null>(null);
+  const [expandedInvestors, setExpandedInvestors] = useState<Set<string>>(new Set());
+
+  const toggleInvestor = (name: string) => {
+    const next = new Set(expandedInvestors);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    setExpandedInvestors(next);
+  };
 
   const getAccountBalanceCOP = (acc: FinancialAccount) => {
     if (acc.method === 'Cripto (USDT)') {
@@ -248,27 +256,98 @@ export default function Finance({ appData }: { appData: ReturnType<typeof useApp
                   ))}
                 </div>
 
-                {/* Expenses and Actions */}
                 <Card className="lg:col-span-2 border-none shadow-sm flex flex-col justify-center p-4 bg-muted/50">
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-1">
                       <h4 className="text-xs font-bold uppercase text-muted-foreground">Operaciones Rápidas</h4>
                       <p className="text-[11px] text-muted-foreground/60">Registra salidas de dinero para {investor}</p>
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold uppercase text-[10px]"
-                      onClick={() => {
-                        setNewExpense(prev => ({ ...prev, investor: investor }));
-                        setIsExpenseOpen(true);
-                      }}
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> Registrar Gasto
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="border-rose-200 text-rose-600 hover:bg-rose-50 font-bold uppercase text-[10px]"
+                        onClick={() => {
+                          setNewExpense(prev => ({ ...prev, investor: investor }));
+                          setIsExpenseOpen(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Registrar Gasto
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-primary font-bold uppercase text-[10px] h-8"
+                        onClick={() => toggleInvestor(investor)}
+                      >
+                        {expandedInvestors.has(investor) ? (
+                          <>Ocultar Inversiones <ChevronUp className="w-3 h-3 ml-1" /></>
+                        ) : (
+                          <>Ver Inversiones <ChevronDown className="w-3 h-3 ml-1" /></>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               </div>
+
+              {/* Detailed Product List (Accordion) */}
+              {expandedInvestors.has(investor) && (
+                <Card className="border-none shadow-sm bg-muted/30 overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50 border-border">
+                          <TableHead className="text-[9px] uppercase font-black py-2 tracking-widest">Producto Invertido</TableHead>
+                          <TableHead className="text-[9px] uppercase font-black py-2 tracking-widest text-center">Cant.</TableHead>
+                          <TableHead className="text-[9px] uppercase font-black py-2 tracking-widest text-right">Inversión Individual</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {investorProducts
+                          .filter(p => !p.isExternal && (p.status === 'stock' || p.status === 'reserved'))
+                          .map(p => {
+                            const shareInfo = p.coInvestors && p.coInvestors.length > 0 
+                              ? p.coInvestors.find(co => co.investor === investor)
+                              : null;
+                            const share = shareInfo ? (shareInfo.percentage / 100) : 1;
+                            const invValue = p.purchasePrice * share * (p.quantity || 1);
+                            
+                            return (
+                              <TableRow key={p.id} className="border-border hover:bg-muted/50">
+                                <TableCell className="py-3 text-[10px] font-medium text-foreground">
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="font-bold text-slate-800">{p.name}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={cn(
+                                        "text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter",
+                                        p.status === 'reserved' ? "bg-orange-100 text-orange-600" : "bg-blue-100 text-blue-600"
+                                      )}>
+                                        {p.status === 'reserved' ? 'Reservado' : 'En Stock'}
+                                      </span>
+                                      {shareInfo && (
+                                        <span className="text-[8px] text-primary font-bold">Share: {shareInfo.percentage}%</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="py-3 text-[10px] font-black text-center text-foreground">{p.quantity}</TableCell>
+                                <TableCell className="py-3 text-sm font-mono font-black text-right text-foreground">
+                                  {fmt(invValue)}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        {investorProducts.filter(p => !p.isExternal && (p.status === 'stock' || p.status === 'reserved')).length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-6 text-muted-foreground text-[10px] uppercase font-bold">Sin inversiones activas en stock</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           );
         })}

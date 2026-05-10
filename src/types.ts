@@ -47,6 +47,7 @@ export interface Product {
   discount?: number;
   discountType?: 'fixed' | 'percentage';
   purchaseSources?: { accountId: string; amount: number }[];
+  hideInCatalog?: boolean;
 }
 
 export interface FinancialAccount {

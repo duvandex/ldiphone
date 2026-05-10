@@ -61,6 +61,7 @@ export default function Catalog() {
   const publicProducts = data.products
     .filter(p => 
       (p.status === 'stock' || p.status === 'reserved' || !p.status) && 
+      !p.hideInCatalog &&
       (p.name?.toLowerCase() || '').includes(search.toLowerCase()) &&
       (category === 'all' || 
        p.category === category || 

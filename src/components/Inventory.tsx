@@ -289,7 +289,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     description: '',
     category: 'CELULARES',
     isExternal: false,
-    coInvestors: []
+    coInvestors: [],
+    hideInCatalog: false
   });
 
   const [useCoInvestment, setUseCoInvestment] = useState(false);
@@ -428,7 +429,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       purchasePrice: 0, salePrice: 0, quantity: 1, status: 'stock',
       category: 'CELULARES',
       images: [], purchaseMethod: 'Efectivo', warrantyMonths: 3,
-      warrantyExpiration: '', description: '', isExternal: false, coInvestors: []
+      warrantyExpiration: '', description: '', isExternal: false, coInvestors: [],
+      hideInCatalog: false
     });
     setUseCoInvestment(false);
     setUseMultiSource(false);
@@ -437,6 +439,10 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   };
 
   // ... (keeping search/filter logic same)
+  const toggleHideInCatalog = async (p: Product) => {
+    await updateProduct(p.id, { hideInCatalog: !p.hideInCatalog });
+  };
+
   const filteredProducts = data.products.filter(p => {
     if (p.status === 'sold') return false;
 
@@ -935,6 +941,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     <HandCoins className="w-3 h-3" /> Pago Multi-Cuenta
                   </Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="hide-catalog" 
+                    checked={newProduct.hideInCatalog} 
+                    onCheckedChange={(v) => setNewProduct({...newProduct, hideInCatalog: !!v})} 
+                  />
+                  <Label htmlFor="hide-catalog" className="text-[10px] font-black uppercase tracking-widest text-rose-500 cursor-pointer">
+                    No Mostrar
+                  </Label>
+                </div>
               </div>
 
               {!newProduct.isExternal && !useCoInvestment && !useMultiSource && (
@@ -1381,6 +1397,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                        <div className="flex items-center gap-1 ml-2 pr-2 border-l border-slate-100 pl-4">
+                           <Checkbox 
+                             id={`hide-${p.id}`}
+                             checked={p.hideInCatalog}
+                             onCheckedChange={() => toggleHideInCatalog(p)}
+                             className="border-rose-200 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
+                           />
+                           <Label htmlFor={`hide-${p.id}`} className="text-[10px] font-black uppercase text-rose-500 cursor-pointer select-none">No Mostrar</Label>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1495,6 +1520,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                     >
                       {p.status === 'stock' ? <Trash2 className="w-5 h-5" /> : <Pencil className="w-4 h-4" />}
                     </Button>
+
+                    <div className="flex items-center gap-2 w-full pt-2 mt-2 border-t border-slate-50">
+                        <Checkbox 
+                           id={`hide-mobile-${p.id}`}
+                           checked={p.hideInCatalog}
+                           onCheckedChange={() => toggleHideInCatalog(p)}
+                           className="w-6 h-6 rounded-lg border-2 border-rose-200 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500 shadow-sm"
+                        />
+                        <Label htmlFor={`hide-mobile-${p.id}`} className="text-[10px] font-black uppercase text-rose-500 cursor-pointer select-none tracking-widest">No Mostrar</Label>
+                    </div>
 
                     {(p.status === 'stock' || p.status === 'reserved') && (
                         <div className="flex gap-2 flex-1 min-w-0">
@@ -1692,6 +1727,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   <Label htmlFor="e-is-co-inv" className="text-[10px] font-black uppercase tracking-widest text-blue-600 cursor-pointer">
                     Co-Inversión
                   </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                   <Checkbox 
+                     id="e-hide-catalog" 
+                     checked={editProductState?.hideInCatalog || false} 
+                     onCheckedChange={(v) => setEditProductState(prev => prev ? ({...prev, hideInCatalog: !!v}) : null)} 
+                   />
+                   <Label htmlFor="e-hide-catalog" className="text-[10px] font-black uppercase tracking-widest text-rose-500 cursor-pointer">
+                     No Mostrar
+                   </Label>
                 </div>
               </div>
 

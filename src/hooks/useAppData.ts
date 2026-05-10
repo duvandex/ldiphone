@@ -229,10 +229,21 @@ export function useAppData() {
 
       await runTransaction(db, async (transaction) => {
         // Collect all potential account references to read FIRST
-        const accountOps: { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }[] = [];
+        const accountOps: { ref: any, amount: number, id: string, investor?: Investor, method?: PaymentMethod }[] = [];
         
         if (!newProduct.isExternal) {
-          if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
+          if (newProduct.purchaseSources && newProduct.purchaseSources.length > 0) {
+            for (const src of newProduct.purchaseSources) {
+              const [inv, met] = src.accountId.split('-');
+              accountOps.push({
+                ref: doc(db, 'accounts', src.accountId),
+                amount: src.amount,
+                id: src.accountId,
+                investor: inv as Investor,
+                method: met as PaymentMethod
+              });
+            }
+          } else if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
             for (const co of newProduct.coInvestors) {
               const methodUsed = co.method || newProduct.purchaseMethod || 'Efectivo';
               const accountId = `${co.investor}-${methodUsed}`;
@@ -410,6 +421,149 @@ export function useAppData() {
       });
     } catch (err) {
       handleFirestoreError(err, 'update', `products/${id}`);
+    }
+  };
+
+  const processBulkSale = async (items: {
+    productId: string;
+    salePrice: number;
+    sellQuantity: number;
+    discount?: number;
+    discountType?: 'fixed' | 'percentage';
+    warrantyMonths: number;
+    warrantyExpiration: string;
+  }[], commonData: {
+    buyer: string;
+    saleDate: string;
+    saleMethod: PaymentMethod;
+  }) => {
+    try {
+      await runTransaction(db, async (transaction) => {
+        // Collect all products and settings
+        const productRefs = items.map(item => doc(db, 'products', item.productId));
+        const productSnapshots = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        
+        const settingsRef = doc(db, 'app_settings', 'global');
+        const settingsDoc = await transaction.get(settingsRef);
+        
+        const currentCounter = settingsDoc.exists() ? (settingsDoc.data() as any).invoiceCounter || 1 : 1;
+        const invoiceNumber = `FAC-${String(currentCounter).padStart(3, '0')}`;
+        
+        // Prepare account updates
+        const accountOpsMap = new Map<string, { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }>();
+
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const productSnap = productSnapshots[i];
+          if (!productSnap.exists()) continue;
+          const product = productSnap.data() as Product;
+          
+          let finalPrice = item.salePrice;
+          if (item.discount && item.discount > 0) {
+            if (item.discountType === 'percentage') {
+              finalPrice = finalPrice * (1 - (item.discount / 100));
+            } else {
+              finalPrice = finalPrice - item.discount;
+            }
+          }
+
+          const incomeCOP = finalPrice * item.sellQuantity;
+          const alreadyPaid = product.status === 'reserved' ? (product.reservationAmount || 0) : 0;
+          const pendingIncome = incomeCOP - alreadyPaid;
+          
+          if (pendingIncome > 0) {
+            const adjustedIncome = commonData.saleMethod === 'Cripto (USDT)' ? pendingIncome / usdtRate : pendingIncome;
+            const targetInvestors = product.isExternal 
+              ? [{ investor: 'Duvan' as Investor, percentage: 100 }] 
+              : (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor, percentage: 100 }]);
+
+            for (const co of targetInvestors) {
+              const accountId = `${co.investor}-${commonData.saleMethod}`;
+              const share = adjustedIncome * (co.percentage / 100);
+              const existingOp = accountOpsMap.get(accountId);
+              if (existingOp) {
+                existingOp.amount += share;
+              } else {
+                accountOpsMap.set(accountId, {
+                  ref: doc(db, 'accounts', accountId),
+                  amount: share,
+                  id: accountId,
+                  investor: co.investor,
+                  method: commonData.saleMethod
+                });
+              }
+            }
+          }
+
+          // Update Product
+          const currentQty = product.quantity || 1;
+          const isSalePartial = item.sellQuantity < currentQty;
+
+          if (isSalePartial) {
+            transaction.update(productRefs[i], {
+              quantity: currentQty - item.sellQuantity,
+            });
+
+            const newSoldId = Math.random().toString(36).substr(2, 9);
+            const soldEntry = {
+              ...product,
+              id: newSoldId,
+              status: 'sold',
+              quantity: item.sellQuantity,
+              salePrice: finalPrice,
+              saleDate: commonData.saleDate,
+              buyer: commonData.buyer,
+              invoiceNumber: invoiceNumber,
+              saleMethod: commonData.saleMethod,
+              warrantyMonths: item.warrantyMonths,
+              warrantyExpiration: item.warrantyExpiration,
+              discount: item.discount,
+              discountType: item.discountType,
+              originalProductId: item.productId,
+              warrantyTerms: data.settings.warrantyTerms,
+            };
+            transaction.set(doc(db, 'products', newSoldId), soldEntry);
+          } else {
+            transaction.update(productRefs[i], {
+              status: 'sold',
+              salePrice: finalPrice,
+              saleDate: commonData.saleDate,
+              buyer: commonData.buyer,
+              invoiceNumber: invoiceNumber,
+              saleMethod: commonData.saleMethod,
+              warrantyMonths: item.warrantyMonths,
+              warrantyExpiration: item.warrantyExpiration,
+              discount: item.discount,
+              discountType: item.discountType,
+              warrantyTerms: data.settings.warrantyTerms,
+            });
+          }
+        }
+
+        // Apply Account WRITES
+        const accountOps = Array.from(accountOpsMap.values());
+        const accountSnapshots = await Promise.all(accountOps.map(op => transaction.get(op.ref)));
+        
+        accountOps.forEach((op, idx) => {
+          const accSnap = accountSnapshots[idx];
+          if (accSnap.exists()) {
+            transaction.update(op.ref, { balance: (accSnap.data() as any).balance + op.amount });
+          } else {
+            transaction.set(op.ref, {
+              id: op.id,
+              investor: op.investor,
+              method: op.method,
+              name: op.method,
+              balance: op.amount
+            });
+          }
+        });
+
+        // Increment Invoice Counter
+        transaction.update(settingsRef, { invoiceCounter: currentCounter + 1 });
+      });
+    } catch (err) {
+      handleFirestoreError(err, 'write', 'bulk_sale');
     }
   };
 
@@ -744,6 +898,7 @@ export function useAppData() {
     loading,
     addProduct,
     updateProduct,
+    processBulkSale,
     deleteProduct,
     undoSale,
     addDebtor,

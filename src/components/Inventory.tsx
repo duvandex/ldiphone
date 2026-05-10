@@ -157,7 +157,7 @@ const ImageUploader = ({
 };
 
 export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addProduct, deleteProduct, updateProduct, generateInvoiceNumber } = appData;
+  const { data, addProduct, deleteProduct, updateProduct, processBulkSale, generateInvoiceNumber } = appData;
   const { uploading } = useCloudinary();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
@@ -169,8 +169,79 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Multi-Selection State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkSellOpen, setIsBulkSellOpen] = useState(false);
+  const [bulkSellItems, setBulkSellItems] = useState<{
+    productId: string;
+    productName: string;
+    salePrice: number;
+    sellQuantity: number;
+    discount: number;
+    discountType: 'fixed' | 'percentage';
+    warrantyMonths: number;
+    warrantyExpiration: string;
+    maxQuantity: number;
+  }[]>([]);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [activeScannerMode, setActiveScannerMode] = useState<'add' | 'edit' | null>(null);
+
+  const [bulkSellData, setBulkSellData] = useState({
+    buyer: '',
+    saleDate: new Date().toISOString().split('T')[0],
+    saleMethod: 'Efectivo' as PaymentMethod,
+  });
+
+  const toggleSelection = (id: string | 'all') => {
+    if (id === 'all') {
+      if (selectedIds.size === filteredProducts.filter(p => p.status === 'stock' || p.status === 'reserved').length) {
+        setSelectedIds(new Set());
+      } else {
+        setSelectedIds(new Set(filteredProducts.filter(p => p.status === 'stock' || p.status === 'reserved').map(p => p.id)));
+      }
+    } else {
+      const next = new Set(selectedIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      setSelectedIds(next);
+    }
+  };
+
+  const startBulkSell = () => {
+    const items = data.products.filter(p => selectedIds.has(p.id)).map(p => ({
+      productId: p.id,
+      productName: p.name,
+      salePrice: p.salePrice || 0,
+      sellQuantity: 1,
+      discount: 0,
+      discountType: 'fixed' as const,
+      warrantyMonths: 3,
+      warrantyExpiration: '',
+      maxQuantity: p.quantity || 1
+    }));
+    
+    // Set default warranty expiration for each item
+    const itemsWithWarranty = items.map(item => {
+      const date = new Date(bulkSellData.saleDate);
+      date.setMonth(date.getMonth() + item.warrantyMonths);
+      return { ...item, warrantyExpiration: date.toISOString().split('T')[0] };
+    });
+
+    setBulkSellItems(itemsWithWarranty);
+    setIsBulkSellOpen(true);
+  };
+
+  const handleBulkSell = async () => {
+    if (!bulkSellData.buyer || !bulkSellData.saleDate) {
+      alert("Por favor complete los datos del cliente y la fecha.");
+      return;
+    }
+    
+    await processBulkSale(bulkSellItems, bulkSellData);
+    setIsBulkSellOpen(false);
+    setSelectedIds(new Set());
+  };
 
   const [sortBy, setSortBy] = useState<string>('purchasePrice');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -222,6 +293,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
   });
 
   const [useCoInvestment, setUseCoInvestment] = useState(false);
+  const [useMultiSource, setUseMultiSource] = useState(false);
+  const [purchaseSources, setPurchaseSources] = useState<{ accountId: string; amount: number }[]>([]);
   const [coInvList, setCoInvList] = useState<CoInvestor[]>([
     { investor: 'Duvan', percentage: 100, method: 'Efectivo' }
   ]);
@@ -240,6 +313,20 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
 
   const addCoInvestor = () => {
     setCoInvList([...coInvList, { investor: 'Lina', percentage: 0, method: 'Efectivo' }]);
+  };
+
+  const addPurchaseSource = () => {
+    setPurchaseSources([...purchaseSources, { accountId: 'Duvan-Efectivo', amount: 0 }]);
+  };
+
+  const removePurchaseSource = (idx: number) => {
+    setPurchaseSources(purchaseSources.filter((_, i) => i !== idx));
+  };
+
+  const updatePurchaseSource = (idx: number, updates: Partial<{ accountId: string; amount: number }>) => {
+    const next = [...purchaseSources];
+    next[idx] = { ...next[idx], ...updates };
+    setPurchaseSources(next);
   };
 
   const removeCoInvestor = (idx: number) => {
@@ -276,8 +363,17 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     if (p.coInvestors && p.coInvestors.length > 0) {
       setUseCoInvestment(true);
       setCoInvList(p.coInvestors);
+      setUseMultiSource(false);
+      setPurchaseSources([]);
+    } else if (p.purchaseSources && p.purchaseSources.length > 0) {
+      setUseMultiSource(true);
+      setPurchaseSources(p.purchaseSources);
+      setUseCoInvestment(false);
+      setCoInvList([{ investor: 'Duvan', percentage: 100, method: 'Efectivo' }]);
     } else {
       setUseCoInvestment(false);
+      setUseMultiSource(false);
+      setPurchaseSources([]);
       setCoInvList([{ investor: 'Duvan', percentage: 100, method: 'Efectivo' }]);
     }
 
@@ -298,7 +394,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     }
     
     let finalProduct = { ...newProduct };
-    if (useCoInvestment) {
+    if (useMultiSource) {
+      const totalAmount = purchaseSources.reduce((a, b) => a + b.amount, 0);
+      const expectedTotal = finalProduct.purchasePrice * finalProduct.quantity;
+      if (Math.abs(totalAmount - expectedTotal) > 1) {
+        if (!confirm(`La suma de los pagos (${fmt(totalAmount)}) no coincide con el costo total (${fmt(expectedTotal)}). ¿Deseas continuar de todas formas?`)) {
+          return;
+        }
+      }
+      finalProduct.purchaseSources = purchaseSources;
+    } else if (useCoInvestment) {
       const totalPct = coInvList.reduce((a, b) => a + b.percentage, 0);
       if (Math.abs(totalPct - 100) > 0.01) {
         alert("La suma de los porcentajes debe ser exactamente 100%");
@@ -326,6 +431,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       warrantyExpiration: '', description: '', isExternal: false, coInvestors: []
     });
     setUseCoInvestment(false);
+    setUseMultiSource(false);
+    setPurchaseSources([]);
     setCoInvList([{ investor: 'Duvan', percentage: 100 }]);
   };
 
@@ -428,6 +535,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     saleMethod: PaymentMethod;
     warrantyMonths: number;
     warrantyExpiration: string;
+    discount: number;
+    discountType: 'fixed' | 'percentage';
   }>({
     salePrice: '',
     saleDate: new Date().toISOString().split('T')[0],
@@ -436,6 +545,8 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     saleMethod: 'Efectivo',
     warrantyMonths: 3,
     warrantyExpiration: '',
+    discount: 0,
+    discountType: 'fixed',
   });
 
   // Add effect to sync warranty expiration in sell dialog
@@ -519,11 +630,20 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       alert(`No hay suficiente stock disponible. (Stock actual: ${selectedProduct.quantity})`);
       return;
     }
+
+    let finalPrice = sPrice;
+    if (sellData.discount > 0) {
+      if (sellData.discountType === 'percentage') {
+        finalPrice = sPrice * (1 - (sellData.discount / 100));
+      } else {
+        finalPrice = sPrice - sellData.discount;
+      }
+    }
     
     try {
       await updateProduct(selectedProduct.id, {
         ...sellData,
-        salePrice: sPrice,
+        salePrice: finalPrice,
         sellQuantity: sQty,
         status: 'sold',
         warrantyTerms: data.settings.warrantyTerms,
@@ -788,15 +908,36 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                   <Checkbox 
                     id="is-co-inv" 
                     checked={useCoInvestment} 
-                    onCheckedChange={(v) => setUseCoInvestment(!!v)} 
+                    onCheckedChange={(v) => {
+                       setUseCoInvestment(!!v);
+                       if (v) setUseMultiSource(false);
+                    }} 
                   />
                   <Label htmlFor="is-co-inv" className="text-[10px] font-black uppercase tracking-widest text-blue-600 flex items-center gap-1.5 cursor-pointer">
                     <Users className="w-3 h-3" /> Inversión Compartida
                   </Label>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="is-multi-src" 
+                    checked={useMultiSource} 
+                    onCheckedChange={(v) => {
+                       setUseMultiSource(!!v);
+                       if (v) {
+                          setUseCoInvestment(false);
+                          if (purchaseSources.length === 0) {
+                             setPurchaseSources([{ accountId: `${newProduct.investor}-${newProduct.purchaseMethod}`, amount: newProduct.purchasePrice * newProduct.quantity }]);
+                          }
+                       }
+                    }} 
+                  />
+                  <Label htmlFor="is-multi-src" className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-1.5 cursor-pointer">
+                    <HandCoins className="w-3 h-3" /> Pago Multi-Cuenta
+                  </Label>
+                </div>
               </div>
 
-              {!newProduct.isExternal && !useCoInvestment && (
+              {!newProduct.isExternal && !useCoInvestment && !useMultiSource && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversor *</Label>
@@ -881,6 +1022,61 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 </div>
               )}
 
+              {useMultiSource && !newProduct.isExternal && (
+                <div className="space-y-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Distribución de Pago</Label>
+                    <Button type="button" variant="ghost" size="sm" onClick={addPurchaseSource} className="h-7 text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-100 px-3">
+                      <Plus className="w-3 h-3 mr-1" /> Añadir Cuenta
+                    </Button>
+                  </div>
+                  <div className="space-y-3">
+                    {purchaseSources.map((src, idx) => (
+                      <div key={idx} className="flex gap-2 p-3 bg-white rounded-xl border border-emerald-50 shadow-sm items-end">
+                        <div className="flex-1 space-y-2">
+                           <Label className="text-[8px] font-black uppercase text-slate-400">Cuenta / Origen</Label>
+                           <Select value={src.accountId} onValueChange={v => updatePurchaseSource(idx, { accountId: v })}>
+                             <SelectTrigger className="w-full rounded-lg border-emerald-100 h-9 font-bold text-[10px] bg-slate-50/50"><SelectValue /></SelectTrigger>
+                             <SelectContent className="rounded-xl">
+                               {data.accounts.map(acc => (
+                                 <SelectItem key={acc.id} value={acc.id} className="text-xs">
+                                   <div className="flex justify-between items-center w-full gap-4">
+                                     <span>{acc.investor} - {acc.method}</span>
+                                     <span className={cn("font-black", acc.balance >= 0 ? "text-emerald-600" : "text-rose-500")}>
+                                       {fmt(acc.balance)}
+                                     </span>
+                                   </div>
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                        </div>
+                        <div className="w-32 space-y-2">
+                           <Label className="text-[8px] font-black uppercase text-slate-400">Valor</Label>
+                           <Input 
+                             type="number" 
+                             className="rounded-lg border-emerald-100 h-9 font-black text-xs bg-slate-50/50" 
+                             value={src.amount || ''} 
+                             onChange={e => updatePurchaseSource(idx, { amount: parseFloat(e.target.value) || 0 })}
+                           />
+                        </div>
+                        {purchaseSources.length > 1 && (
+                          <Button variant="ghost" size="icon" onClick={() => removePurchaseSource(idx)} className="h-9 w-9 text-rose-500 hover:bg-rose-50 rounded-lg shrink-0">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className={cn(
+                    "text-[10px] font-black text-center pt-1 uppercase tracking-widest",
+                    Math.abs(purchaseSources.reduce((a, b) => a + b.amount, 0) - (newProduct.purchasePrice * newProduct.quantity)) < 1 ? "text-emerald-600" : "text-rose-500"
+                  )}>
+                    Total: {fmt(purchaseSources.reduce((a, b) => a + b.amount, 0))} / {fmt(newProduct.purchasePrice * newProduct.quantity)}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha Compra</Label>
@@ -922,8 +1118,14 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="w-12 pl-8">
+                  <Checkbox 
+                    checked={selectedIds.size > 0 && selectedIds.size === filteredProducts.filter(p => p.status === 'stock' || p.status === 'reserved').length}
+                    onCheckedChange={() => toggleSelection('all')}
+                  />
+                </TableHead>
                 <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-8 h-14 cursor-pointer hover:text-foreground transition-colors"
+                  className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-4 h-14 cursor-pointer hover:text-foreground transition-colors"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-1">
@@ -996,7 +1198,15 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
                 const totalProfit = profitPerUnit * (p.quantity || 1);
                 return (
                   <TableRow key={p.id} className="group border-b border-border hover:bg-muted/30 transition-colors">
-                    <TableCell className="py-5 pl-8">
+                    <TableCell className="w-12 pl-8">
+                       {(p.status === 'stock' || p.status === 'reserved') && (
+                         <Checkbox 
+                           checked={selectedIds.has(p.id)}
+                           onCheckedChange={() => toggleSelection(p.id)}
+                         />
+                       )}
+                    </TableCell>
+                    <TableCell className="py-5 pl-4">
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-card shadow-sm transition-transform group-hover:scale-105 duration-300">
                           {p.images && p.images.length > 0 ? (
@@ -1186,7 +1396,16 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
         {sortedProducts.map((p) => {
           const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
           return (
-            <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl">
+            <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl relative">
+              {(p.status === 'stock' || p.status === 'reserved') && (
+                <div className="absolute top-4 left-4 z-20">
+                  <Checkbox 
+                    className="w-6 h-6 rounded-lg bg-white/90 backdrop-blur-sm border-2 border-slate-200 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    checked={selectedIds.has(p.id)}
+                    onCheckedChange={() => toggleSelection(p.id)}
+                  />
+                </div>
+              )}
               <div className="flex flex-col">
                 <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
                   {p.images && p.images.length > 0 ? (
@@ -1339,6 +1558,24 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
           );
         })}
       </div>
+
+      {/* Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-lg bg-slate-900 text-white rounded-3xl shadow-2xl p-4 flex items-center justify-between backdrop-blur-md bg-opacity-95 animate-in fade-in slide-in-from-bottom-5">
+           <div className="flex flex-col">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{selectedIds.size} {selectedIds.size === 1 ? 'Equipo seleccionado' : 'Equipos seleccionados'}</span>
+              <span className="text-sm font-black">Carrito de Venta Multiple</span>
+           </div>
+           <div className="flex gap-2">
+              <Button variant="ghost" className="text-white hover:bg-slate-800 rounded-xl px-4 text-xs font-black uppercase tracking-widest" onClick={() => setSelectedIds(new Set())}>
+                 Cancelar
+              </Button>
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-6 font-black uppercase text-xs tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20" onClick={startBulkSell}>
+                 <ShoppingCart className="w-4 h-4" /> Vender
+              </Button>
+           </div>
+        </div>
+      )}
 
       {/* Add Product Dialog - Empty as it is handled by the Dialog block above */}
 
@@ -1649,6 +1886,224 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
       </DialogContent>
     </Dialog>
 
+      {/* Bulk Sell Dialog */}
+      <Dialog open={isBulkSellOpen} onOpenChange={setIsBulkSellOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto rounded-3xl p-0 border-none shadow-2xl">
+          <div className="p-8 space-y-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black tracking-tight uppercase text-emerald-600 flex items-center gap-2">
+                 <ShoppingCart className="w-6 h-6" /> Registro de Venta Múltiple
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Nombre del Cliente *</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input 
+                      placeholder="Nombre completo" 
+                      className="rounded-xl border-slate-200 h-11 pl-10 bg-white"
+                      value={bulkSellData.buyer}
+                      onChange={e => setBulkSellData({...bulkSellData, buyer: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha de Venta *</Label>
+                  <Input 
+                     type="date" 
+                     className="rounded-xl border-slate-200 h-11 bg-white"
+                     value={bulkSellData.saleDate}
+                     onChange={e => {
+                        const newDate = e.target.value;
+                        setBulkSellData({...bulkSellData, saleDate: newDate});
+                        // Update all items warranty expiration based on new date
+                        setBulkSellItems(prev => prev.map(item => {
+                           const d = new Date(newDate);
+                           d.setMonth(d.setMonth(d.getMonth() + item.warrantyMonths));
+                           return { ...item, warrantyExpiration: d.toISOString().split('T')[0] };
+                        }));
+                     }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método de Pago Global</Label>
+                <Select value={bulkSellData.saleMethod} onValueChange={v => setBulkSellData({...bulkSellData, saleMethod: v as PaymentMethod})}>
+                  <SelectTrigger className="rounded-xl border-slate-200 h-11 font-bold text-xs bg-white"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="Efectivo">Efectivo</SelectItem>
+                    <SelectItem value="Bancolombia">Bancolombia</SelectItem>
+                    <SelectItem value="Nequi">Nequi</SelectItem>
+                    <SelectItem value="Banco de Bogota">Banco de Bogotá</SelectItem>
+                    <SelectItem value="Cripto (USDT)">Cripto (USDT)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Equipos en el Carrito ({bulkSellItems.length})</Label>
+               <div className="space-y-3">
+                  {bulkSellItems.map((item, idx) => {
+                     const totalItemPrice = item.salePrice * item.sellQuantity;
+                     let discountValue = 0;
+                     if (item.discount > 0) {
+                        if (item.discountType === 'percentage') {
+                           discountValue = totalItemPrice * (item.discount / 100);
+                        } else {
+                           discountValue = item.discount;
+                        }
+                     }
+                     const finalItemPrice = totalItemPrice - discountValue;
+
+                     return (
+                        <div key={item.productId} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                           <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                                    <Smartphone className="w-5 h-5 text-slate-400" />
+                                 </div>
+                                 <div className="font-black text-sm text-slate-900">{item.productName}</div>
+                              </div>
+                              <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 className="h-8 w-8 text-rose-500"
+                                 onClick={() => {
+                                    const next = bulkSellItems.filter((_, i) => i !== idx);
+                                    setBulkSellItems(next);
+                                    const nextIds = new Set(selectedIds);
+                                    nextIds.delete(item.productId);
+                                    setSelectedIds(nextIds);
+                                    if (next.length === 0) setIsBulkSellOpen(false);
+                                 }}
+                              >
+                                 <Trash2 className="w-4 h-4" />
+                              </Button>
+                           </div>
+
+                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="space-y-1">
+                                 <Label className="text-[8px] font-black uppercase text-slate-400">Precio Base</Label>
+                                 <Input 
+                                    type="number"
+                                    className="h-9 text-xs font-bold rounded-lg"
+                                    value={item.salePrice}
+                                    onChange={e => {
+                                       const next = [...bulkSellItems];
+                                       next[idx].salePrice = parseFloat(e.target.value) || 0;
+                                       setBulkSellItems(next);
+                                    }}
+                                 />
+                              </div>
+                              <div className="space-y-1">
+                                 <Label className="text-[8px] font-black uppercase text-slate-400">Cantidad</Label>
+                                 <Input 
+                                    type="number"
+                                    min="1"
+                                    max={item.maxQuantity}
+                                    className="h-9 text-xs font-bold rounded-lg"
+                                    value={item.sellQuantity}
+                                    onChange={e => {
+                                       const next = [...bulkSellItems];
+                                       next[idx].sellQuantity = Math.min(parseInt(e.target.value) || 1, item.maxQuantity);
+                                       setBulkSellItems(next);
+                                    }}
+                                 />
+                              </div>
+                              <div className="space-y-1">
+                                 <Label className="text-[8px] font-black uppercase text-slate-400">Dto. Valor</Label>
+                                 <Input 
+                                    type="number"
+                                    className="h-9 text-xs font-bold rounded-lg"
+                                    value={item.discount}
+                                    onChange={e => {
+                                       const next = [...bulkSellItems];
+                                       next[idx].discount = parseFloat(e.target.value) || 0;
+                                       setBulkSellItems(next);
+                                    }}
+                                 />
+                              </div>
+                              <div className="space-y-1">
+                                 <Label className="text-[8px] font-black uppercase text-slate-400">Tipo Dto.</Label>
+                                 <Select 
+                                    value={item.discountType} 
+                                    onValueChange={v => {
+                                       const next = [...bulkSellItems];
+                                       next[idx].discountType = v as 'fixed' | 'percentage';
+                                       setBulkSellItems(next);
+                                    }}
+                                 >
+                                    <SelectTrigger className="h-9 text-[10px] font-bold rounded-lg"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                       <SelectItem value="fixed">$ Fijo</SelectItem>
+                                       <SelectItem value="percentage">% Perc</SelectItem>
+                                    </SelectContent>
+                                 </Select>
+                              </div>
+                           </div>
+
+                           <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                              <div className="flex gap-4">
+                                 <div className="space-y-0.5">
+                                    <div className="text-[8px] font-black uppercase text-slate-400">Garantía (Meses)</div>
+                                    <Input 
+                                       type="number" 
+                                       className="h-7 w-16 text-[10px] font-bold rounded-md"
+                                       value={item.warrantyMonths}
+                                       onChange={e => {
+                                          const next = [...bulkSellItems];
+                                          const val = parseInt(e.target.value) || 0;
+                                          next[idx].warrantyMonths = val;
+                                          const d = new Date(bulkSellData.saleDate);
+                                          d.setMonth(d.getMonth() + val);
+                                          next[idx].warrantyExpiration = d.toISOString().split('T')[0];
+                                          setBulkSellItems(next);
+                                       }}
+                                    />
+                                 </div>
+                                 <div className="space-y-0.5">
+                                    <div className="text-[8px] font-black uppercase text-slate-400">Vence</div>
+                                    <div className="text-[10px] font-bold text-slate-600 pt-1">{item.warrantyExpiration}</div>
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                 <div className="text-[8px] font-black uppercase text-emerald-600">Subtotal con Descuento</div>
+                                 <div className="text-sm font-black text-emerald-700">{fmt(finalItemPrice)}</div>
+                              </div>
+                           </div>
+                        </div>
+                     );
+                  })}
+               </div>
+            </div>
+
+            <div className="bg-emerald-600 p-6 rounded-[2rem] text-white flex items-center justify-between shadow-xl shadow-emerald-600/20">
+               <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Total de la Venta</div>
+                  <div className="text-2xl font-black">
+                     {fmt(bulkSellItems.reduce((acc, item) => {
+                        const total = item.salePrice * item.sellQuantity;
+                        const disc = item.discountType === 'percentage' ? total * (item.discount / 100) : item.discount;
+                        return acc + (total - disc);
+                     }, 0))}
+                  </div>
+               </div>
+               <Button 
+                onClick={handleBulkSell}
+                className="bg-white text-emerald-600 hover:bg-slate-100 h-12 px-8 rounded-xl font-black uppercase text-xs tracking-widest"
+               >
+                  Confirmar Venta
+               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Confirm Delete Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={(open) => {
         setIsDeleteOpen(open);
@@ -1726,6 +2181,29 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
               />
             </div>
             
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="sell-discount" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descuento</Label>
+                <Input 
+                  id="sell-discount" 
+                  type="number" 
+                  className="rounded-xl border-slate-100 h-11"
+                  value={sellData.discount} 
+                  onChange={e => setSellData({...sellData, discount: parseFloat(e.target.value) || 0})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo Dto.</Label>
+                <Select value={sellData.discountType} onValueChange={v => setSellData({...sellData, discountType: v as 'fixed' | 'percentage'})}>
+                  <SelectTrigger className="rounded-xl border-slate-100 h-11 font-bold text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="rounded-2xl border-slate-100">
+                    <SelectItem value="fixed">$ Fijo</SelectItem>
+                    <SelectItem value="percentage">% Porcentaje</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="sell-date" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fecha</Label>

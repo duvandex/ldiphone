@@ -44,6 +44,9 @@ export interface Product {
   description?: string;
   isExternal?: boolean; // If true, not counted in physical stock value, profit to Duvan
   coInvestors?: CoInvestor[]; // For split ownership
+  discount?: number;
+  discountType?: 'fixed' | 'percentage';
+  purchaseSources?: { accountId: string; amount: number }[];
 }
 
 export interface FinancialAccount {

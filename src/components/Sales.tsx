@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
@@ -20,9 +20,11 @@ export default function Sales({ appData }: { appData: ReturnType<typeof useAppDa
   const [isUndoOpen, setIsUndoOpen] = useState(false);
   const [undoId, setUndoId] = useState<string | null>(null);
 
-  const soldProducts = [...data.products.filter(p => p.status === 'sold')].sort((a, b) => 
-    (b.saleDate || '').localeCompare(a.saleDate || '')
-  );
+  const soldProducts = React.useMemo(() => {
+    return [...data.products.filter(p => p.status === 'sold')].sort((a, b) => 
+      (b.saleDate || '').localeCompare(a.saleDate || '')
+    );
+  }, [data.products]);
 
   const handleUpdateSale = () => {
     if (!editingSale) return;

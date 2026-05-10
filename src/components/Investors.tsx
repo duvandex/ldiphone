@@ -6,7 +6,48 @@ import { fmt, cn } from '../lib/utils';
 
 export default function Investors({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data } = appData;
-  const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+
+  const investorData = React.useMemo(() => {
+    const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+    return investors.map((inv) => {
+      const prods = data.products.filter(p => p.investor === inv);
+      const accounts = data.accounts.filter(a => a.investor === inv);
+      
+      const stockCapital = prods.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0);
+      const accountBalance = accounts.reduce((acc, a) => acc + a.balance, 0);
+      const totalCapital = stockCapital + accountBalance;
+      
+      const totalProfit = prods.filter(p => p.status === 'sold').reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
+      const stockCount = prods.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.quantity || 1), 0);
+      const soldCount = prods.filter(p => p.status === 'sold').length;
+      const stockItemCount = prods.filter(p => p.status === 'stock').length;
+
+      return {
+        name: inv,
+        prods,
+        accounts,
+        stockCapital,
+        accountBalance,
+        totalCapital,
+        totalProfit,
+        stockCount,
+        soldCount,
+        stockItemCount
+      };
+    }).filter(d => d.prods.length > 0 || d.accounts.length > 0);
+  }, [data.products, data.accounts]);
+
+  const globalSummary = React.useMemo(() => {
+    const stockProducts = data.products.filter(p => p.status === 'stock');
+    const soldProducts = data.products.filter(p => p.status === 'sold');
+    
+    return {
+      currentCapital: stockProducts.reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0) +
+                     data.accounts.reduce((acc, a) => acc + a.balance, 0),
+      totalProfit: soldProducts.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0),
+      totalStockItems: stockProducts.reduce((acc, p) => acc + (p.quantity || 1), 0)
+    };
+  }, [data.products, data.accounts]);
 
   return (
     <div className="space-y-8">
@@ -14,41 +55,30 @@ export default function Investors({ appData }: { appData: ReturnType<typeof useA
         <h2 className="text-xl font-bold tracking-tight text-foreground">Detalle por Inversor</h2>
       </div>
 
-      {investors.map((inv) => {
-        const prods = data.products.filter(p => p.investor === inv);
-        const accounts = data.accounts.filter(a => a.investor === inv);
-        if (prods.length === 0 && accounts.length === 0) return null;
-
-        const stockCapital = prods.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0);
-        const accountBalance = accounts.reduce((acc, a) => acc + a.balance, 0);
-        const totalCapital = stockCapital + accountBalance;
-        
-        const totalProfit = prods.filter(p => p.status === 'sold').reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
-        const stockCount = prods.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.quantity || 1), 0);
-
+      {investorData.map((inv) => {
         return (
-          <div key={inv} className="space-y-4">
+          <div key={inv.name} className="space-y-4">
             <div className="flex items-end justify-between px-1">
               <div>
-                <h3 className="text-lg font-bold text-foreground">{inv}</h3>
+                <h3 className="text-lg font-bold text-foreground">{inv.name}</h3>
                 <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  {prods.filter(p => p.status === 'stock').length} en stock · {prods.filter(p => p.status === 'sold').length} vendidos
+                  {inv.stockItemCount} en stock · {inv.soldCount} vendidos
                 </div>
               </div>
               <div className="flex gap-6 text-right">
                 <div>
                   <div className="text-[10px] uppercase font-bold text-muted-foreground">Cap. Total</div>
-                  <div className="text-sm font-mono font-bold text-foreground">{fmt(totalCapital)}</div>
+                  <div className="text-sm font-mono font-bold text-foreground">{fmt(inv.totalCapital)}</div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-bold text-muted-foreground flex flex-col">
-                    <span>Stock: {fmt(stockCapital)}</span>
-                    <span>Cuentas: {fmt(accountBalance)}</span>
+                    <span>Stock: {fmt(inv.stockCapital)}</span>
+                    <span>Cuentas: {fmt(inv.accountBalance)}</span>
                   </div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase font-bold text-muted-foreground">Ganancia</div>
-                  <div className="text-sm font-mono font-semibold text-emerald-600">{fmt(totalProfit)}</div>
+                  <div className="text-sm font-mono font-semibold text-emerald-600">{fmt(inv.totalProfit)}</div>
                 </div>
               </div>
             </div>
@@ -67,7 +97,7 @@ export default function Investors({ appData }: { appData: ReturnType<typeof useA
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {prods.map((p) => {
+                    {inv.prods.map((p) => {
                       const profit = p.status === 'sold' ? (p.salePrice || 0) - p.purchasePrice : null;
                       return (
                         <TableRow key={p.id} className="group border-border">
@@ -115,10 +145,7 @@ export default function Investors({ appData }: { appData: ReturnType<typeof useA
             <CardContent className="p-6">
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Capital Actual (Stock + Cuentas)</div>
               <div className="text-2xl font-black tracking-tighter text-foreground">
-                {fmt(
-                  data.products.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.purchasePrice * (p.quantity || 1)), 0) +
-                  data.accounts.reduce((acc, a) => acc + a.balance, 0)
-                )}
+                {fmt(globalSummary.currentCapital)}
               </div>
             </CardContent>
           </Card>
@@ -126,7 +153,7 @@ export default function Investors({ appData }: { appData: ReturnType<typeof useA
             <CardContent className="p-6">
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Ganancia Total Realizada</div>
               <div className="text-2xl font-black tracking-tighter text-emerald-600">
-                {fmt(data.products.filter(p => p.status === 'sold').reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0))}
+                {fmt(globalSummary.totalProfit)}
               </div>
             </CardContent>
           </Card>
@@ -134,7 +161,7 @@ export default function Investors({ appData }: { appData: ReturnType<typeof useA
             <CardContent className="p-6">
               <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Productos en Stock</div>
               <div className="text-2xl font-black tracking-tighter text-blue-600">
-                {data.products.filter(p => p.status === 'stock').reduce((acc, p) => acc + (p.quantity || 1), 0)}
+                {globalSummary.totalStockItems}
               </div>
             </CardContent>
           </Card>

@@ -58,16 +58,18 @@ export default function Catalog() {
     await updateSettings({ paymentMethods: currentMethods });
   };
 
-  const publicProducts = data.products
-    .filter(p => 
-      (p.status === 'stock' || p.status === 'reserved' || !p.status) && 
-      !p.hideInCatalog &&
-      (p.name?.toLowerCase() || '').includes(search.toLowerCase()) &&
-      (category === 'all' || 
-       p.category === category || 
-       (p.name?.toLowerCase().includes(category.toLowerCase())))
-    )
-    .sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
+  const publicProducts = React.useMemo(() => {
+    return data.products
+      .filter(p => 
+        (p.status === 'stock' || p.status === 'reserved' || !p.status) && 
+        !p.hideInCatalog &&
+        (p.name?.toLowerCase() || '').includes(search.toLowerCase()) &&
+        (category === 'all' || 
+         p.category === category || 
+         (p.name?.toLowerCase().includes(category.toLowerCase())))
+      )
+      .sort((a, b) => (b.salePrice || 0) - (a.salePrice || 0));
+  }, [data.products, search, category]);
 
   const categories = [
     { id: 'all', name: 'TODO', icon: ShoppingBag },

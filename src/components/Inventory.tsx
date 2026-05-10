@@ -443,47 +443,50 @@ export default function Inventory({ appData }: { appData: ReturnType<typeof useA
     await updateProduct(p.id, { hideInCatalog: !p.hideInCatalog });
   };
 
-  const filteredProducts = data.products.filter(p => {
-    if (p.status === 'sold') return false;
+  const filteredProducts = React.useMemo(() => {
+    return data.products.filter(p => {
+      if (p.status === 'sold') return false;
 
-    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
-                         (p.imei || '').includes(search) ||
-                         (p.provider || '').toLowerCase().includes(search.toLowerCase()) ||
-                         (p.category || '').toLowerCase().includes(search.toLowerCase());
-    
-    // Check if investorFilter is in any of the coinvestors or the main investor
-    const matchesInvestor = investorFilter === 'all' || 
-                           (p.investor === investorFilter) || 
-                           (p.coInvestors?.some(c => c.investor === investorFilter));
-    
-    const matchesStatus = statusFilter === 'all' || p.status === statusFilter || (!p.status && statusFilter === 'stock');
-    return matchesSearch && matchesInvestor && matchesStatus;
-  });
+      const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
+                           (p.imei || '').includes(search) ||
+                           (p.provider || '').toLowerCase().includes(search.toLowerCase()) ||
+                           (p.category || '').toLowerCase().includes(search.toLowerCase());
+      
+      const matchesInvestor = investorFilter === 'all' || 
+                             (p.investor === investorFilter) || 
+                             (p.coInvestors?.some(c => c.investor === investorFilter));
+      
+      const matchesStatus = statusFilter === 'all' || p.status === statusFilter || (!p.status && statusFilter === 'stock');
+      return matchesSearch && matchesInvestor && matchesStatus;
+    });
+  }, [data.products, search, investorFilter, statusFilter]);
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    let valA: any;
-    let valB: any;
+  const sortedProducts = React.useMemo(() => {
+    return [...filteredProducts].sort((a, b) => {
+      let valA: any;
+      let valB: any;
 
-    if (sortBy === 'profit') {
-      valA = (a.salePrice || 0) - a.purchasePrice;
-      valB = (b.salePrice || 0) - b.purchasePrice;
-    } else if (sortBy === 'investor') {
-      valA = a.investor || (a.coInvestors?.[0]?.investor || '');
-      valB = b.investor || (b.coInvestors?.[0]?.investor || '');
-    } else {
-      valA = (a as any)[sortBy] || '';
-      valB = (b as any)[sortBy] || '';
-    }
+      if (sortBy === 'profit') {
+        valA = (a.salePrice || 0) - a.purchasePrice;
+        valB = (b.salePrice || 0) - b.purchasePrice;
+      } else if (sortBy === 'investor') {
+        valA = a.investor || (a.coInvestors?.[0]?.investor || '');
+        valB = b.investor || (b.coInvestors?.[0]?.investor || '');
+      } else {
+        valA = (a as any)[sortBy] || '';
+        valB = (b as any)[sortBy] || '';
+      }
 
-    if (typeof valA === 'string') {
-      valA = valA.toLowerCase();
-      valB = valB.toLowerCase();
-    }
+      if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
+      }
 
-    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredProducts, sortBy, sortOrder]);
 
   const [editProductState, setEditProductState] = useState<Product | null>(null);
 

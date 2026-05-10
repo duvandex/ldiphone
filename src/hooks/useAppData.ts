@@ -892,7 +892,7 @@ export function useAppData() {
     }
   };
 
-  return {
+  return React.useMemo(() => ({
     data,
     user,
     loading,
@@ -919,5 +919,5 @@ export function useAppData() {
     isQuotaExceeded,
     findProductPublicly,
     searchedProduct,
-  };
+  }), [data, user, loading, usdtRate, isQuotaExceeded, searchedProduct]);
 }

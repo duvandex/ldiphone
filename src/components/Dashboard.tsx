@@ -10,97 +10,111 @@ import { motion } from 'motion/react';
 export default function Dashboard({ appData }: { appData: ReturnType<typeof useAppData> }) {
   const { data, user, initializeDatabase, usdtRate } = appData;
 
-  const getAccountBalanceCOP = (acc: any) => {
-    if (acc.method === 'Cripto (USDT)') {
-      return acc.balance * usdtRate;
-    }
-    return acc.balance;
-  };
-  const isDuvan = user?.email === 'duvanmarinj@gmail.com';
-  const isDbEmpty = data.products.length === 0;
-  const stock = (data.products || []).filter(p => p.status === 'stock');
-  const sold = (data.products || []).filter(p => p.status === 'sold');
-  
-  const totalProfit = sold.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
-  
-  // Stock value should ONLY count internal stock capital (ignore external products)
-  const stockValue = stock.reduce((acc, p) => {
-    if (p.isExternal) return acc;
-    return acc + (p.purchasePrice * (p.quantity || 1));
-  }, 0);
-  
-  const totalStockUnits = stock.reduce((acc, p) => acc + (p.quantity || 1), 0);
-  
-  const pendingDebts = data.debtors.reduce((acc, d) => {
-    const paid = d.payments.reduce((a, b) => a + b, 0);
-    return acc + (d.totalAmount - paid);
-  }, 0);
+  const isDuvan = React.useMemo(() => user?.email === 'duvanmarinj@gmail.com', [user]);
+  const isDbEmpty = React.useMemo(() => data.products.length === 0, [data.products]);
 
-  const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
-  const investorStats = investors.map(inv => {
-    let capital = 0;
-    let profit = 0;
-    let sales = 0;
-    let stockCount = 0;
+  const { stock, sold, totalProfit, totalStockUnits, stockValue } = React.useMemo(() => {
+    const stockProducts = (data.products || []).filter(p => p.status === 'stock');
+    const soldProducts = (data.products || []).filter(p => p.status === 'sold');
+    
+    const profit = soldProducts.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
+    
+    const stockVal = stockProducts.reduce((acc, p) => {
+      if (p.isExternal) return acc;
+      return acc + (p.purchasePrice * (p.quantity || 1));
+    }, 0);
+    
+    const stockUnits = stockProducts.reduce((acc, p) => acc + (p.quantity || 1), 0);
 
-    data.products.forEach(p => {
-      // Logic for Co-Investment
-      if (p.coInvestors && p.coInvestors.length > 0) {
-        const coMatch = p.coInvestors.find(c => c.investor === inv);
-        if (coMatch) {
-          const share = coMatch.percentage / 100;
-          if (p.status === 'stock') {
-            capital += p.purchasePrice * p.quantity * share;
-            stockCount += p.quantity * share;
-          } else if (p.status === 'sold') {
-            sales += (p.salePrice || 0) * p.quantity * share;
-            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity * share;
+    return {
+      stock: stockProducts,
+      sold: soldProducts,
+      totalProfit: profit,
+      totalStockUnits: stockUnits,
+      stockValue: stockVal
+    };
+  }, [data.products]);
+  
+  const pendingDebts = React.useMemo(() => {
+    return data.debtors.reduce((acc, d) => {
+      const paid = d.payments.reduce((a, b) => a + b, 0);
+      return acc + (d.totalAmount - paid);
+    }, 0);
+  }, [data.debtors]);
+
+  const { investorStats, totalCapital, totalLiabilities } = React.useMemo(() => {
+    const getAccountBalanceCOP = (acc: any) => {
+      if (acc.method === 'Cripto (USDT)') {
+        return acc.balance * usdtRate;
+      }
+      return acc.balance;
+    };
+
+    const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+    const iStats = investors.map(inv => {
+      let capital = 0;
+      let profit = 0;
+      let sales = 0;
+      let stockCount = 0;
+
+      data.products.forEach(p => {
+        if (p.coInvestors && p.coInvestors.length > 0) {
+          const coMatch = p.coInvestors.find(c => c.investor === inv);
+          if (coMatch) {
+            const share = coMatch.percentage / 100;
+            if (p.status === 'stock') {
+              capital += p.purchasePrice * p.quantity * share;
+              stockCount += p.quantity * share;
+            } else if (p.status === 'sold') {
+              sales += (p.salePrice || 0) * p.quantity * share;
+              profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity * share;
+            }
+          }
+        } 
+        else if (p.isExternal) {
+          if (inv === 'Duvan' && p.status === 'sold') {
+            sales += (p.salePrice || 0) * p.quantity;
+            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
           }
         }
-      } 
-      // Logic for External (Only Duvan gets profit, capital is always 0)
-      else if (p.isExternal) {
-        if (inv === 'Duvan' && p.status === 'sold') {
-          sales += (p.salePrice || 0) * p.quantity;
-          profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
+        else if (p.investor === inv) {
+          if (p.status === 'stock') {
+            capital += p.purchasePrice * p.quantity;
+            stockCount += p.quantity;
+          } else if (p.status === 'sold') {
+            sales += (p.salePrice || 0) * p.quantity;
+            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
+          }
         }
-      }
-      // Standard single investor
-      else if (p.investor === inv) {
-        if (p.status === 'stock') {
-          capital += p.purchasePrice * p.quantity;
-          stockCount += p.quantity;
-        } else if (p.status === 'sold') {
-          sales += (p.salePrice || 0) * p.quantity;
-          profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
-        }
-      }
+      });
+      
+      return {
+        name: inv,
+        capital,
+        sales,
+        profit,
+        balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + getAccountBalanceCOP(a), 0),
+        stockCount
+      };
     });
-    
-    return {
-      name: inv,
-      capital,
-      sales,
-      profit,
-      balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + getAccountBalanceCOP(a), 0),
-      stockCount
-    };
-  });
 
-  const totalCapital = data.accounts.reduce((acc, a) => acc + getAccountBalanceCOP(a), 0);
+    const tCapital = data.accounts.reduce((acc, a) => acc + getAccountBalanceCOP(a), 0);
 
-  const totalLiabilities = data.liabilities.reduce((acc, l) => {
-    const paid = l.payments.reduce((a, b) => a + b, 0);
-    return acc + (l.totalAmount - paid);
-  }, 0);
+    const tLiabilities = data.liabilities.reduce((acc, l) => {
+      const paid = l.payments.reduce((a, b) => a + b, 0);
+      return acc + (l.totalAmount - paid);
+    }, 0);
 
-  const stats = [
+    return { investorStats: iStats, totalCapital: tCapital, totalLiabilities: tLiabilities };
+  }, [data.products, data.accounts, data.liabilities, usdtRate]);
+
+  const stats = React.useMemo(() => [
     { label: 'Unidades Stock', value: totalStockUnits, icon: Package, color: 'bg-blue-500/10 text-blue-500' },
     { label: 'Ganancia Total', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500' },
     { label: 'Cuentas x Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-500/10 text-amber-500' },
     { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-500/10 text-rose-500' },
     { label: 'Capital Disponible', value: fmt(totalCapital), icon: Activity, color: 'bg-indigo-500/10 text-indigo-500' },
-  ];
+  ], [totalStockUnits, totalProfit, pendingDebts, totalLiabilities, totalCapital]);
 
   const container = {
     hidden: { opacity: 0 },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -8,15 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Separator } from './ui/separator';
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import Logo from './Logo';
 
-export default function InvoiceView({ appData, isPublic = false }: { appData: ReturnType<typeof useAppData>, isPublic?: boolean }) {
+export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }) {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { data, findProductPublicly, searchedProduct, loading } = appData;
+  const { data, findProductPublicly, searchedProduct } = useData();
   
   const [selectedId, setSelectedId] = useState<string>(id || searchParams.get('id') || '');
   const [imeiSearch, setImeiSearch] = useState('');

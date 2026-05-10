@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 
 interface LogoProps {
   className?: string;
@@ -8,7 +8,7 @@ interface LogoProps {
 }
 
 export default function Logo({ className, size = 'md' }: LogoProps) {
-  const { data } = useAppData();
+  const { data } = useData();
   const { companyLogo, companyName } = data.settings;
 
   const sizes = {

@@ -4,14 +4,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Building2, ShieldCheck, Camera, Save, RefreshCcw, Image as ImageIcon, Moon, Sun } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useTheme } from '../hooks/useTheme';
 
 export default function Settings() {
-  const { data, updateSettings } = useAppData();
+  const { data, updateSettings } = useData();
   const { theme, toggleTheme } = useTheme();
   const { uploadImage, uploading: cloudUploading } = useCloudinary();
   const [formData, setFormData] = useState({

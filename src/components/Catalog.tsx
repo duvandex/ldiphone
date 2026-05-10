@@ -4,7 +4,7 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send, Tablet, Watch, Headphones, CreditCard } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { fmt, cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Product } from '../types';
 
 export default function Catalog() {
-  const { data, user, updateSettings } = useAppData();
+  const { data, user, updateSettings } = useData();
   const { uploadImage } = useCloudinary();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');

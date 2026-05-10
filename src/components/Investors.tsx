@@ -2,11 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 
-export default function Investors({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data } = appData;
+export default function Investors() {
+  const { data } = useData();
 
   const investorData = React.useMemo(() => {
     const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];

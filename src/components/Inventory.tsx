@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smartphone, ShieldCheck, Users, ExternalLink, Copy, ArrowLeft, ArrowRight, Star, HandCoins, User, ArrowUpDown, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
 import { fmt, cn } from '../lib/utils';
@@ -156,8 +156,8 @@ const ImageUploader = ({
   );
 };
 
-export default function Inventory({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addProduct, deleteProduct, updateProduct, processBulkSale, generateInvoiceNumber } = appData;
+export default function Inventory() {
+  const { data, addProduct, deleteProduct, updateProduct, processBulkSale, generateInvoiceNumber } = useData();
   const { uploading } = useCloudinary();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');

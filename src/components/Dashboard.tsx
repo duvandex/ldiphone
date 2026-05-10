@@ -3,13 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Package, ShoppingCart, TrendingUp, TrendingDown, Wallet, CreditCard, RefreshCw, ChevronRight, Activity } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { motion } from 'motion/react';
 
-export default function Dashboard({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, user, initializeDatabase, usdtRate } = appData;
+export default function Dashboard() {
+  const { data, user, initializeDatabase, usdtRate } = useData();
 
   const isDuvan = React.useMemo(() => user?.email === 'duvanmarinj@gmail.com', [user]);
   const isDbEmpty = React.useMemo(() => data.products.length === 0, [data.products]);

@@ -6,13 +6,13 @@ import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Input } from './ui/input';
 import { Hash, User, ShoppingBag, ChevronLeft, ShieldCheck, Calendar } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt } from '../lib/utils';
 import Logo from './Logo';
 
 export default function WarrantyPage() {
   const { id } = useParams();
-  const { data, findProductPublicly, searchedProduct, loading } = useAppData();
+  const { data, findProductPublicly, searchedProduct, loading } = useData();
   const [search, setSearch] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   

@@ -7,13 +7,13 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Receipt, Download, Pencil, Trash2, Copy } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Product, PaymentMethod } from '../types';
 
-export default function Sales({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, updateProduct, undoSale } = appData;
+export default function Sales() {
+  const { data, updateProduct, undoSale } = useData();
   const navigate = useNavigate();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Product | null>(null);

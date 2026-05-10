@@ -7,12 +7,12 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
 import { Plus, Trash2, HandCoins, UserPlus } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
-export default function Liabilities({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addLiability, addLiabilityPayment, deleteLiability, updateLiability } = appData;
+export default function Liabilities() {
+  const { data, addLiability, addLiabilityPayment, deleteLiability, updateLiability } = useData();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isExtraOpen, setIsExtraOpen] = useState(false);

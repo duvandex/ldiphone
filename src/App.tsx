@@ -19,8 +19,8 @@ import Finance from './components/Finance';
 import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
 import Settings from './components/Settings';
-import { useAppData } from './hooks/useAppData';
 import { useTheme, ThemeProvider } from './hooks/useTheme';
+import { AppDataProvider, useData } from './context/AppDataContext';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
 
 import Logo from './components/Logo';
@@ -235,13 +235,15 @@ function QuotaWarning() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AppDataProvider>
+        <AppContent />
+      </AppDataProvider>
     </ThemeProvider>
   );
 }
 
 function AppContent() {
-  const appData = useAppData();
+  const appData = useData();
   const { user, loading, isQuotaExceeded } = appData;
 
   const handleLogout = async () => {
@@ -264,35 +266,35 @@ function AppContent() {
           <Route path="/catalog" element={<Catalog />} />
           <Route path="/warranty" element={<WarrantyPage />} />
           <Route path="/warranty/:id" element={<WarrantyPage />} />
-          <Route path="/view-invoice/:id" element={<InvoiceView appData={appData} isPublic />} />
+          <Route path="/view-invoice/:id" element={<InvoiceView isPublic />} />
           <Route path="/login" element={
             isAuthenticated ? <Navigate to="/" replace /> : <Login />
           } />
           
           {/* Admin Routes (Protected) */}
           <Route path="/" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Dashboard appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Dashboard /></AdminLayout>
           } />
           <Route path="/investors" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Investors appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Investors /></AdminLayout>
           } />
           <Route path="/inventory" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Inventory appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Inventory /></AdminLayout>
           } />
           <Route path="/sales" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Sales appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Sales /></AdminLayout>
           } />
           <Route path="/finance" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Finance appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Finance /></AdminLayout>
           } />
           <Route path="/debtors" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Debtors appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Debtors /></AdminLayout>
           } />
           <Route path="/liabilities" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Liabilities appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Liabilities /></AdminLayout>
           } />
           <Route path="/invoice" element={
-            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><InvoiceView appData={appData} /></AdminLayout>
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><InvoiceView /></AdminLayout>
           } />
           <Route path="/settings" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Settings /></AdminLayout>

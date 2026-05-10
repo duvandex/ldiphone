@@ -8,13 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Badge } from './ui/badge';
 import { Plus, Trash2, Wallet, Landmark, Banknote, TrendingDown, TrendingUp, PiggyBank, Users, User, Pencil, Save, CreditCard, Bitcoin, ChevronDown, ChevronUp } from 'lucide-react';
-import { useAppData } from '../hooks/useAppData';
+import { useData } from '../context/AppDataContext';
 import { PaymentMethod, FinancialAccount, Investor, Expense } from '../types';
 import { fmt, cn } from '../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
-export default function Finance({ appData }: { appData: ReturnType<typeof useAppData> }) {
-  const { data, addExpense, deleteExpense, updateAccountBalance, usdtRate } = appData;
+export default function Finance() {
+  const { data, addExpense, deleteExpense, updateAccountBalance, usdtRate } = useData();
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);

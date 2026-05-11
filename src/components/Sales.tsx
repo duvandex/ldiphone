@@ -6,25 +6,75 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Receipt, Download, Pencil, Trash2, Copy } from 'lucide-react';
+import { Receipt, Download, Pencil, Trash2, Copy, Search, Filter, TrendingUp, ShoppingBag, Hash } from 'lucide-react';
 import { useData } from '../context/AppDataContext';
-import { fmt } from '../lib/utils';
+import { fmt, cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { Product, PaymentMethod } from '../types';
+
+type TimePeriod = 'hoy' | 'semana' | 'mes' | 'año' | 'todo';
 
 export default function Sales() {
   const { data, updateProduct, undoSale } = useData();
   const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [period, setPeriod] = useState<TimePeriod>('todo');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<Product | null>(null);
   const [isUndoOpen, setIsUndoOpen] = useState(false);
   const [undoId, setUndoId] = useState<string | null>(null);
 
+  const periodOptions: { value: TimePeriod; label: string }[] = [
+    { value: 'hoy', label: 'Hoy' },
+    { value: 'semana', label: 'Semana' },
+    { value: 'mes', label: 'Mes' },
+    { value: 'año', label: 'Año' },
+    { value: 'todo', label: 'Todo' },
+  ];
+
   const soldProducts = React.useMemo(() => {
-    return [...data.products.filter(p => p.status === 'sold')].sort((a, b) => 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const filterByPeriod = (dateStr: string) => {
+      if (!dateStr) return false;
+      const date = new Date(dateStr + 'T12:00:00');
+      
+      switch (period) {
+        case 'hoy':
+          return date.toDateString() === today.toDateString();
+        case 'semana':
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          return date >= startOfWeek;
+        case 'mes':
+          return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+        case 'año':
+          return date.getFullYear() === today.getFullYear();
+        case 'todo':
+          return true;
+        default:
+          return true;
+      }
+    };
+
+    return [...data.products.filter(p => 
+      p.status === 'sold' && 
+      filterByPeriod(p.saleDate || '') &&
+      (p.name.toLowerCase().includes(search.toLowerCase()) || 
+       p.imei?.includes(search) || 
+       p.buyer?.toLowerCase().includes(search.toLowerCase()) ||
+       p.invoiceNumber?.toLowerCase().includes(search.toLowerCase()))
+    )].sort((a, b) => 
       (b.saleDate || '').localeCompare(a.saleDate || '')
     );
-  }, [data.products]);
+  }, [data.products, period, search]);
+
+  const summary = React.useMemo(() => {
+    const total = soldProducts.reduce((acc, p) => acc + ((p.salePrice || 0) * (p.quantity || 1)), 0);
+    const profit = soldProducts.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
+    return { total, profit, count: soldProducts.length };
+  }, [soldProducts]);
 
   const handleUpdateSale = () => {
     if (!editingSale) return;
@@ -69,19 +119,93 @@ export default function Sales() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight text-foreground">Historial de Ventas</h2>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={exportToCSV}
-          disabled={soldProducts.length === 0}
-          className="text-xs font-medium border-border"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Exportar CSV
-        </Button>
+    <div className="space-y-6 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black tracking-tight text-foreground">Gestión de Ventas</h2>
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider opacity-60 mt-1">Control detallado de transacciones finalizadas</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportToCSV}
+            disabled={soldProducts.length === 0}
+            className="text-[10px] font-black uppercase tracking-widest border-border h-10 rounded-xl"
+          >
+            <Download className="w-3.5 h-3.5 mr-2" />
+            Descargar Reporte
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="card-premium border-none bg-primary/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+              <ShoppingBag className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Volumen Ventas</p>
+              <p className="text-xl font-black tracking-tighter text-foreground">{fmt(summary.total)}</p>
+              <p className="text-[10px] font-bold text-muted-foreground mt-0.5">{summary.count} operaciones en {period}</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium border-none bg-emerald-500/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Rentabilidad Bruta</p>
+              <p className="text-xl font-black tracking-tighter text-emerald-600">{fmt(summary.profit)}</p>
+              <p className="text-[10px] font-bold text-muted-foreground mt-0.5">Margen sobre costo</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium border-none bg-blue-500/5">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+              <Hash className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ticket Promedio</p>
+              <p className="text-xl font-black tracking-tighter text-blue-600">{fmt(summary.count > 0 ? summary.total / summary.count : 0)}</p>
+              <p className="text-[10px] font-bold text-muted-foreground mt-0.5">Por unidad vendida</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input 
+            className="pl-11 h-12 rounded-2xl border-none bg-muted/30 font-medium placeholder:text-muted-foreground text-sm"
+            placeholder="Buscar por producto, IMEI, cliente o factura..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center bg-muted/30 p-1 rounded-2xl border border-border w-full md:w-auto overflow-x-auto no-scrollbar">
+          {periodOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setPeriod(opt.value)}
+              className={cn(
+                "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap",
+                period === opt.value 
+                  ? "bg-white text-primary shadow-sm shadow-black/5" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <Card className="border-none shadow-sm bg-card">

@@ -13,8 +13,11 @@ import { PaymentMethod, FinancialAccount, Investor, Expense } from '../types';
 import { fmt, cn } from '../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
+type TimePeriod = 'hoy' | 'semana' | 'mes' | 'año' | 'todo';
+
 export default function Finance() {
   const { data, addExpense, deleteExpense, updateAccountBalance, usdtRate } = useData();
+  const [period, setPeriod] = useState<TimePeriod>('mes');
   const [isExpenseOpen, setIsExpenseOpen] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -41,6 +44,59 @@ export default function Finance() {
 
   const investors: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
 
+  const periodOptions: { value: TimePeriod; label: string }[] = [
+    { value: 'hoy', label: 'Hoy' },
+    { value: 'semana', label: 'Semana' },
+    { value: 'mes', label: 'Mes' },
+    { value: 'año', label: 'Año' },
+    { value: 'todo', label: 'Todo' },
+  ];
+
+  const filteredData = React.useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const filterByPeriod = (dateStr: string) => {
+      if (!dateStr) return false;
+      const date = new Date(dateStr + 'T12:00:00');
+      
+      switch (period) {
+        case 'hoy':
+          return date.toDateString() === today.toDateString();
+        case 'semana':
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          return date >= startOfWeek;
+        case 'mes':
+          return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+        case 'año':
+          return date.getFullYear() === today.getFullYear();
+        case 'todo':
+          return true;
+        default:
+          return true;
+      }
+    };
+
+    const soldInPeriod = data.products.filter(p => p.status === 'sold' && filterByPeriod(p.saleDate || ''));
+    const expensesInPeriod = data.expenses.filter(e => filterByPeriod(e.date));
+    
+    return { soldInPeriod, expensesInPeriod };
+  }, [data.products, data.expenses, period]);
+
+  const totalCapital = data.accounts.reduce((sum, acc) => sum + getAccountBalanceCOP(acc), 0);
+  const totalInventory = data.products
+    .filter(p => p.status === 'stock' || p.status === 'reserved')
+    .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
+  
+  const totalGain = filteredData.soldInPeriod
+    .reduce((sum, p) => {
+      const pGain = (p.salePrice || 0) - p.purchasePrice;
+      return sum + (pGain * p.quantity);
+    }, 0);
+
+  const totalExpenses = filteredData.expensesInPeriod.reduce((sum, e) => sum + e.amount, 0);
+
   const [newExpense, setNewExpense] = useState({
     description: '',
     amount: 0,
@@ -49,20 +105,6 @@ export default function Finance() {
     date: new Date().toISOString().split('T')[0],
     investor: 'Duvan' as Investor,
   });
-
-  const totalCapital = data.accounts.reduce((sum, acc) => sum + getAccountBalanceCOP(acc), 0);
-  const totalInventory = data.products
-    .filter(p => p.status === 'stock' || p.status === 'reserved')
-    .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
-  
-  const totalGain = data.products
-    .filter(p => p.status === 'sold')
-    .reduce((sum, p) => {
-      const pGain = (p.salePrice || 0) - p.purchasePrice;
-      return sum + (pGain * p.quantity);
-    }, 0);
-
-  const totalExpenses = data.expenses.reduce((sum, e) => sum + e.amount, 0);
 
   const reservedProducts = data.products.filter(p => p.status === 'reserved');
   const totalReservedPending = reservedProducts.reduce((sum, p) => {
@@ -136,8 +178,29 @@ export default function Finance() {
   };
 
   return (
-    <div className="space-y-12">
-      {/* Individual Investor Views */}
+    <div className="space-y-12 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 bg-background/80 backdrop-blur-md z-40 py-4 -mx-4 px-4 border-b border-border shadow-sm">
+        <div>
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground">Gestión de Cuentas</h2>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Balance General de Inversores y Gastos</p>
+        </div>
+        <div className="flex items-center bg-muted/50 p-1 rounded-2xl border border-border overflow-x-auto no-scrollbar">
+          {periodOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setPeriod(opt.value)}
+              className={cn(
+                "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap",
+                period === opt.value 
+                  ? "bg-white text-primary shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-1 gap-12">
         {investors.map((investor) => {
           const methods: PaymentMethod[] = ['Efectivo', 'Bancolombia', 'Nequi', 'Banco de Bogota'];
@@ -154,16 +217,22 @@ export default function Finance() {
             } as FinancialAccount;
           });
 
-          const investorProducts = data.products.filter(p => 
+          const investorProducts = filteredData.soldInPeriod.filter(p => 
             p.investor === investor || 
             (p.coInvestors && p.coInvestors.some(co => co.investor === investor))
           );
-          const investorExpenses = data.expenses.filter(e => e.investor === investor);
+          // For inventory we ALWAYS use the full data because inventory is CURRENT state
+          const invFullInventory = data.products.filter(p => 
+            (p.investor === investor || (p.coInvestors && p.coInvestors.some(co => co.investor === investor))) &&
+            (p.status === 'stock' || p.status === 'reserved')
+          );
+
+          const investorExpenses = filteredData.expensesInPeriod.filter(e => e.investor === investor);
           
           const invCapital = accountsToRender.reduce((s, a) => s + getAccountBalanceCOP(a), 0);
           
-          const invInventory = investorProducts
-            .filter(p => (p.status === 'stock' || p.status === 'reserved') && !p.isExternal)
+          const invInventoryValue = invFullInventory
+            .filter(p => !p.isExternal)
             .reduce((s, p) => {
               const share = p.coInvestors && p.coInvestors.length > 0 
                 ? (p.coInvestors.find(co => co.investor === investor)?.percentage || 0) / 100
@@ -171,8 +240,7 @@ export default function Finance() {
               return s + (p.purchasePrice * share * (p.quantity || 1));
             }, 0);
 
-          const invGain = investorProducts
-            .filter(p => p.status === 'sold')
+          const invGainInPeriod = investorProducts
             .reduce((s, p) => {
               const share = p.coInvestors && p.coInvestors.length > 0 
                 ? (p.coInvestors.find(co => co.investor === investor)?.percentage || 0) / 100
@@ -180,44 +248,44 @@ export default function Finance() {
               const pGain = (p.salePrice || 0) - p.purchasePrice;
               return s + (pGain * share * (p.quantity || 1));
             }, 0);
-          const invExpensesTotal = investorExpenses.reduce((s, e) => s + e.amount, 0);
+          const invExpensesTotalInPeriod = investorExpenses.reduce((s, e) => s + e.amount, 0);
 
           return (
             <div key={investor} className="space-y-4">
-              <div className="flex items-center gap-3 border-b border-border pb-2">
-                <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
-                  <User className="w-4 h-4" />
+              <div className="flex items-center gap-3 border-b border-border pb-2 group">
+                <div className="bg-primary text-primary-foreground p-1.5 rounded-xl group-hover:rotate-12 transition-transform shadow-lg shadow-primary/20">
+                  <User className="w-5 h-5" />
                 </div>
-                <h2 className="text-xl font-black uppercase tracking-tight text-foreground">{investor}</h2>
+                <h2 className="text-2xl font-black uppercase tracking-tight text-foreground">{investor}</h2>
                 <div className="ml-auto flex gap-4">
                    <div className="text-right">
-                      <div className="text-[9px] uppercase font-bold text-muted-foreground">Total Patrimonio</div>
-                      <div className="text-sm font-black text-foreground">{fmt(invCapital + invInventory)}</div>
+                      <div className="text-[10px] uppercase font-black text-muted-foreground opacity-60">Situación Patrimonial</div>
+                      <div className="text-lg font-black text-foreground tracking-tighter">{fmt(invCapital + invInventoryValue)}</div>
                    </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
                 {/* Investor Stats */}
-                <Card className="border-none shadow-sm bg-card overflow-hidden">
+                <Card className="border-none shadow-sm bg-card overflow-hidden card-premium">
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Capital en Efectivo</span>
-                      <span className="text-xs font-mono font-bold text-blue-600">{fmt(invCapital)}</span>
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Saldo Contable</span>
+                      <span className="text-xs font-mono font-black text-blue-600">{fmt(invCapital)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Inversión en Stock</span>
-                      <span className="text-xs font-mono font-bold text-foreground">{fmt(invInventory)}</span>
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Activos Stock</span>
+                      <span className="text-xs font-mono font-black text-foreground">{fmt(invInventoryValue)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-muted-foreground">Ganancia Acumulada</span>
-                      <span className={cn("text-xs font-mono font-bold", invGain >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                        {fmt(invGain)}
+                      <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Profit ({period})</span>
+                      <span className={cn("text-xs font-mono font-black", invGainInPeriod >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                        {fmt(invGainInPeriod)}
                       </span>
                     </div>
                     <div className="pt-2 border-t border-border flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-rose-500">Gastos Realizados</span>
-                      <span className="text-xs font-mono font-bold text-rose-500">{fmt(invExpensesTotal)}</span>
+                      <span className="text-[10px] font-black uppercase text-rose-500 tracking-widest">Egresos ({period})</span>
+                      <span className="text-xs font-mono font-black text-rose-500">{fmt(invExpensesTotalInPeriod)}</span>
                     </div>
                   </CardContent>
                 </Card>

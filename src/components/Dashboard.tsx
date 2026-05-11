@@ -1,24 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Package, ShoppingCart, TrendingUp, TrendingDown, Wallet, CreditCard, RefreshCw, ChevronRight, Activity } from 'lucide-react';
+import { Package, ShoppingCart, TrendingUp, TrendingDown, Wallet, CreditCard, RefreshCw, ChevronRight, Activity, Calendar, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Button } from './ui/button';
 import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { motion } from 'motion/react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts';
+import { motion, AnimatePresence } from 'motion/react';
+
+type TimePeriod = 'hoy' | 'semana' | 'mes' | 'año' | 'todo';
 
 export default function Dashboard() {
   const { data, user, initializeDatabase, usdtRate } = useData();
+  const [period, setPeriod] = useState<TimePeriod>('mes');
 
   const isDuvan = React.useMemo(() => user?.email === 'duvanmarinj@gmail.com', [user]);
   const isDbEmpty = React.useMemo(() => data.products.length === 0, [data.products]);
 
-  const { stock, sold, totalProfit, totalStockUnits, stockValue } = React.useMemo(() => {
+  const filteredData = React.useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    const filterByPeriod = (dateStr: string) => {
+      if (!dateStr) return false;
+      const date = new Date(dateStr + 'T12:00:00'); // Use noon to avoid TZ issues
+      
+      switch (period) {
+        case 'hoy':
+          return date.toDateString() === today.toDateString();
+        case 'semana':
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay());
+          return date >= startOfWeek;
+        case 'mes':
+          return date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear();
+        case 'año':
+          return date.getFullYear() === today.getFullYear();
+        case 'todo':
+          return true;
+        default:
+          return true;
+      }
+    };
+
+    const soldInPeriod = data.products.filter(p => p.status === 'sold' && filterByPeriod(p.saleDate || ''));
+    const expensesInPeriod = data.expenses.filter(e => filterByPeriod(e.date));
+    
+    return { soldInPeriod, expensesInPeriod };
+  }, [data.products, data.expenses, period]);
+
+  const { stock, sold, totalProfit, totalStockUnits, stockValue, totalRevenue } = React.useMemo(() => {
     const stockProducts = (data.products || []).filter(p => p.status === 'stock');
-    const soldProducts = (data.products || []).filter(p => p.status === 'sold');
+    const soldProducts = filteredData.soldInPeriod;
     
     const profit = soldProducts.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
+    const revenue = soldProducts.reduce((acc, p) => acc + ((p.salePrice || 0) * (p.quantity || 1)), 0);
     
     const stockVal = stockProducts.reduce((acc, p) => {
       if (p.isExternal) return acc;
@@ -32,9 +68,10 @@ export default function Dashboard() {
       sold: soldProducts,
       totalProfit: profit,
       totalStockUnits: stockUnits,
-      stockValue: stockVal
+      stockValue: stockVal,
+      totalRevenue: revenue
     };
-  }, [data.products]);
+  }, [data.products, filteredData.soldInPeriod]);
   
   const pendingDebts = React.useMemo(() => {
     return data.debtors.reduce((acc, d) => {
@@ -54,10 +91,11 @@ export default function Dashboard() {
     const investors = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
     const iStats = investors.map(inv => {
       let capital = 0;
-      let profit = 0;
-      let sales = 0;
+      let profitView = 0;
+      let salesView = 0;
       let stockCount = 0;
 
+      // For capital and stock, we use global data (current state)
       data.products.forEach(p => {
         if (p.coInvestors && p.coInvestors.length > 0) {
           const coMatch = p.coInvestors.find(c => c.investor === inv);
@@ -66,34 +104,44 @@ export default function Dashboard() {
             if (p.status === 'stock') {
               capital += p.purchasePrice * p.quantity * share;
               stockCount += p.quantity * share;
-            } else if (p.status === 'sold') {
-              sales += (p.salePrice || 0) * p.quantity * share;
-              profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity * share;
             }
           }
         } 
-        else if (p.isExternal) {
-          if (inv === 'Duvan' && p.status === 'sold') {
-            sales += (p.salePrice || 0) * p.quantity;
-            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
-          }
-        }
-        else if (p.investor === inv) {
+        else if (!p.isExternal && p.investor === inv) {
           if (p.status === 'stock') {
             capital += p.purchasePrice * p.quantity;
             stockCount += p.quantity;
-          } else if (p.status === 'sold') {
-            sales += (p.salePrice || 0) * p.quantity;
-            profit += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
           }
+        }
+      });
+
+      // For profit and sales, we use the PERIOD filtered data
+      filteredData.soldInPeriod.forEach(p => {
+        if (p.coInvestors && p.coInvestors.length > 0) {
+          const coMatch = p.coInvestors.find(c => c.investor === inv);
+          if (coMatch) {
+            const share = coMatch.percentage / 100;
+            salesView += (p.salePrice || 0) * p.quantity * share;
+            profitView += ((p.salePrice || 0) - p.purchasePrice) * p.quantity * share;
+          }
+        } 
+        else if (p.isExternal) {
+          if (inv === 'Duvan') {
+            salesView += (p.salePrice || 0) * p.quantity;
+            profitView += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
+          }
+        }
+        else if (p.investor === inv) {
+          salesView += (p.salePrice || 0) * p.quantity;
+          profitView += ((p.salePrice || 0) - p.purchasePrice) * p.quantity;
         }
       });
       
       return {
         name: inv,
         capital,
-        sales,
-        profit,
+        sales: salesView,
+        profit: profitView,
         balance: data.accounts.filter(a => a.investor === inv).reduce((acc, a) => acc + getAccountBalanceCOP(a), 0),
         stockCount
       };
@@ -107,15 +155,23 @@ export default function Dashboard() {
     }, 0);
 
     return { investorStats: iStats, totalCapital: tCapital, totalLiabilities: tLiabilities };
-  }, [data.products, data.accounts, data.liabilities, usdtRate]);
+  }, [data.products, data.accounts, data.liabilities, usdtRate, filteredData.soldInPeriod]);
 
   const stats = React.useMemo(() => [
-    { label: 'Unidades Stock', value: totalStockUnits, icon: Package, color: 'bg-blue-500/10 text-blue-500' },
-    { label: 'Ganancia Total', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500' },
+    { label: 'Ventas Periodo', value: fmt(totalRevenue), icon: ShoppingCart, color: 'bg-primary/10 text-primary' },
+    { label: 'Ganancia Periodo', value: fmt(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500' },
+    { label: 'Capital Stock', value: fmt(stockValue), icon: Package, color: 'bg-blue-500/10 text-blue-500' },
     { label: 'Cuentas x Cobrar', value: fmt(pendingDebts), icon: CreditCard, color: 'bg-amber-500/10 text-amber-500' },
-    { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-500/10 text-rose-500' },
-    { label: 'Capital Disponible', value: fmt(totalCapital), icon: Activity, color: 'bg-indigo-500/10 text-indigo-500' },
-  ], [totalStockUnits, totalProfit, pendingDebts, totalLiabilities, totalCapital]);
+    { label: 'Pasivos (Deudas)', value: fmt(totalLiabilities), icon: TrendingDown, color: 'bg-rose-600/10 text-rose-600' },
+  ], [totalRevenue, totalProfit, stockValue, pendingDebts, totalLiabilities]);
+
+  const periodOptions: { value: TimePeriod; label: string }[] = [
+    { value: 'hoy', label: 'Hoy' },
+    { value: 'semana', label: 'Esta Semana' },
+    { value: 'mes', label: 'Este Mes' },
+    { value: 'año', label: 'Este Año' },
+    { value: 'todo', label: 'Todo' },
+  ];
 
   const container = {
     hidden: { opacity: 0 },
@@ -142,10 +198,27 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            Exploración de Datos
-            <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">LIVE</span>
+            Cuentas y Ganancias
+            <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full tracking-widest">REALTIME</span>
           </h1>
-          <p className="text-muted-foreground text-sm font-medium">Control financiero y de inventario centralizado</p>
+          <p className="text-muted-foreground text-xs font-bold uppercase tracking-wider opacity-60 mt-1">Control financiero y de inventario centralizado</p>
+        </div>
+
+        <div className="flex items-center bg-muted/30 p-1 rounded-2xl border border-border overflow-x-auto no-scrollbar">
+          {periodOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setPeriod(opt.value)}
+              className={cn(
+                "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all whitespace-nowrap",
+                period === opt.value 
+                  ? "bg-white text-primary shadow-sm shadow-black/5" 
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -207,58 +280,58 @@ export default function Dashboard() {
                     contentStyle={{ borderRadius: '16px', border: '1px solid var(--border)', backgroundColor: 'var(--card)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)', padding: '12px' }}
                     labelStyle={{ fontWeight: 800, marginBottom: '4px', textTransform: 'uppercase', fontSize: '10px', color: 'var(--foreground)' }}
                   />
-                  <Bar dataKey="profit" radius={[6, 6, 0, 0]} barSize={32}>
-                    {investorStats.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? '#10b981' : '#f43f5e'} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={item}>
-          <Card className="card-premium border-none h-full">
-            <CardHeader className="border-b border-border">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                Posiciones de Capital
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent border-none bg-muted/30">
-                    <TableHead className="text-[10px] uppercase font-black px-6 h-10">Inversor</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10">Efectivo</TableHead>
-                    <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10">Ganancia</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {investorStats.map((inv) => (
-                    <TableRow key={inv.name} className="group cursor-default border-border">
-                      <TableCell className="font-bold py-4 px-6 text-sm flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-[10px] font-black group-hover:bg-primary group-hover:text-primary-foreground transition-colors uppercase">
-                          {inv.name.substring(0, 2)}
-                        </div>
-                        {inv.name}
-                      </TableCell>
-                      <TableCell className="text-right py-4 px-6 font-mono text-xs text-blue-600 font-black">{fmt(inv.balance)}</TableCell>
-                      <TableCell className={cn(
-                        "text-right py-4 px-6 font-mono text-xs font-black",
-                        inv.profit >= 0 ? "text-emerald-600" : "text-rose-600"
-                      )}>
-                        {fmt(inv.profit)}
-                      </TableCell>
+                    <Bar dataKey="profit" radius={[6, 6, 0, 0]} barSize={32}>
+                      {investorStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.profit >= 0 ? 'var(--primary)' : '#f43f5e'} fillOpacity={0.8} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </motion.div>
+  
+          <motion.div variants={item}>
+            <Card className="card-premium border-none h-full bg-slate-900 text-white overflow-hidden">
+              <CardHeader className="border-b border-white/5 bg-white/5">
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  Posiciones de Capital
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-none bg-white/5">
+                      <TableHead className="text-[10px] uppercase font-black px-6 h-10 text-slate-400">Inversor</TableHead>
+                      <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10 text-slate-400">Contable</TableHead>
+                      <TableHead className="text-[10px] uppercase font-black text-right px-6 h-10 text-slate-400">Profit ({period})</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+                  </TableHeader>
+                  <TableBody>
+                    {investorStats.map((inv) => (
+                      <TableRow key={inv.name} className="group cursor-default border-white/5 hover:bg-white/5">
+                        <TableCell className="font-bold py-4 px-6 text-sm flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-black group-hover:bg-primary group-hover:text-white transition-colors uppercase">
+                            {inv.name.substring(0, 2)}
+                          </div>
+                          {inv.name}
+                        </TableCell>
+                        <TableCell className="text-right py-4 px-6 font-mono text-xs text-blue-400 font-bold">{fmt(inv.balance)}</TableCell>
+                        <TableCell className={cn(
+                          "text-right py-4 px-6 font-mono text-xs font-bold",
+                          inv.profit >= 0 ? "text-emerald-400" : "text-rose-400"
+                        )}>
+                          {fmt(inv.profit)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
 
       <motion.div variants={item}>
         <Card className="card-premium border-none">

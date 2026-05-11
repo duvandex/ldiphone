@@ -1426,11 +1426,18 @@ export default function Inventory() {
           return (
             <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl relative">
               {(p.status === 'stock' || p.status === 'reserved') && (
-                <div className="absolute top-4 left-4 z-20">
+                <div 
+                  className="absolute top-0 left-0 w-16 h-16 z-30 flex items-center justify-center p-4 cursor-pointer"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleSelection(p.id);
+                  }}
+                >
                   <Checkbox 
-                    className="w-6 h-6 rounded-lg bg-white/90 backdrop-blur-sm border-2 border-slate-200 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    className="w-6 h-6 rounded-lg bg-white/90 backdrop-blur-sm border-2 border-slate-200 data-[state=checked]:bg-primary data-[state=checked]:border-primary pointer-events-none"
                     checked={selectedIds.has(p.id)}
-                    onCheckedChange={() => toggleSelection(p.id)}
+                    onCheckedChange={() => {}}
                   />
                 </div>
               )}

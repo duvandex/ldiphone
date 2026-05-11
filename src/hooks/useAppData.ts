@@ -439,18 +439,42 @@ export function useAppData() {
   }) => {
     try {
       await runTransaction(db, async (transaction) => {
-        // Collect all products and settings
-        const productRefs = items.map(item => doc(db, 'products', item.productId));
-        const productSnapshots = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        // --- 1. ALL READS FIRST ---
         
+        // Settings read
         const settingsRef = doc(db, 'app_settings', 'global');
         const settingsDoc = await transaction.get(settingsRef);
         
+        // Products read
+        const productRefs = items.map(item => doc(db, 'products', item.productId));
+        const productSnapshots = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+        
+        // Identify all unique accounts needed from products
+        const uniqueAccountIds = new Set<string>();
+        for (const snap of productSnapshots) {
+          if (!snap.exists()) continue;
+          const product = snap.data() as Product;
+          const targetInvestors = product.isExternal 
+            ? [{ investor: 'Duvan' as Investor }] 
+            : (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor }]);
+          
+          for (const co of targetInvestors) {
+            uniqueAccountIds.add(`${co.investor}-${commonData.saleMethod}`);
+          }
+        }
+
+        // Accounts read
+        const accountRefs = Array.from(uniqueAccountIds).map(id => doc(db, 'accounts', id));
+        const accountSnapshots = await Promise.all(accountRefs.map(ref => transaction.get(ref)));
+        const accountMap = new Map(accountSnapshots.map((snap, i) => [Array.from(uniqueAccountIds)[i], snap]));
+
+        // --- 2. LOGIC AND WRITES ---
+
         const currentCounter = settingsDoc.exists() ? (settingsDoc.data() as any).invoiceCounter || 1 : 1;
         const invoiceNumber = `FAC-${String(currentCounter).padStart(3, '0')}`;
         
-        // Prepare account updates
-        const accountOpsMap = new Map<string, { ref: any, amount: number, id: string, investor: Investor, method: PaymentMethod }>();
+        // Track account balance changes
+        const accountBalanceUpdates = new Map<string, number>();
 
         for (let i = 0; i < items.length; i++) {
           const item = items[i];
@@ -459,11 +483,14 @@ export function useAppData() {
           const product = productSnap.data() as Product;
           
           let finalPrice = item.salePrice;
+          let discountValuePerUnit = 0;
           if (item.discount && item.discount > 0) {
             if (item.discountType === 'percentage') {
-              finalPrice = finalPrice * (1 - (item.discount / 100));
+              discountValuePerUnit = item.salePrice * (item.discount / 100);
+              finalPrice = item.salePrice - discountValuePerUnit;
             } else {
-              finalPrice = finalPrice - item.discount;
+              discountValuePerUnit = item.discount;
+              finalPrice = item.salePrice - discountValuePerUnit;
             }
           }
 
@@ -480,22 +507,10 @@ export function useAppData() {
             for (const co of targetInvestors) {
               const accountId = `${co.investor}-${commonData.saleMethod}`;
               const share = adjustedIncome * (co.percentage / 100);
-              const existingOp = accountOpsMap.get(accountId);
-              if (existingOp) {
-                existingOp.amount += share;
-              } else {
-                accountOpsMap.set(accountId, {
-                  ref: doc(db, 'accounts', accountId),
-                  amount: share,
-                  id: accountId,
-                  investor: co.investor,
-                  method: commonData.saleMethod
-                });
-              }
+              accountBalanceUpdates.set(accountId, (accountBalanceUpdates.get(accountId) || 0) + share);
             }
           }
 
-          // Update Product
           const currentQty = product.quantity || 1;
           const isSalePartial = item.sellQuantity < currentQty;
 
@@ -540,24 +555,22 @@ export function useAppData() {
           }
         }
 
-        // Apply Account WRITES
-        const accountOps = Array.from(accountOpsMap.values());
-        const accountSnapshots = await Promise.all(accountOps.map(op => transaction.get(op.ref)));
-        
-        accountOps.forEach((op, idx) => {
-          const accSnap = accountSnapshots[idx];
-          if (accSnap.exists()) {
-            transaction.update(op.ref, { balance: (accSnap.data() as any).balance + op.amount });
+        // Apply Account writes
+        for (const [accountId, balanceChange] of accountBalanceUpdates.entries()) {
+          const accSnap = accountMap.get(accountId);
+          const [inv, met] = accountId.split('-');
+          if (accSnap && accSnap.exists()) {
+            transaction.update(accSnap.ref, { balance: (accSnap.data() as any).balance + balanceChange });
           } else {
-            transaction.set(op.ref, {
-              id: op.id,
-              investor: op.investor,
-              method: op.method,
-              name: op.method,
-              balance: op.amount
+            transaction.set(doc(db, 'accounts', accountId), {
+              id: accountId,
+              investor: inv,
+              method: met,
+              name: met,
+              balance: balanceChange
             });
           }
-        });
+        }
 
         // Increment Invoice Counter
         transaction.update(settingsRef, { invoiceCounter: currentCounter + 1 });

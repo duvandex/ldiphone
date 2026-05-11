@@ -78,6 +78,28 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
     window.print();
   };
 
+  const pricing = React.useMemo(() => {
+    if (!product) return { unitPrice: 0, total: 0, subtotal: 0, discount: 0 };
+    
+    const finalUnitPrice = product.salePrice || 0;
+    const qty = product.quantity || 1;
+    let baseUnitPrice = finalUnitPrice;
+    
+    if (product.discount && product.discount > 0) {
+      if (product.discountType === 'percentage') {
+        baseUnitPrice = finalUnitPrice / (1 - (product.discount / 100));
+      } else {
+        baseUnitPrice = finalUnitPrice + product.discount;
+      }
+    }
+    
+    const subtotal = baseUnitPrice * qty;
+    const total = finalUnitPrice * qty;
+    const discount = subtotal - total;
+    
+    return { unitPrice: baseUnitPrice, total, subtotal, discount };
+  }, [product]);
+
   if (isPublic && !product) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 space-y-4">
@@ -183,13 +205,13 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
                     <div className="col-span-6">
                       <div className="text-sm font-bold text-foreground print:text-black">{product.name}</div>
                       <div className="text-[10px] text-muted-foreground font-mono mt-0.5">IMEI: {product.imei || 'No registrado'}</div>
-                      <div className="text-[9px] text-muted-foreground/80 mt-0.5">P. Unitario: {fmt(product.salePrice || 0)}</div>
+                      <div className="text-[9px] text-muted-foreground/80 mt-0.5">P. Unitario: {fmt(pricing.unitPrice)}</div>
                     </div>
                     <div className="col-span-2 text-center text-xs font-bold text-foreground print:text-black">
                       x{product.quantity || 1}
                     </div>
                     <div className="col-span-4 text-right font-mono font-bold text-sm text-foreground print:text-black">
-                      {fmt((product.salePrice || 0) * (product.quantity || 1))}
+                      {fmt(pricing.subtotal)}
                     </div>
                   </div>
                 </div>
@@ -199,13 +221,19 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
               <div className="flex justify-end pt-4">
                 <div className="w-full max-w-[200px] space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span className="font-mono text-foreground print:text-black">{fmt((product.salePrice || 0) * (product.quantity || 1))}</span>
+                    <span className="text-muted-foreground uppercase font-black tracking-widest text-[9px]">Subtotal</span>
+                    <span className="font-mono text-foreground print:text-black">{fmt(pricing.subtotal)}</span>
                   </div>
+                  {pricing.discount > 0 && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-rose-500 uppercase font-black tracking-widest text-[9px]">Descuento</span>
+                      <span className="font-mono text-rose-500">-{fmt(pricing.discount)}</span>
+                    </div>
+                  )}
                   <Separator className="bg-border print:bg-slate-200" />
                   <div className="flex justify-between items-baseline">
                     <span className="text-xs font-bold uppercase text-foreground print:text-black">Total</span>
-                    <span className="text-xl font-black tracking-tighter text-foreground print:text-black">{fmt((product.salePrice || 0) * (product.quantity || 1))}</span>
+                    <span className="text-xl font-black tracking-tighter text-foreground print:text-black">{fmt(pricing.total)}</span>
                   </div>
                 </div>
               </div>

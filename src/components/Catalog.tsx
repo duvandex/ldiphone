@@ -254,109 +254,98 @@ export default function Catalog() {
       </section>
 
       {/* Grid */}
-      <main className="flex-1 px-4 py-12 md:px-8">
+      <main className="flex-1 px-2 py-6 sm:px-8 sm:py-12">
         <div className="max-w-7xl mx-auto">
           {/* Categories */}
-          <div className="flex items-center gap-3 mb-12 overflow-x-auto pb-4 no-scrollbar">
+          <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-12 overflow-x-auto pb-4 no-scrollbar">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setCategory(cat.id)}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl whitespace-nowrap transition-all duration-300 font-black text-[10px] uppercase tracking-widest",
+                  "flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl whitespace-nowrap transition-all duration-300 font-black text-[8px] sm:text-[10px] uppercase tracking-widest",
                   category === cat.id 
                     ? "bg-primary text-primary-foreground shadow-xl shadow-primary/10 scale-105" 
                     : "bg-card text-muted-foreground hover:text-foreground hover:bg-muted border border-border"
                 )}
               >
-                <cat.icon className="w-4 h-4" />
+                <cat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {cat.name}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3">
-               Colección Disponible
-               <span className="h-px w-12 bg-border"></span>
+          <div className="flex items-center justify-between mb-6 sm:mb-10 px-2 sm:px-0">
+            <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 sm:gap-3">
+               Colección
+               <span className="h-px w-8 sm:w-12 bg-border"></span>
             </h3>
-            <p className="text-[10px] font-bold text-muted-foreground italic">{publicProducts.length} resultados encontrados</p>
+            <p className="text-[8px] sm:text-[10px] font-bold text-muted-foreground italic">{publicProducts.length} equipos</p>
           </div>
 
           <motion.div 
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+            className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-8"
           >
             {publicProducts.map((p) => (
               <motion.div key={p.id} variants={item}>
-                <Card className="group card-premium rounded-3xl overflow-hidden border-none h-full flex flex-col bg-card">
+                <Card className="group card-premium rounded-2xl sm:rounded-3xl overflow-hidden border-none h-full flex flex-col bg-card shadow-sm hover:shadow-xl transition-all duration-500">
                   <div 
-                    className="aspect-video relative flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer"
+                    className="aspect-[4/5] sm:aspect-video relative flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer"
                     onClick={() => {
                         setSelectedProduct(p);
                         setActiveImageIndex(0);
                     }}
                   >
                     {p.images && p.images.length > 0 ? (
-                      <img src={p.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.name} />
+                      <img 
+                        src={p.images[0]} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        alt={p.name} 
+                        loading="lazy"
+                      />
                     ) : (
                       <div className="flex flex-col items-center gap-2 opacity-20 group-hover:opacity-40 transition-opacity">
-                         <Smartphone className="w-16 h-16 text-foreground" />
+                         <Smartphone className="w-12 h-12 sm:w-16 sm:h-16 text-foreground" />
                       </div>
                     )}
                     
                     <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
-                      "absolute top-4 right-4 text-[8px] font-black uppercase tracking-[0.2em] px-2.5 py-1 rounded-full border-none shadow-lg backdrop-blur-md",
+                      "absolute top-2 right-2 sm:top-4 sm:right-4 text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border-none shadow-lg backdrop-blur-md",
                       p.status === 'stock' ? "bg-blue-50/90 text-blue-600" : 
                       p.status === 'reserved' ? "bg-orange-50/90 text-orange-600" :
                       "bg-rose-50/90 text-rose-600"
                     )}>
                       {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'OUT'}
                     </Badge>
-
-                    {p.images && p.images.length > 1 && (
-                      <div className="absolute bottom-4 right-4 bg-black/40 text-white text-[9px] font-bold px-3 py-1.5 rounded-full backdrop-blur-lg border border-white/10 group-hover:bg-primary transition-colors uppercase tracking-widest">
-                        +{p.images.length} FOTOS
-                      </div>
-                    )}
                   </div>
 
-                  <CardContent className="p-6 flex flex-col flex-1">
-                    <div className="mb-4">
-                       <h3 className="font-black text-xl tracking-tight text-foreground leading-tight group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
-                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Ref: {p.id.slice(0, 8)}</div>
+                  <CardContent className="p-3 sm:p-6 flex flex-col flex-1">
+                    <div className="mb-2 sm:mb-4">
+                       <h3 className="font-black text-xs sm:text-xl tracking-tight text-foreground leading-tight group-hover:text-primary transition-colors cursor-pointer line-clamp-1 sm:line-clamp-none" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
+                       <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">Ref: {p.id.slice(0, 8)}</div>
                     </div>
 
-                    {p.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-4 leading-relaxed font-medium h-8">
-                        {p.description}
-                      </p>
-                    )}
-                    
-                    <div className="space-y-4 mt-auto pt-4 border-t border-border">
-                        {p.warrantyMonths && (
-                            <div className="text-[9px] font-black text-primary uppercase flex items-center gap-1.5 tracking-widest bg-primary/10 w-fit px-2 py-1 rounded-md">
-                                <ShieldCheck className="w-3.5 h-3.5" /> {p.warrantyMonths} MESES GARANTÍA
-                            </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
+                    <div className="space-y-2 sm:space-y-4 mt-auto pt-2 sm:pt-4 border-t border-border">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-0.5">Precio Especial</span>
-                                <span className="text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
+                                <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Especial</span>
+                                <span className="text-sm sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
                             </div>
                             
                             <a 
                                 href={getWhatsAppLink(p)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-emerald-500 w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20 hover:scale-110 active:scale-95 transition-all text-white group/wa"
+                                className="bg-emerald-500 w-full sm:w-12 h-9 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10 hover:scale-105 active:scale-95 transition-all text-white"
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white" xmlns="http://www.w3.org/2000/svg">
+                                <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-6 sm:h-6 fill-white" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                                 </svg>
+                                <span className="sm:hidden ml-2 text-[9px] font-black uppercase tracking-widest">Pedir</span>
                             </a>
                         </div>
                     </div>

@@ -750,7 +750,7 @@ export default function Inventory() {
   };
 
   const summaryByStatus = React.useMemo(() => {
-    const stock = products.filter(p => p.status === 'stock' || p.status === 'reserved');
+    const stock = data.products.filter(p => p.status === 'stock' || p.status === 'reserved');
     const totalCost = stock.reduce((sum, p) => sum + (p.purchasePrice * (p.quantity || 1)), 0);
     const totalEstSale = stock.reduce((sum, p) => sum + ((p.salePrice || 0) * (p.quantity || 1)), 0);
     return {
@@ -759,7 +759,7 @@ export default function Inventory() {
       cost: totalCost,
       profit: totalEstSale - totalCost
     };
-  }, [products]);
+  }, [data.products]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

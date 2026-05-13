@@ -12,6 +12,7 @@ import { useData } from '../context/AppDataContext';
 import { PaymentMethod, FinancialAccount, Investor, Expense } from '../types';
 import { fmt, cn } from '../lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 type TimePeriod = 'hoy' | 'semana' | 'mes' | 'año' | 'todo';
 
@@ -87,7 +88,52 @@ export default function Finance() {
   const totalCapital = data.accounts.reduce((sum, acc) => sum + getAccountBalanceCOP(acc), 0);
   const totalInventory = data.products
     .filter(p => p.status === 'stock' || p.status === 'reserved')
-    .reduce((sum, p) => sum + (p.purchasePrice * p.quantity), 0);
+    .reduce((sum, p) => sum + (p.purchasePrice * (p.quantity || 1)), 0);
+
+  const dashboardData = React.useMemo(() => {
+    const assetsData = [
+      { name: 'Capital', value: totalCapital, color: '#0ea5e9' },
+      { name: 'Inventario', value: totalInventory, color: '#10b981' },
+    ];
+
+    const revenueByInvestor = investors.map(inv => {
+      const invProducts = data.products.filter(p => 
+        (p.investor === inv || p.coInvestors?.some(ci => ci.investor === inv)) && 
+        p.status === 'sold' && 
+        (() => {
+          const now = new Date();
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const d = new Date(p.saleDate || '');
+          if (period === 'hoy') return d >= today;
+          if (period === 'semana') {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(today.getDate() - 7);
+            return d >= weekAgo;
+          }
+          if (period === 'mes') {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(today.getMonth() - 1);
+            return d >= monthAgo;
+          }
+          if (period === 'año') {
+            const yearAgo = new Date(today);
+            yearAgo.setFullYear(today.getFullYear() - 1);
+            return d >= yearAgo;
+          }
+          return true;
+        })()
+      );
+      const totalRevenue = invProducts.reduce((sum, p) => {
+        const share = p.coInvestors && p.coInvestors.length > 0 
+          ? (p.coInvestors.find(co => co.investor === inv)?.percentage || 0) / 100
+          : (p.investor === inv ? 1 : 0);
+        return sum + ((p.salePrice || 0) * share * (p.quantity || 1));
+      }, 0);
+      return { name: inv, ingresos: totalRevenue };
+    }).filter(d => d.ingresos > 0);
+
+    return { assetsData, revenueByInvestor };
+  }, [totalCapital, totalInventory, data.products, period]);
   
   const totalGain = filteredData.soldInPeriod
     .reduce((sum, p) => {
@@ -200,6 +246,83 @@ export default function Finance() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Analytics Dashboard Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="card-premium lg:col-span-1 border-none shadow-xl overflow-hidden bg-white">
+          <CardHeader className="pb-0">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Distribución de Activos</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[280px] p-0 flex flex-col items-center justify-center">
+            <ResponsiveContainer width="100%" height="80%">
+              <PieChart>
+                <Pie
+                  data={dashboardData.assetsData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={8}
+                  dataKey="value"
+                >
+                  {dashboardData.assetsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value: number) => fmt(value)}
+                  contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', fontWeight: 900, fontSize: '12px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[9px] font-black uppercase tracking-widest pb-6">
+              {dashboardData.assetsData.map((entry, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />
+                  <span className="text-slate-500">{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-premium lg:col-span-2 border-none shadow-xl overflow-hidden bg-white">
+          <CardHeader className="pb-0">
+            <CardTitle className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ventas por Inversor ({period})</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[280px] pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dashboardData.revenueByInvestor} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <XAxis 
+                   dataKey="name" 
+                   axisLine={false} 
+                   tickLine={false} 
+                   tick={{ fontSize: 9, fontWeight: 900, fill: '#64748b' }} 
+                   dy={10}
+                />
+                <YAxis hide />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0,0,0,0.02)', radius: 12 }}
+                  formatter={(value: number) => fmt(value)}
+                  contentStyle={{ borderRadius: '1.5rem', border: 'none', boxShadow: '0 25px 50px -12px rgb(0 0 0 / 0.25)', fontWeight: 900, fontSize: '12px' }}
+                />
+                <Bar 
+                   dataKey="ingresos" 
+                   fill="url(#barGradient)" 
+                   radius={[12, 12, 4, 4]} 
+                   barSize={40}
+                />
+                <defs>
+                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0ea5e9" />
+                      <stop offset="100%" stopColor="#38bdf8" />
+                   </linearGradient>
+                </defs>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
       <div className="grid grid-cols-1 gap-12">
         {investors.map((investor) => {

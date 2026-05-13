@@ -59,11 +59,26 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
     }
   }
 
-  const product = publicInvoiceData || data.products.find(p => p.id === selectedId) || (searchedProduct?.id === selectedId ? searchedProduct : null) || searchedProduct;
+  const currentProduct = publicInvoiceData || data.products.find(p => p.id === selectedId) || (searchedProduct?.id === selectedId ? searchedProduct : null) || searchedProduct;
+
+  const invoiceProducts = React.useMemo(() => {
+    if (!currentProduct) return [];
+    if (!currentProduct.invoiceNumber) return [currentProduct];
+    
+    const related = data.products.filter(p => 
+      p.status === 'sold' && 
+      p.invoiceNumber === currentProduct.invoiceNumber && 
+      p.saleDate === currentProduct.saleDate
+    );
+    
+    return related.length > 0 ? related : [currentProduct];
+  }, [currentProduct, data.products]);
+
+  const mainProduct = invoiceProducts[0];
 
   const generatePublicLink = () => {
-    if (!product) return '';
-    return `${window.location.origin}/view-invoice/${product.id}`;
+    if (!currentProduct) return '';
+    return `${window.location.origin}/view-invoice/${currentProduct.id}`;
   };
 
   const publicLink = generatePublicLink();
@@ -79,36 +94,45 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
   };
 
   const pricing = React.useMemo(() => {
-    if (!product) return { unitPrice: 0, total: 0, subtotal: 0, discount: 0 };
-    
-    const finalUnitPrice = product.salePrice || 0;
-    const qty = product.quantity || 1;
-    let baseUnitPrice = finalUnitPrice;
-    
-    if (product.discount && product.discount > 0) {
-      if (product.discountType === 'percentage') {
-        baseUnitPrice = finalUnitPrice / (1 - (product.discount / 100));
-      } else {
-        baseUnitPrice = finalUnitPrice + product.discount;
+    return invoiceProducts.reduce((acc, p) => {
+      const finalUnitPrice = p.salePrice || 0;
+      const qty = p.quantity || 1;
+      let baseUnitPrice = finalUnitPrice;
+      
+      if (p.discount && p.discount > 0) {
+        if (p.discountType === 'percentage') {
+          baseUnitPrice = finalUnitPrice / (1 - (p.discount / 100));
+        } else {
+          baseUnitPrice = finalUnitPrice + p.discount;
+        }
       }
-    }
-    
-    const subtotal = baseUnitPrice * qty;
-    const total = finalUnitPrice * qty;
-    const discount = subtotal - total;
-    
-    return { unitPrice: baseUnitPrice, total, subtotal, discount };
-  }, [product]);
+      
+      const subtotal = baseUnitPrice * qty;
+      const total = finalUnitPrice * qty;
+      const disc = subtotal - total;
+      
+      return {
+        subtotal: acc.subtotal + subtotal,
+        total: acc.total + total,
+        discount: acc.discount + disc
+      };
+    }, { subtotal: 0, total: 0, discount: 0 });
+  }, [invoiceProducts]);
 
-  if (isPublic && !product) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 space-y-4">
-        <div className="text-6xl text-muted">?</div>
-        <h2 className="text-xl font-bold text-muted-foreground">Factura no encontrada</h2>
-        <p className="text-muted-foreground text-sm max-w-xs text-center">No pudimos encontrar la factura solicitada. Por favor verifica el enlace.</p>
-        <Button variant="outline" onClick={() => navigate('/catalog')}>Volver al Catálogo</Button>
-      </div>
-    );
+  if (!mainProduct) {
+    if (isPublic) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 space-y-4">
+          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center text-rose-600">
+            <Smartphone className="w-8 h-8" />
+          </div>
+          <h1 className="text-xl font-black uppercase tracking-tight">Factura no encontrada</h1>
+          <p className="text-muted-foreground text-sm text-center max-w-xs">Lo sentimos, no pudimos encontrar los detalles de esta factura.</p>
+          <Button variant="outline" onClick={() => navigate('/catalog')}>Volver al Catálogo</Button>
+        </div>
+      );
+    }
+    return <div className="p-8 text-center text-muted-foreground font-bold uppercase tracking-widest text-xs">Cargando detalles de factura...</div>;
   }
 
   return (
@@ -154,7 +178,7 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
         </Card>
       )}
 
-      {product ? (
+      {mainProduct ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Invoice Document */}
           <Card className="border-none shadow-lg overflow-hidden bg-card text-card-foreground print:shadow-none print:border print:bg-white print:text-black">
@@ -177,15 +201,15 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
               <div className="grid grid-cols-2 gap-y-4 text-xs">
                 <div className="space-y-1">
                   <div className="text-[9px] uppercase font-bold text-muted-foreground">Factura N°</div>
-                  <div className="font-bold text-sm text-foreground print:text-black">{product.invoiceNumber}</div>
+                  <div className="font-bold text-sm text-foreground print:text-black">{mainProduct.invoiceNumber}</div>
                 </div>
                 <div className="space-y-1 text-right">
                   <div className="text-[9px] uppercase font-bold text-muted-foreground">Fecha</div>
-                  <div className="font-medium text-foreground print:text-black">{product.saleDate || new Date().toLocaleDateString()}</div>
+                  <div className="font-medium text-foreground print:text-black">{mainProduct.saleDate || new Date().toLocaleDateString()}</div>
                 </div>
                 <div className="space-y-1">
                   <div className="text-[9px] uppercase font-bold text-muted-foreground">Cliente</div>
-                  <div className="font-semibold text-foreground print:text-black">{product.buyer || 'Consumidor Final'}</div>
+                  <div className="font-semibold text-foreground print:text-black">{mainProduct.buyer || 'Consumidor Final'}</div>
                 </div>
                 <div className="space-y-1 text-right">
                   <div className="text-[9px] uppercase font-bold text-muted-foreground">Estado</div>
@@ -195,25 +219,37 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
 
               {/* Items Table */}
               <div className="space-y-4">
-                <div className="grid grid-cols-12 text-[10px] uppercase font-bold text-muted-foreground px-2">
+                <div className="grid grid-cols-12 text-[10px] uppercase font-black tracking-widest text-muted-foreground px-2">
                   <div className="col-span-6">Descripción</div>
                   <div className="col-span-2 text-center">Cant.</div>
                   <div className="col-span-4 text-right">Total</div>
                 </div>
                 <div className="space-y-2">
-                  <div className="grid grid-cols-12 items-center bg-muted/50 p-3 rounded-lg border border-border print:bg-slate-50 print:border-slate-100">
-                    <div className="col-span-6">
-                      <div className="text-sm font-bold text-foreground print:text-black">{product.name}</div>
-                      <div className="text-[10px] text-muted-foreground font-mono mt-0.5">IMEI: {product.imei || 'No registrado'}</div>
-                      <div className="text-[9px] text-muted-foreground/80 mt-0.5">P. Unitario: {fmt(pricing.unitPrice)}</div>
-                    </div>
-                    <div className="col-span-2 text-center text-xs font-bold text-foreground print:text-black">
-                      x{product.quantity || 1}
-                    </div>
-                    <div className="col-span-4 text-right font-mono font-bold text-sm text-foreground print:text-black">
-                      {fmt(pricing.subtotal)}
-                    </div>
-                  </div>
+                  {invoiceProducts.map((p, idx) => {
+                    const finalUnitPrice = p.salePrice || 0;
+                    let baseUnitPrice = finalUnitPrice;
+                    if (p.discount && p.discount > 0) {
+                      if (p.discountType === 'percentage') {
+                        baseUnitPrice = finalUnitPrice / (1 - (p.discount / 100));
+                      } else {
+                        baseUnitPrice = finalUnitPrice + p.discount;
+                      }
+                    }
+                    return (
+                      <div key={idx} className="grid grid-cols-12 items-center bg-muted/50 p-4 rounded-2xl border border-border print:bg-slate-50 print:border-slate-100 shadow-sm">
+                        <div className="col-span-6">
+                          <div className="text-sm font-black text-foreground print:text-black">{p.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-black mt-1 uppercase tracking-widest opacity-60">IMEI: {p.imei || 'No registrado'}</div>
+                        </div>
+                        <div className="col-span-2 text-center text-xs font-black text-foreground print:text-black">
+                          x{p.quantity || 1}
+                        </div>
+                        <div className="col-span-4 text-right font-black text-sm text-foreground print:text-black tabular-nums">
+                          {fmt(baseUnitPrice * (p.quantity || 1))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -246,11 +282,11 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
                 </div>
                 <div className="space-y-3">
                   <div className="text-[10px] font-black bg-foreground/10 w-fit px-3 py-1 rounded-full text-foreground uppercase tracking-widest print:bg-black/10 print:text-black">
-                    Vigencia: {product.warrantyMonths || data.settings.defaultWarrantyMonths} Meses 
-                    {product.warrantyExpiration && ` (Hasta: ${product.warrantyExpiration})`}
+                    Vigencia: {mainProduct.warrantyMonths || data.settings.defaultWarrantyMonths} Meses 
+                    {mainProduct.warrantyExpiration && ` (Hasta: ${mainProduct.warrantyExpiration})`}
                   </div>
                   <div className="text-[9px] text-muted-foreground leading-relaxed whitespace-pre-wrap font-medium border-l-2 border-emerald-500/30 pl-3">
-                    {product.warrantyTerms || data.settings.warrantyTerms}
+                    {mainProduct.warrantyTerms || data.settings.warrantyTerms}
                   </div>
                 </div>
               </div>

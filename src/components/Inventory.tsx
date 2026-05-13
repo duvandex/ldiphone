@@ -749,8 +749,53 @@ export default function Inventory() {
     }
   };
 
+  const summaryByStatus = React.useMemo(() => {
+    const stock = products.filter(p => p.status === 'stock' || p.status === 'reserved');
+    const totalCost = stock.reduce((sum, p) => sum + (p.purchasePrice * (p.quantity || 1)), 0);
+    const totalEstSale = stock.reduce((sum, p) => sum + ((p.salePrice || 0) * (p.quantity || 1)), 0);
+    return {
+      count: stock.length,
+      units: stock.reduce((sum, p) => sum + (p.quantity || 1), 0),
+      cost: totalCost,
+      profit: totalEstSale - totalCost
+    };
+  }, [products]);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Inventory Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="card-premium border-none bg-slate-900 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8" />
+          <CardContent className="p-4 relative">
+            <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Equipos en Stock</p>
+            <div className="text-xl font-black">{summaryByStatus.units} <span className="text-[10px] opacity-40">unid.</span></div>
+          </CardContent>
+        </Card>
+        <Card className="card-premium border-none bg-blue-600 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8" />
+          <CardContent className="p-4 relative">
+            <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Valor Inventario</p>
+            <div className="text-xl font-black">{fmt(summaryByStatus.cost)}</div>
+          </CardContent>
+        </Card>
+        <Card className="card-premium border-none bg-emerald-600 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -mr-8 -mt-8" />
+          <CardContent className="p-4 relative">
+            <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-1">Profit Est. Bruto</p>
+            <div className="text-xl font-black">+{fmt(summaryByStatus.profit)}</div>
+          </CardContent>
+        </Card>
+        <Card className="card-premium border-none bg-white border border-slate-100 overflow-hidden relative">
+          <CardContent className="p-4 relative">
+            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Margen Est. %</p>
+            <div className="text-xl font-black text-slate-900">
+              {summaryByStatus.cost > 0 ? ((summaryByStatus.profit / summaryByStatus.cost) * 100).toFixed(1) : 0}%
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Header & Controls */}
       <div className="flex flex-col gap-6">
         <div className="flex flex-col lg:flex-row gap-4 w-full">
@@ -1425,22 +1470,22 @@ export default function Inventory() {
           const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
           return (
             <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl relative">
-              {(p.status === 'stock' || p.status === 'reserved') && (
-                <div 
-                  className="absolute top-0 left-0 w-16 h-16 z-30 flex items-center justify-center p-4 cursor-pointer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleSelection(p.id);
-                  }}
-                >
-                  <Checkbox 
-                    className="w-6 h-6 rounded-lg bg-white/90 backdrop-blur-sm border-2 border-slate-200 data-[state=checked]:bg-primary data-[state=checked]:border-primary pointer-events-none"
-                    checked={selectedIds.has(p.id)}
-                    onCheckedChange={() => {}}
-                  />
-                </div>
-              )}
+                {(p.status === 'stock' || p.status === 'reserved') && (
+                  <button 
+                    className="absolute top-0 left-0 w-24 h-24 z-30 flex items-start justify-start p-4 group"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleSelection(p.id);
+                    }}
+                  >
+                    <Checkbox 
+                      className="w-10 h-10 rounded-2xl bg-white/90 backdrop-blur-md border-2 border-slate-200/50 shadow-xl data-[state=checked]:bg-primary data-[state=checked]:border-white pointer-events-none transition-all group-hover:scale-110"
+                      checked={selectedIds.has(p.id)}
+                      onCheckedChange={() => {}}
+                    />
+                  </button>
+                )}
               <div className="flex flex-col">
                 <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
                   {p.images && p.images.length > 0 ? (
@@ -1606,19 +1651,34 @@ export default function Inventory() {
 
       {/* Bulk Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-lg bg-slate-900 text-white rounded-3xl shadow-2xl p-4 flex items-center justify-between backdrop-blur-md bg-opacity-95 animate-in fade-in slide-in-from-bottom-5">
-           <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{selectedIds.size} {selectedIds.size === 1 ? 'Equipo seleccionado' : 'Equipos seleccionados'}</span>
-              <span className="text-sm font-black">Carrito de Venta Multiple</span>
-           </div>
-           <div className="flex gap-2">
-              <Button variant="ghost" className="text-white hover:bg-slate-800 rounded-xl px-4 text-xs font-black uppercase tracking-widest" onClick={() => setSelectedIds(new Set())}>
-                 Cancelar
-              </Button>
-              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl px-6 font-black uppercase text-xs tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20" onClick={startBulkSell}>
-                 <ShoppingCart className="w-4 h-4" /> Vender
-              </Button>
-           </div>
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-2xl bg-slate-950 text-white rounded-[2.5rem] p-6 shadow-2xl flex items-center justify-between gap-4 animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-white/10 backdrop-blur-2xl bg-opacity-90">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-2xl font-black border border-white/5 shadow-inner">
+              {selectedIds.size}
+            </div>
+            <div>
+              <div className="text-sm font-black uppercase tracking-[0.2em] text-white">Equipos en Carrito</div>
+              <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest leading-none mt-1 items-center flex gap-2">
+                 <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                 Listo para venta múltiple
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+             <Button 
+                variant="ghost" 
+                className="text-white/60 hover:text-white hover:bg-white/5 rounded-2xl px-6 h-12 text-[10px] font-black uppercase tracking-widest hidden sm:flex" 
+                onClick={() => setSelectedIds(new Set())}
+             >
+                Limpiar
+             </Button>
+             <Button 
+               className="bg-emerald-500 hover:bg-emerald-400 text-white h-14 px-10 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-2" 
+               onClick={startBulkSell}
+             >
+               <ShoppingCart className="w-4 h-4" /> Realizar Venta
+             </Button>
+          </div>
         </div>
       )}
 
@@ -2000,154 +2060,156 @@ export default function Inventory() {
               </div>
             </div>
 
-            <div className="space-y-4">
-               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Equipos en el Carrito ({bulkSellItems.length})</Label>
-               <div className="space-y-3">
-                  {bulkSellItems.map((item, idx) => {
-                     const totalItemPrice = item.salePrice * item.sellQuantity;
-                     let discountValue = 0;
-                     if (item.discount > 0) {
-                        if (item.discountType === 'percentage') {
-                           discountValue = totalItemPrice * (item.discount / 100);
-                        } else {
-                           discountValue = item.discount;
-                        }
-                     }
-                     const finalItemPrice = totalItemPrice - discountValue;
+                <div className="space-y-4">
+                   <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Equipos en el Carrito ({bulkSellItems.length})</Label>
+                   <div className="space-y-3">
+                      {bulkSellItems.map((item, idx) => {
+                         const totalItemPrice = item.salePrice * item.sellQuantity;
+                         let discountValue = 0;
+                         if (item.discount > 0) {
+                            if (item.discountType === 'percentage') {
+                               discountValue = totalItemPrice * (item.discount / 100);
+                            } else {
+                               // MODIFIED: In bulk sell, the discount in the input is PER UNIT
+                               discountValue = item.discount * item.sellQuantity;
+                            }
+                         }
+                         const finalItemPrice = totalItemPrice - discountValue;
 
-                     return (
-                        <div key={item.productId} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-4">
-                           <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                                    <Smartphone className="w-5 h-5 text-slate-400" />
-                                 </div>
-                                 <div className="font-black text-sm text-slate-900">{item.productName}</div>
-                              </div>
-                              <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 className="h-8 w-8 text-rose-500"
-                                 onClick={() => {
-                                    const next = bulkSellItems.filter((_, i) => i !== idx);
-                                    setBulkSellItems(next);
-                                    const nextIds = new Set(selectedIds);
-                                    nextIds.delete(item.productId);
-                                    setSelectedIds(nextIds);
-                                    if (next.length === 0) setIsBulkSellOpen(false);
-                                 }}
-                              >
-                                 <Trash2 className="w-4 h-4" />
-                              </Button>
-                           </div>
+                         return (
+                            <div key={item.productId} className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                               <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                                        <Smartphone className="w-5 h-5 text-slate-400" />
+                                     </div>
+                                     <div className="font-black text-sm text-slate-900">{item.productName}</div>
+                                  </div>
+                                  <Button 
+                                     variant="ghost" 
+                                     size="icon" 
+                                     className="h-8 w-8 text-rose-500"
+                                     onClick={() => {
+                                        const next = bulkSellItems.filter((_, i) => i !== idx);
+                                        setBulkSellItems(next);
+                                        const nextIds = new Set(selectedIds);
+                                        nextIds.delete(item.productId);
+                                        setSelectedIds(nextIds);
+                                        if (next.length === 0) setIsBulkSellOpen(false);
+                                     }}
+                                  >
+                                     <Trash2 className="w-4 h-4" />
+                                  </Button>
+                               </div>
 
-                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                              <div className="space-y-1">
-                                 <Label className="text-[8px] font-black uppercase text-slate-400">Precio Base</Label>
-                                 <Input 
-                                    type="number"
-                                    className="h-9 text-xs font-bold rounded-lg"
-                                    value={item.salePrice}
-                                    onChange={e => {
-                                       const next = [...bulkSellItems];
-                                       next[idx].salePrice = parseFloat(e.target.value) || 0;
-                                       setBulkSellItems(next);
-                                    }}
-                                 />
-                              </div>
-                              <div className="space-y-1">
-                                 <Label className="text-[8px] font-black uppercase text-slate-400">Cantidad</Label>
-                                 <Input 
-                                    type="number"
-                                    min="1"
-                                    max={item.maxQuantity}
-                                    className="h-9 text-xs font-bold rounded-lg"
-                                    value={item.sellQuantity}
-                                    onChange={e => {
-                                       const next = [...bulkSellItems];
-                                       next[idx].sellQuantity = Math.min(parseInt(e.target.value) || 1, item.maxQuantity);
-                                       setBulkSellItems(next);
-                                    }}
-                                 />
-                              </div>
-                              <div className="space-y-1">
-                                 <Label className="text-[8px] font-black uppercase text-slate-400">Dto. Valor</Label>
-                                 <Input 
-                                    type="number"
-                                    className="h-9 text-xs font-bold rounded-lg"
-                                    value={item.discount}
-                                    onChange={e => {
-                                       const next = [...bulkSellItems];
-                                       next[idx].discount = parseFloat(e.target.value) || 0;
-                                       setBulkSellItems(next);
-                                    }}
-                                 />
-                              </div>
-                              <div className="space-y-1">
-                                 <Label className="text-[8px] font-black uppercase text-slate-400">Tipo Dto.</Label>
-                                 <Select 
-                                    value={item.discountType} 
-                                    onValueChange={v => {
-                                       const next = [...bulkSellItems];
-                                       next[idx].discountType = v as 'fixed' | 'percentage';
-                                       setBulkSellItems(next);
-                                    }}
-                                 >
-                                    <SelectTrigger className="h-9 text-[10px] font-bold rounded-lg"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                       <SelectItem value="fixed">$ Fijo</SelectItem>
-                                       <SelectItem value="percentage">% Perc</SelectItem>
-                                    </SelectContent>
-                                 </Select>
-                              </div>
-                           </div>
+                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                  <div className="space-y-1">
+                                     <Label className="text-[8px] font-black uppercase text-slate-400">Precio Base</Label>
+                                     <Input 
+                                        type="number"
+                                        className="h-9 text-xs font-bold rounded-lg"
+                                        value={item.salePrice}
+                                        onChange={e => {
+                                           const next = [...bulkSellItems];
+                                           next[idx].salePrice = parseFloat(e.target.value) || 0;
+                                           setBulkSellItems(next);
+                                        }}
+                                     />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <Label className="text-[8px] font-black uppercase text-slate-400">Cantidad</Label>
+                                     <Input 
+                                        type="number"
+                                        min="1"
+                                        max={item.maxQuantity}
+                                        className="h-9 text-xs font-bold rounded-lg"
+                                        value={item.sellQuantity}
+                                        onChange={e => {
+                                           const next = [...bulkSellItems];
+                                           next[idx].sellQuantity = Math.min(parseInt(e.target.value) || 1, item.maxQuantity);
+                                           setBulkSellItems(next);
+                                        }}
+                                     />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <Label className="text-[8px] font-black uppercase text-slate-400">Dto. (unid)</Label>
+                                     <Input 
+                                        type="number"
+                                        className="h-9 text-xs font-bold rounded-lg"
+                                        value={item.discount}
+                                        onChange={e => {
+                                           const next = [...bulkSellItems];
+                                           next[idx].discount = parseFloat(e.target.value) || 0;
+                                           setBulkSellItems(next);
+                                        }}
+                                     />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <Label className="text-[8px] font-black uppercase text-slate-400">Tipo Dto.</Label>
+                                     <Select 
+                                        value={item.discountType} 
+                                        onValueChange={v => {
+                                           const next = [...bulkSellItems];
+                                           next[idx].discountType = v as 'fixed' | 'percentage';
+                                           setBulkSellItems(next);
+                                        }}
+                                     >
+                                        <SelectTrigger className="h-9 text-[10px] font-bold rounded-lg"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                           <SelectItem value="fixed">$ Fijo c/u</SelectItem>
+                                           <SelectItem value="percentage">% Perc c/u</SelectItem>
+                                        </SelectContent>
+                                     </Select>
+                                  </div>
+                               </div>
 
-                           <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                              <div className="flex gap-4">
-                                 <div className="space-y-0.5">
-                                    <div className="text-[8px] font-black uppercase text-slate-400">Garantía (Meses)</div>
-                                    <Input 
-                                       type="number" 
-                                       className="h-7 w-16 text-[10px] font-bold rounded-md"
-                                       value={item.warrantyMonths}
-                                       onChange={e => {
-                                          const next = [...bulkSellItems];
-                                          const val = parseInt(e.target.value) || 0;
-                                          next[idx].warrantyMonths = val;
-                                          const d = new Date(bulkSellData.saleDate);
-                                          d.setMonth(d.getMonth() + val);
-                                          next[idx].warrantyExpiration = d.toISOString().split('T')[0];
-                                          setBulkSellItems(next);
-                                       }}
-                                    />
-                                 </div>
-                                 <div className="space-y-0.5">
-                                    <div className="text-[8px] font-black uppercase text-slate-400">Vence</div>
-                                    <div className="text-[10px] font-bold text-slate-600 pt-1">{item.warrantyExpiration}</div>
-                                 </div>
-                              </div>
-                              <div className="text-right">
-                                 <div className="text-[8px] font-black uppercase text-emerald-600">Subtotal con Descuento</div>
-                                 <div className="text-sm font-black text-emerald-700">{fmt(finalItemPrice)}</div>
-                              </div>
-                           </div>
-                        </div>
-                     );
-                  })}
-               </div>
-            </div>
+                               <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                  <div className="flex gap-4">
+                                     <div className="space-y-0.5">
+                                        <div className="text-[8px] font-black uppercase text-slate-400">Garantía (Meses)</div>
+                                        <Input 
+                                           type="number" 
+                                           className="h-7 w-16 text-[10px] font-bold rounded-md"
+                                           value={item.warrantyMonths}
+                                           onChange={e => {
+                                              const next = [...bulkSellItems];
+                                              const val = parseInt(e.target.value) || 0;
+                                              next[idx].warrantyMonths = val;
+                                              const d = new Date(bulkSellData.saleDate);
+                                              d.setMonth(d.getMonth() + val);
+                                              next[idx].warrantyExpiration = d.toISOString().split('T')[0];
+                                              setBulkSellItems(next);
+                                           }}
+                                        />
+                                     </div>
+                                     <div className="space-y-0.5">
+                                        <div className="text-[8px] font-black uppercase text-slate-400">Vence</div>
+                                        <div className="text-[10px] font-bold text-slate-600 pt-1">{item.warrantyExpiration}</div>
+                                     </div>
+                                  </div>
+                                  <div className="text-right">
+                                     <div className="text-[8px] font-black uppercase text-emerald-600">Subtotal con Descuento</div>
+                                     <div className="text-sm font-black text-emerald-700">{fmt(finalItemPrice)}</div>
+                                  </div>
+                               </div>
+                            </div>
+                         );
+                      })}
+                   </div>
+                </div>
 
-            <div className="bg-emerald-600 p-6 rounded-[2rem] text-white flex items-center justify-between shadow-xl shadow-emerald-600/20">
-               <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Total de la Venta</div>
-                  <div className="text-2xl font-black">
-                     {fmt(bulkSellItems.reduce((acc, item) => {
-                        const total = item.salePrice * item.sellQuantity;
-                        const disc = item.discountType === 'percentage' ? total * (item.discount / 100) : item.discount;
-                        return acc + (total - disc);
-                     }, 0))}
-                  </div>
-               </div>
+                <div className="bg-emerald-600 p-6 rounded-[2rem] text-white flex items-center justify-between shadow-xl shadow-emerald-600/20">
+                   <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-70">Total de la Venta</div>
+                      <div className="text-2xl font-black">
+                         {fmt(bulkSellItems.reduce((acc, item) => {
+                            const total = item.salePrice * item.sellQuantity;
+                            // MODIFIED: Calculate discount per unit if fixed
+                            const disc = item.discountType === 'percentage' ? total * (item.discount / 100) : (item.discount * item.sellQuantity);
+                            return acc + (total - disc);
+                         }, 0))}
+                      </div>
+                   </div>
                <Button 
                 onClick={handleBulkSell}
                 className="bg-white text-emerald-600 hover:bg-slate-100 h-12 px-8 rounded-xl font-black uppercase text-xs tracking-widest"
@@ -2225,7 +2287,7 @@ export default function Inventory() {
             )}
 
             <div className="grid gap-2">
-              <Label htmlFor="sell-price" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio de Venta (Total) *</Label>
+              <Label htmlFor="sell-price" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Precio de Venta Unitario (Bruto) *</Label>
               <Input 
                 id="sell-price" 
                 type="number" 
@@ -2234,6 +2296,7 @@ export default function Inventory() {
                 onChange={e => setSellData({...sellData, salePrice: e.target.value})}
                 placeholder="0"
               />
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-1">Ingresa el precio antes de aplicar el descuento</p>
             </div>
             
             <div className="grid grid-cols-2 gap-4">

@@ -22,6 +22,27 @@ export default function Catalog() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isUploading, setIsUploading] = useState<number | null>(null);
+  const [cart, setCart] = useState<Product[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+
+  const addToCart = (p: Product) => {
+    if (!cart.find(item => item.id === p.id)) {
+      setCart([...cart, p]);
+    }
+    setIsCartOpen(true);
+  };
+
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(p => p.id !== id));
+  };
+
+  const cartTotal = cart.reduce((sum, p) => sum + (p.salePrice || 0), 0);
+
+  const sendCartToWhatsApp = () => {
+    const itemsList = cart.map(p => `- ${p.name}: ${fmt(p.salePrice || 0)}`).join('\n');
+    const message = `Hola! Me interesan estos equipos del catálogo:\n\n${itemsList}\n\n*Total: ${fmt(cartTotal)}*\n\n¿Están disponibles?`;
+    window.open(`https://wa.me/573012949934?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   const isAuthenticated = !!user;
 
@@ -154,20 +175,35 @@ export default function Catalog() {
             <Link to="/catalog" className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground border-b-2 border-primary pb-1">Dispositivos</Link>
           </div>
 
-          <div className="relative max-w-[240px] sm:max-w-md w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
-            <Input 
-              placeholder="¿Qué buscas hoy?..." 
-              className="pl-11 h-10 bg-muted/50 border-none shadow-inner rounded-full text-xs font-bold text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-card transition-all shadow-muted/50"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="relative max-w-[240px] sm:max-w-md w-full flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+              <Input 
+                placeholder="¿Qué buscas hoy?..." 
+                className="pl-11 h-10 bg-muted/50 border-none shadow-inner rounded-full text-xs font-bold text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary focus-visible:bg-card transition-all shadow-muted/50"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full relative hover:bg-muted"
+              onClick={() => setIsCartOpen(true)}
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {cart.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-background">
+                  {cart.length}
+                </span>
+              )}
+            </Button>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-card pt-16 pb-24 overflow-hidden border-b border-border">
+      <section className="relative bg-card pt-4 sm:pt-16 pb-8 sm:pb-24 overflow-hidden border-b border-border">
         <div className="absolute inset-0 z-0 opacity-40">
            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-muted/20 rounded-full translate-x-1/2 -translate-y-1/2"></div>
            <div className="absolute bottom-0 left-0 w-[800px] h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
@@ -177,21 +213,21 @@ export default function Catalog() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center text-center space-y-6"
+            className="flex flex-col items-center text-center space-y-3 sm:space-y-6"
           >
-            <Badge variant="outline" className="rounded-full border-border bg-card px-4 py-1 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
+            <Badge variant="outline" className="rounded-full border-border bg-card px-3 sm:px-4 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
                Catálogo Premium 2026
             </Badge>
-            <h2 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground leading-none">
-              Tu próximo dispositivo.<br/>
+            <h2 className="text-2xl sm:text-7xl font-black tracking-tighter text-foreground leading-[1.1] sm:leading-none">
+              Tu próximo dispositivo.<br className="hidden sm:block"/>
               <span className="text-muted-foreground/30">Sin complicaciones.</span>
             </h2>
 
-            <p className="max-w-2xl text-muted-foreground font-medium text-lg md:text-xl leading-relaxed">
+            <p className="max-w-xl text-muted-foreground font-medium text-xs sm:text-xl leading-relaxed opacity-80 sm:opacity-100">
               Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
             </p>
 
-            <div className="pt-12 w-full max-w-4xl">
+            <div className="pt-4 sm:pt-12 w-full max-w-4xl hidden sm:block">
               <div className="flex flex-col items-center gap-6">
                 <div className="flex items-center gap-4 w-full">
                   <div className="h-px flex-1 bg-gradient-to-r from-transparent to-border"></div>
@@ -349,27 +385,32 @@ export default function Catalog() {
                        )}
                     </div>
 
-                    <div className="space-y-2 sm:space-y-4 mt-auto pt-2 sm:pt-4 border-t border-border">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                            <div className="flex flex-col">
-                                <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Especial</span>
-                                <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
+                            <div className="flex gap-1.5 mt-auto pt-2 sm:pt-4 border-t border-border">
+                                <div className="flex flex-col flex-1">
+                                    <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Especial</span>
+                                    <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button 
+                                        size="icon" 
+                                        onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                                        className="h-8 w-8 sm:h-12 sm:w-12 rounded-lg sm:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all text-white"
+                                    >
+                                        <ShoppingBag className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                                    </Button>
+                                    <a 
+                                        href={getWhatsAppLink(p)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="bg-emerald-500 h-8 w-8 sm:h-12 sm:w-12 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10 hover:scale-105 active:scale-95 transition-all text-white"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                                        </svg>
+                                    </a>
+                                </div>
                             </div>
-                            
-                            <a 
-                                href={getWhatsAppLink(p)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-emerald-500 w-full sm:w-12 h-7 sm:h-12 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10 hover:scale-105 active:scale-95 transition-all text-white"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-6 sm:h-6 fill-white" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                                </svg>
-                                <span className="sm:hidden ml-1 text-[8px] font-black uppercase tracking-tighter">Pedir</span>
-                            </a>
-                        </div>
-                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -539,6 +580,13 @@ export default function Catalog() {
                         </div>
 
                         <div className="pt-10 space-y-4">
+                            <Button 
+                                onClick={() => addToCart(selectedProduct)}
+                                className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center gap-4 font-black uppercase text-sm tracking-widest shadow-2xl shadow-slate-900/20 transition-all active:scale-[0.98]"
+                            >
+                                <ShoppingBag className="w-6 h-6" />
+                                AÑADIR AL CARRITO
+                            </Button>
                             <a 
                                 href={getWhatsAppLink(selectedProduct)}
                                 target="_blank"
@@ -562,6 +610,85 @@ export default function Catalog() {
             )}
          </DialogContent>
       </Dialog>
+
+      {/* Cart Dialog */}
+      <Dialog open={isCartOpen} onOpenChange={setIsCartOpen}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden border-none rounded-[2rem] shadow-2xl">
+          <DialogHeader className="p-8 border-b border-border bg-card">
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
+               <ShoppingBag className="w-7 h-7" /> Tu Carrito
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="max-h-[60vh] overflow-y-auto p-6 space-y-4 bg-background">
+             {cart.length === 0 ? (
+               <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 opacity-30">
+                  <ShoppingBag className="w-16 h-16" />
+                  <p className="text-xs font-black uppercase tracking-widest">El carrito está vacío</p>
+               </div>
+             ) : (
+               cart.map(p => (
+                 <div key={p.id} className="flex gap-4 p-4 bg-card rounded-2xl border border-border shadow-sm items-center">
+                    <div className="w-16 h-16 bg-muted rounded-xl overflow-hidden shrink-0">
+                       {p.images && p.images[0] ? (
+                          <img src={p.images[0]} className="w-full h-full object-cover" />
+                       ) : <div className="w-full h-full flex items-center justify-center"><Smartphone className="w-6 h-6 opacity-20" /></div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                       <h4 className="text-[10px] font-black uppercase tracking-tight truncate">{p.name}</h4>
+                       <p className="text-lg font-black text-primary">{fmt(p.salePrice || 0)}</p>
+                    </div>
+                    <button 
+                      onClick={() => removeFromCart(p.id)}
+                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-full transition-colors"
+                    >
+                       <X className="w-5 h-5" />
+                    </button>
+                 </div>
+               ))
+             )}
+          </div>
+
+          {cart.length > 0 && (
+            <div className="p-8 bg-card border-t border-border space-y-6">
+               <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Estimado</span>
+                  <span className="text-3xl font-black tracking-tighter">{fmt(cartTotal)}</span>
+               </div>
+               <div className="grid grid-cols-1 gap-3">
+                 <Button 
+                   className="h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs tracking-widest shadow-xl shadow-emerald-600/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+                   onClick={sendCartToWhatsApp}
+                 >
+                    <Send className="w-5 h-5" /> Finalizar Pedido WhatsApp
+                 </Button>
+                 <Button 
+                   variant="ghost"
+                   className="h-12 rounded-xl text-muted-foreground font-black uppercase text-[10px] tracking-widest"
+                   onClick={() => setIsCartOpen(false)}
+                 >
+                    Seguir Comprando
+                 </Button>
+               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Cart Button Mobile */}
+      {cart.length > 0 && !isCartOpen && (
+         <motion.button 
+           initial={{ scale: 0, opacity: 0 }}
+           animate={{ scale: 1, opacity: 1 }}
+           className="fixed bottom-6 right-6 z-40 sm:hidden w-16 h-16 bg-primary text-primary-foreground rounded-2xl shadow-2xl flex items-center justify-center"
+           onClick={() => setIsCartOpen(true)}
+         >
+            <ShoppingBag className="w-6 h-6" />
+            <span className="absolute -top-2 -right-2 bg-foreground text-background w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-background">
+               {cart.length}
+            </span>
+         </motion.button>
+      )}
 
       {/* Trust Banner */}
       <section className="bg-muted/30 py-16 border-t border-border">

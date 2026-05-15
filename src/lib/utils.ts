@@ -14,3 +14,21 @@ export function formatCurrency(amount: number) {
 }
 
 export const fmt = formatCurrency;
+
+export function extractGB(name: string, description?: string): string | null {
+  const combined = `${name} ${description || ''}`;
+  const match = combined.match(/(\d+)\s*GB/i);
+  return match ? match[1] + 'GB' : null;
+}
+
+export function extractBattery(name: string, description?: string): string | null {
+  const combined = `${name} ${description || ''}`;
+  // Look for percentage, or "condición" followed by numbers
+  const match = combined.match(/(\d+)\s*%/);
+  if (match) return match[1] + '%';
+  
+  const conditionMatch = combined.match(/condici[oó]n\s*:?\s*(\d+)/i);
+  if (conditionMatch) return conditionMatch[1] + '%';
+
+  return null;
+}

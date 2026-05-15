@@ -13,7 +13,7 @@ import { Search, Plus, Trash2, ShoppingCart, Pencil, Camera, X, ImagePlus, Smart
 import { useData } from '../context/AppDataContext';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { Investor, Product, PaymentMethod, CoInvestor, Category } from '../types';
-import { fmt, cn } from '../lib/utils';
+import { fmt, cn, extractGB, extractBattery } from '../lib/utils';
 import IMEIScanner from './IMEIScanner';
 import { useSearchParams } from 'react-router-dom';
 
@@ -1283,6 +1283,23 @@ export default function Inventory() {
                         </div>
                          <div className="space-y-0.5">
                           <div className="font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
+                          
+                          {/* Auto Spec Labels */}
+                          {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {extractGB(p.name, p.description) && (
+                                <div className="bg-slate-100 text-slate-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                                  💾 {extractGB(p.name, p.description)}
+                                </div>
+                              )}
+                              {extractBattery(p.name, p.description) && (
+                                <div className="bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                                  🔋 {extractBattery(p.name, p.description)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
                               {p.purchaseDate}
                           </div>
@@ -1502,6 +1519,23 @@ export default function Inventory() {
                   <div className="flex justify-between items-start mb-4">
                     <div className="min-w-0">
                       <h3 className="font-black text-lg text-foreground tracking-tight truncate">{p.name}</h3>
+                      
+                      {/* Auto Spec Labels Mobile */}
+                      {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
+                        <div className="flex flex-wrap gap-1.5 mt-1 border-b border-border/50 pb-2 mb-2">
+                          {extractGB(p.name, p.description) && (
+                            <div className="bg-slate-100 text-slate-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                              💾 {extractGB(p.name, p.description)}
+                            </div>
+                          )}
+                          {extractBattery(p.name, p.description) && (
+                            <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                              🔋 {extractBattery(p.name, p.description)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">{p.id.slice(0, 8)}</div>
                     </div>
                     <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(

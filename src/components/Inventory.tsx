@@ -1297,6 +1297,11 @@ export default function Inventory() {
                                   🔋 {extractBattery(p.name, p.description)}
                                 </div>
                               )}
+                              {p.warrantyMonths && (
+                                <div className="bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                                  🛡️ {p.warrantyMonths}M GTÍA
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1531,6 +1536,11 @@ export default function Inventory() {
                           {extractBattery(p.name, p.description) && (
                             <div className="bg-emerald-50 text-emerald-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                               🔋 {extractBattery(p.name, p.description)}
+                            </div>
+                          )}
+                          {p.warrantyMonths && (
+                            <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                              🛡️ {p.warrantyMonths} MESES GARANTÍA
                             </div>
                           )}
                         </div>

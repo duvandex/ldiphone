@@ -340,6 +340,11 @@ export default function Catalog() {
                                🔋 {extractBattery(p.name, p.description)}
                              </div>
                            )}
+                           {p.warrantyMonths && (
+                             <div className="bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                               🛡️ {p.warrantyMonths} MESES GARANTÍA
+                             </div>
+                           )}
                          </div>
                        )}
                     </div>
@@ -470,6 +475,11 @@ export default function Catalog() {
                                 {extractBattery(selectedProduct.name, selectedProduct.description) && (
                                     <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                         🔋 BATERÍA: {extractBattery(selectedProduct.name, selectedProduct.description)}
+                                    </div>
+                                )}
+                                {selectedProduct.warrantyMonths && (
+                                    <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                        🛡️ GARANTÍA: {selectedProduct.warrantyMonths} MESES
                                     </div>
                                 )}
                             </div>

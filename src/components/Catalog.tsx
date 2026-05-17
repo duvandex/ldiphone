@@ -354,38 +354,36 @@ export default function Catalog() {
                       </div>
                     )}
 
-                    {/* Promotion Badge */}
+                    {/* Promotion Badge - Square Block Style like Reference */}
                     {(p.regularPrice || 0) > (p.salePrice || 0) && (
-                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10">
+                        <div className="absolute top-0 left-0 z-20">
                             <motion.div 
-                                initial={{ x: -20, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                className="bg-rose-600 text-white flex overflow-hidden rounded-lg sm:rounded-xl shadow-xl shadow-rose-600/20"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="bg-[#f15a24] text-white px-2 py-1 sm:px-3 sm:py-2 font-black text-[10px] sm:text-lg shadow-lg"
                             >
-                                <div className="bg-rose-700 px-1.5 py-0.5 sm:px-3 sm:py-1.5 flex items-center justify-center">
-                                    <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-widest leading-none">OFERTA</span>
-                                </div>
-                                <div className="px-1.5 py-0.5 sm:px-3 sm:py-1.5 flex items-center justify-center font-black italic">
-                                    <span className="text-[9px] sm:text-lg tracking-tighter leading-none">-{Math.round(((p.regularPrice! - p.salePrice!) / p.regularPrice!) * 100)}%</span>
-                                </div>
+                                -{Math.round(((p.regularPrice! - p.salePrice!) / p.regularPrice!) * 100)}%
                             </motion.div>
                         </div>
                     )}
                     
                     <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
-                      "absolute top-2 right-2 sm:top-4 sm:right-4 text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border-none shadow-lg backdrop-blur-md",
-                      p.status === 'stock' ? "bg-blue-50/90 text-blue-600" : 
+                      "absolute top-2 right-2 sm:top-4 sm:right-4 z-10 text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border-none shadow-lg backdrop-blur-md",
+                      p.status === 'stock' ? "bg-white/90 text-[#f15a24]" : 
                       p.status === 'reserved' ? "bg-orange-50/90 text-orange-600" :
                       "bg-rose-50/90 text-rose-600"
                     )}>
-                      {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'OUT'}
+                      {p.status === 'stock' ? 'DISPONIBLE' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
                     </Badge>
                   </div>
 
-                  <CardContent className="p-2 sm:p-6 flex flex-col flex-1">
-                    <div className="mb-1.5 sm:mb-4">
-                       <h3 className="font-black text-[10px] sm:text-xl tracking-tight text-foreground leading-[1.1] group-hover:text-primary transition-colors cursor-pointer" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h3>
-                       <div className="text-[7px] sm:text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-0.5 opacity-60">Ref: {p.id.slice(0, 8)}</div>
+                  <CardContent className="p-4 sm:p-6 flex flex-col flex-1 bg-white">
+                    <div className="mb-auto">
+                       <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-widest text-[#f15a24]">{p.category}</span>
+                          <span className="text-[7px] sm:text-[10px] font-medium uppercase tracking-widest text-slate-300">ID: {p.id.slice(0, 6)}</span>
+                       </div>
+                       <h4 className="text-sm sm:text-2xl font-bold text-slate-900 line-clamp-2 leading-tight min-h-[2.5rem] sm:min-h-[3.5rem] tracking-tight group-hover:text-[#f15a24] transition-colors" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h4>
                        
                        {/* Auto Spec Labels */}
                        {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
@@ -409,44 +407,40 @@ export default function Catalog() {
                        )}
                     </div>
 
-                            <div className="flex gap-1.5 mt-auto pt-2 sm:pt-4 border-t border-border">
-                                <div className="flex flex-col flex-1">
-                                    {(p.regularPrice || 0) > (p.salePrice || 0) ? (
-                                        <>
-                                            <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-rose-500">Precio Especial</span>
-                                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-                                                <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter leading-tight">{fmt(p.salePrice || 0)}</span>
-                                                <span className="text-[8px] sm:text-sm font-bold text-muted-foreground line-through opacity-40 leading-none">{fmt(p.regularPrice || 0)}</span>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inversión</span>
-                                            <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
-                                        </>
-                                    )}
+                    <div className="flex items-end justify-between mt-4 sm:mt-6 pt-4 border-t border-slate-50">
+                        <div className="flex flex-col">
+                            {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                                <div className="flex items-center gap-1 mb-0.5">
+                                    <span className="text-[7px] sm:text-[9px] font-black text-slate-300 uppercase tracking-widest">Antes:</span>
+                                    <span className="text-[10px] sm:text-base font-bold text-slate-300 line-through">
+                                        {fmt(p.regularPrice || 0)}
+                                    </span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <Button 
-                                        size="icon" 
-                                        onClick={(e) => { e.stopPropagation(); addToCart(p); }}
-                                        className="h-8 w-8 sm:h-12 sm:w-12 rounded-lg sm:rounded-2xl bg-slate-900 shadow-lg shadow-slate-900/10 hover:scale-105 active:scale-95 transition-all text-white"
-                                    >
-                                        <ShoppingBag className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
-                                    </Button>
-                                    <a 
-                                        href={getWhatsAppLink(p)}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="bg-emerald-500 h-8 w-8 sm:h-12 sm:w-12 rounded-lg sm:rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/10 hover:scale-105 active:scale-95 transition-all text-white"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 sm:w-5 sm:h-5 fill-white" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                                        </svg>
-                                    </a>
-                                </div>
+                            )}
+                            <div className="flex items-baseline gap-1">
+                                {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                                    <span className="text-[8px] sm:text-[10px] font-black text-[#f15a24] uppercase tracking-widest">Hoy:</span>
+                                )}
+                                <span className={cn(
+                                    "text-lg sm:text-4xl font-black tracking-tighter leading-none",
+                                    (p.regularPrice || 0) > (p.salePrice || 0) ? "text-[#f15a24]" : "text-slate-900"
+                                )}>
+                                    {fmt(p.salePrice || 0)}
+                                </span>
                             </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                             <Button 
+                                size="icon" 
+                                variant="outline"
+                                onClick={(e) => { e.stopPropagation(); addToCart(p); }}
+                                className="h-10 w-10 sm:h-14 sm:w-14 rounded-full border-slate-100 hover:border-[#f15a24] hover:text-[#f15a24] transition-all"
+                            >
+                                <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
+                            </Button>
+                        </div>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -561,25 +555,36 @@ export default function Catalog() {
                                     </div>
                                 )}
                             </div>
-                             <div className="flex flex-col gap-1 mb-6">
+                             <div className="flex flex-col gap-1 mb-8">
                                 {(selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) && (
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <Badge className="bg-rose-100 text-rose-700 border-none text-[10px] font-black px-3 py-1 rounded-lg">
-                                            DESCUENTO DEL {Math.round(((selectedProduct.regularPrice! - selectedProduct.salePrice!) / selectedProduct.regularPrice!) * 100)}%
-                                        </Badge>
-                                        <span className="text-xl font-bold text-muted-foreground line-through opacity-50">{fmt(selectedProduct.regularPrice || 0)}</span>
+                                    <div className="flex flex-col gap-2 mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <Badge className="bg-[#f15a24] text-white border-none text-[12px] font-black px-3 py-1 rounded-sm">
+                                                OFERTA ESPECIAL
+                                            </Badge>
+                                            <span className="text-[10px] font-black text-[#f15a24] uppercase tracking-widest animate-pulse">¡Ahorras el {Math.round(((selectedProduct.regularPrice! - selectedProduct.salePrice!) / selectedProduct.regularPrice!) * 100)}%!</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Precio Anterior:</span>
+                                            <span className="text-2xl font-bold text-slate-300 line-through">{fmt(selectedProduct.regularPrice || 0)}</span>
+                                        </div>
                                     </div>
                                 )}
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1">Precio de Lanzamiento</span>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-6xl font-black text-primary tracking-tighter leading-none">{fmt(selectedProduct.salePrice || 0)}</div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Precio de Hoy</span>
+                                    <div className="flex items-start gap-4">
+                                        <div className={cn(
+                                            "text-6xl sm:text-8xl font-black tracking-tighter leading-none",
+                                            (selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) ? "text-[#f15a24]" : "text-slate-900"
+                                        )}>
+                                            {fmt(selectedProduct.salePrice || 0)}
+                                        </div>
                                         {selectedProduct.status === 'stock' && (
-                                            <div className="flex flex-col gap-1">
+                                            <div className="flex flex-col gap-2 pt-2">
                                                 <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black px-3">DISPONIBILIDAD INMEDIATA</Badge>
                                                 <div className="flex items-center gap-1.5 pl-2">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">Listo para entrega</span>
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Certificado Apple</span>
                                                 </div>
                                             </div>
                                         )}

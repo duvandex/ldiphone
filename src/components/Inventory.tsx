@@ -416,10 +416,6 @@ export default function Inventory() {
       finalProduct.coInvestors = [];
     }
 
-    if (finalProduct.isExternal) {
-      finalProduct.investor = 'Duvan'; // Earnings to Duvan
-    }
-
     addProduct(finalProduct as any);
     setIsAddOpen(false);
     // Reset
@@ -1001,7 +997,7 @@ export default function Inventory() {
                 </div>
               </div>
 
-              {!newProduct.isExternal && !useCoInvestment && !useMultiSource && (
+              {!useCoInvestment && !useMultiSource && (
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Inversor *</Label>
@@ -1028,7 +1024,7 @@ export default function Inventory() {
                 </div>
               )}
 
-              {useCoInvestment && !newProduct.isExternal && (
+              {useCoInvestment && (
                 <div className="space-y-4 bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
                   <div className="flex items-center justify-between">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-blue-600">Reparto de Inversión (%)</Label>
@@ -1086,7 +1082,7 @@ export default function Inventory() {
                 </div>
               )}
 
-              {useMultiSource && !newProduct.isExternal && (
+              {useMultiSource && (
                 <div className="space-y-4 bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
                   <div className="flex items-center justify-between">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Distribución de Pago</Label>
@@ -1832,6 +1828,16 @@ export default function Inventory() {
             <div className="space-y-4 border-t border-slate-50 pt-6">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px] font-black uppercase tracking-widest text-slate-900">Propiedad y Socios</Label>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="e-is-external" 
+                    checked={editProductState?.isExternal || false} 
+                    onCheckedChange={(v) => setEditProductState(prev => prev ? ({...prev, isExternal: !!v}) : null)} 
+                  />
+                  <Label htmlFor="e-is-external" className="text-[10px] font-black uppercase tracking-widest text-rose-500 cursor-pointer">
+                    Externa
+                  </Label>
+                </div>
                 <div className="flex items-center space-x-2">
                   <Checkbox 
                     id="e-is-co-inv" 

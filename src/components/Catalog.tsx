@@ -203,7 +203,7 @@ export default function Catalog() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-card pt-4 sm:pt-16 pb-8 sm:pb-24 overflow-hidden border-b border-border">
+      <section className="relative bg-card pt-2 sm:pt-16 pb-4 sm:pb-24 overflow-hidden border-b border-border">
         <div className="absolute inset-0 z-0 opacity-40">
            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-muted/20 rounded-full translate-x-1/2 -translate-y-1/2"></div>
            <div className="absolute bottom-0 left-0 w-[800px] h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
@@ -213,17 +213,17 @@ export default function Catalog() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center text-center space-y-3 sm:space-y-6"
+            className="flex flex-col items-center text-center space-y-2 sm:space-y-6"
           >
-            <Badge variant="outline" className="rounded-full border-border bg-card px-3 sm:px-4 py-0.5 sm:py-1 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
+            <Badge variant="outline" className="rounded-full border-border bg-card px-2 sm:px-4 py-0 sm:py-1 text-[7px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
                Catálogo Premium 2026
             </Badge>
-            <h2 className="text-2xl sm:text-7xl font-black tracking-tighter text-foreground leading-[1.1] sm:leading-none">
+            <h2 className="text-lg sm:text-7xl font-black tracking-tighter text-foreground leading-[1.1] sm:leading-none">
               Tu próximo dispositivo.<br className="hidden sm:block"/>
-              <span className="text-muted-foreground/30">Sin complicaciones.</span>
+              <span className="text-muted-foreground/30 sm:ml-4">Sin complicaciones.</span>
             </h2>
 
-            <p className="max-w-xl text-muted-foreground font-medium text-xs sm:text-xl leading-relaxed opacity-80 sm:opacity-100">
+            <p className="max-w-xl text-muted-foreground font-medium text-[10px] sm:text-xl leading-relaxed opacity-80 sm:opacity-100 hidden sm:block">
               Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
             </p>
 

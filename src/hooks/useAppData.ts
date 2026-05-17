@@ -231,45 +231,43 @@ export function useAppData() {
         // Collect all potential account references to read FIRST
         const accountOps: { ref: any, amount: number, id: string, investor?: Investor, method?: PaymentMethod }[] = [];
         
-        if (!newProduct.isExternal) {
-          if (newProduct.purchaseSources && newProduct.purchaseSources.length > 0) {
-            for (const src of newProduct.purchaseSources) {
-              const [inv, met] = src.accountId.split('-');
-              accountOps.push({
-                ref: doc(db, 'accounts', src.accountId),
-                amount: src.amount,
-                id: src.accountId,
-                investor: inv as Investor,
-                method: met as PaymentMethod
-              });
-            }
-          } else if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
-            for (const co of newProduct.coInvestors) {
-              const methodUsed = co.method || newProduct.purchaseMethod || 'Efectivo';
-              const accountId = `${co.investor}-${methodUsed}`;
-              const totalCOP = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
-              const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
-              accountOps.push({ 
-                ref: doc(db, 'accounts', accountId), 
-                amount, 
-                id: accountId, 
-                investor: co.investor, 
-                method: methodUsed 
-              });
-            }
-          } else {
-            const methodUsed = newProduct.purchaseMethod || 'Efectivo';
-            const accountId = `${newProduct.investor}-${methodUsed}`;
-            const totalCOP = newProduct.purchasePrice * newProduct.quantity;
+        if (newProduct.purchaseSources && newProduct.purchaseSources.length > 0) {
+          for (const src of newProduct.purchaseSources) {
+            const [inv, met] = src.accountId.split('-');
+            accountOps.push({
+              ref: doc(db, 'accounts', src.accountId),
+              amount: src.amount,
+              id: src.accountId,
+              investor: inv as Investor,
+              method: met as PaymentMethod
+            });
+          }
+        } else if (newProduct.coInvestors && newProduct.coInvestors.length > 0) {
+          for (const co of newProduct.coInvestors) {
+            const methodUsed = co.method || newProduct.purchaseMethod || 'Efectivo';
+            const accountId = `${co.investor}-${methodUsed}`;
+            const totalCOP = (newProduct.purchasePrice * newProduct.quantity) * (co.percentage / 100);
             const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
             accountOps.push({ 
               ref: doc(db, 'accounts', accountId), 
               amount, 
               id: accountId, 
-              investor: newProduct.investor, 
+              investor: co.investor, 
               method: methodUsed 
             });
           }
+        } else {
+          const methodUsed = newProduct.purchaseMethod || 'Efectivo';
+          const accountId = `${newProduct.investor}-${methodUsed}`;
+          const totalCOP = newProduct.purchasePrice * newProduct.quantity;
+          const amount = methodUsed === 'Cripto (USDT)' ? totalCOP / usdtRate : totalCOP;
+          accountOps.push({ 
+            ref: doc(db, 'accounts', accountId), 
+            amount, 
+            id: accountId, 
+            investor: newProduct.investor, 
+            method: methodUsed 
+          });
         }
 
         // 1. Perform all READS
@@ -332,10 +330,7 @@ export function useAppData() {
 
         if (incomeAmount > 0) {
           const targetInvestor = product.investor || 'Duvan'; // Fallback to Duvan if investor missing
-          if (product.isExternal) {
-            const accountId = `Duvan-${saleMethod}`;
-            incomeOps.push({ ref: doc(db, 'accounts', accountId), amount: adjustedIncome, id: accountId, investor: 'Duvan', method: saleMethod });
-          } else if (product.coInvestors && product.coInvestors.length > 0) {
+          if (product.coInvestors && product.coInvestors.length > 0) {
             for (const co of product.coInvestors) {
               const accountId = `${co.investor}-${saleMethod}`;
               const share = adjustedIncome * (co.percentage / 100);
@@ -454,9 +449,7 @@ export function useAppData() {
         for (const snap of productSnapshots) {
           if (!snap.exists()) continue;
           const product = snap.data() as Product;
-          const targetInvestors = product.isExternal 
-            ? [{ investor: 'Duvan' as Investor }] 
-            : (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor }]);
+          const targetInvestors = (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor }]);
           
           for (const co of targetInvestors) {
             uniqueAccountIds.add(`${co.investor}-${commonData.saleMethod}`);
@@ -500,9 +493,7 @@ export function useAppData() {
           
           if (pendingIncome > 0) {
             const adjustedIncome = commonData.saleMethod === 'Cripto (USDT)' ? pendingIncome / usdtRate : pendingIncome;
-            const targetInvestors = product.isExternal 
-              ? [{ investor: 'Duvan' as Investor, percentage: 100 }] 
-              : (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor, percentage: 100 }]);
+            const targetInvestors = (product.coInvestors?.length ? product.coInvestors : [{ investor: product.investor, percentage: 100 }]);
 
             for (const co of targetInvestors) {
               const accountId = `${co.investor}-${commonData.saleMethod}`;
@@ -852,7 +843,7 @@ export function useAppData() {
         let accountDoc = null;
         let accountRef = null;
         if (sale.saleMethod && sale.salePrice && sale.saleMethod !== 'none') {
-          const targetInvestor = sale.isExternal ? 'Duvan' : sale.investor;
+          const targetInvestor = sale.investor || 'Duvan';
           const accountId = `${targetInvestor}-${sale.saleMethod}`;
           accountRef = doc(db, 'accounts', accountId);
           accountDoc = await transaction.get(accountRef);

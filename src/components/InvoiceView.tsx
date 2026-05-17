@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck } from 'lucide-react';
+import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck, Smartphone } from 'lucide-react';
 import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import Logo from './Logo';

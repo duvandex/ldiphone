@@ -14,8 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Product } from '../types';
 
 export default function Catalog() {
-  const { data, user, updateSettings } = useData();
-  const { uploadImage } = useCloudinary();
+  const { data, user, updateSettings, loading } = useData();
+  const { uploadImage, getOptimizedUrl } = useCloudinary();
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -80,6 +80,7 @@ export default function Catalog() {
   };
 
   const publicProducts = React.useMemo(() => {
+    if (!data.products) return [];
     return data.products
       .filter(p => 
         (p.status === 'stock' || p.status === 'reserved' || !p.status) && 
@@ -325,7 +326,12 @@ export default function Catalog() {
             animate="show"
             className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-8"
           >
-            {publicProducts.map((p) => (
+            {loading && publicProducts.length === 0 ? (
+              // Fast loading skeletons
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="aspect-[3/4] sm:aspect-video bg-muted/20 animate-pulse rounded-2xl" />
+              ))
+            ) : publicProducts.map((p) => (
               <motion.div key={p.id} variants={item}>
                 <Card className="group card-premium rounded-xl sm:rounded-3xl overflow-hidden border-none h-full flex flex-col bg-card shadow-sm hover:shadow-xl transition-all duration-500">
                   <div 
@@ -337,7 +343,7 @@ export default function Catalog() {
                   >
                     {p.images && p.images.length > 0 ? (
                       <img 
-                        src={p.images[0]} 
+                        src={getOptimizedUrl(p.images[0], 600, 800)} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
                         alt={p.name} 
                         loading="lazy"
@@ -454,9 +460,10 @@ export default function Catalog() {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 1.05 }}
                                     transition={{ duration: 0.3, ease: 'easeOut' }}
-                                    src={selectedProduct.images?.[activeImageIndex] || ''} 
+                                    src={getOptimizedUrl(selectedProduct.images?.[activeImageIndex] || '', 1200, 1200, 'fit')} 
                                     className="w-full h-full object-contain pointer-events-none"
                                     alt={selectedProduct.name}
+                                    loading="eager"
                                 />
                             </AnimatePresence>
                             
@@ -490,7 +497,7 @@ export default function Catalog() {
                                             activeImageIndex === i ? "border-primary scale-110 shadow-primary/20" : "border-transparent opacity-40 hover:opacity-100"
                                         )}
                                     >
-                                        <img src={img} className="w-full h-full object-cover rounded-lg" alt="" />
+                                        <img src={getOptimizedUrl(img, 200, 200)} className="w-full h-full object-cover rounded-lg" alt="" />
                                     </button>
                                 ))}
                             </div>
@@ -631,7 +638,7 @@ export default function Catalog() {
                  <div key={p.id} className="flex gap-4 p-4 bg-card rounded-2xl border border-border shadow-sm items-center">
                     <div className="w-16 h-16 bg-muted rounded-xl overflow-hidden shrink-0">
                        {p.images && p.images[0] ? (
-                          <img src={p.images[0]} className="w-full h-full object-cover" />
+                          <img src={getOptimizedUrl(p.images[0], 200, 200)} className="w-full h-full object-cover" />
                        ) : <div className="w-full h-full flex items-center justify-center"><Smartphone className="w-6 h-6 opacity-20" /></div>}
                     </div>
                     <div className="flex-1 min-w-0">

@@ -41,5 +41,13 @@ export function useCloudinary() {
     return urls;
   };
 
-  return { uploadImage, uploadMultiple, uploading };
+  const getOptimizedUrl = (url: string, width: number = 800, height: number = 800, crop: string = 'fill') => {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    // Replace /upload/ with /upload/w_W,h_H,c_C,f_auto,q_auto/
+    const parts = url.split('/upload/');
+    if (parts.length !== 2) return url;
+    return `${parts[0]}/upload/w_${width},h_${height},c_${crop},f_auto,q_auto/${parts[1]}`;
+  };
+
+  return { uploadImage, uploadMultiple, uploading, getOptimizedUrl };
 }

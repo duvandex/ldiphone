@@ -353,6 +353,24 @@ export default function Catalog() {
                          <Smartphone className="w-12 h-12 sm:w-16 sm:h-16 text-foreground" />
                       </div>
                     )}
+
+                    {/* Promotion Badge */}
+                    {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-10">
+                            <motion.div 
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                className="bg-rose-600 text-white flex overflow-hidden rounded-lg sm:rounded-xl shadow-xl shadow-rose-600/20"
+                            >
+                                <div className="bg-rose-700 px-1.5 py-0.5 sm:px-3 sm:py-1.5 flex items-center justify-center">
+                                    <span className="text-[7px] sm:text-[10px] font-black uppercase tracking-widest leading-none">OFERTA</span>
+                                </div>
+                                <div className="px-1.5 py-0.5 sm:px-3 sm:py-1.5 flex items-center justify-center font-black italic">
+                                    <span className="text-[9px] sm:text-lg tracking-tighter leading-none">-{Math.round(((p.regularPrice! - p.salePrice!) / p.regularPrice!) * 100)}%</span>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
                     
                     <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
                       "absolute top-2 right-2 sm:top-4 sm:right-4 text-[7px] sm:text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full border-none shadow-lg backdrop-blur-md",
@@ -393,8 +411,20 @@ export default function Catalog() {
 
                             <div className="flex gap-1.5 mt-auto pt-2 sm:pt-4 border-t border-border">
                                 <div className="flex flex-col flex-1">
-                                    <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Especial</span>
-                                    <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
+                                    {(p.regularPrice || 0) > (p.salePrice || 0) ? (
+                                        <>
+                                            <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-rose-500">Precio Especial</span>
+                                            <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+                                                <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter leading-tight">{fmt(p.salePrice || 0)}</span>
+                                                <span className="text-[8px] sm:text-sm font-bold text-muted-foreground line-through opacity-40 leading-none">{fmt(p.regularPrice || 0)}</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-[6px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inversión</span>
+                                            <span className="text-xs sm:text-2xl font-black text-foreground tracking-tighter">{fmt(p.salePrice || 0)}</span>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <Button 
@@ -531,11 +561,30 @@ export default function Catalog() {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-4xl font-black text-primary tracking-tighter">{fmt(selectedProduct.salePrice || 0)}</div>
-                                {selectedProduct.status === 'stock' && (
-                                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-3">En stock inmediato</Badge>
+                             <div className="flex flex-col gap-1 mb-6">
+                                {(selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) && (
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <Badge className="bg-rose-100 text-rose-700 border-none text-[10px] font-black px-3 py-1 rounded-lg">
+                                            DESCUENTO DEL {Math.round(((selectedProduct.regularPrice! - selectedProduct.salePrice!) / selectedProduct.regularPrice!) * 100)}%
+                                        </Badge>
+                                        <span className="text-xl font-bold text-muted-foreground line-through opacity-50">{fmt(selectedProduct.regularPrice || 0)}</span>
+                                    </div>
                                 )}
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground mb-1">Precio de Lanzamiento</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-6xl font-black text-primary tracking-tighter leading-none">{fmt(selectedProduct.salePrice || 0)}</div>
+                                        {selectedProduct.status === 'stock' && (
+                                            <div className="flex flex-col gap-1">
+                                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black px-3">DISPONIBILIDAD INMEDIATA</Badge>
+                                                <div className="flex items-center gap-1.5 pl-2">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">Listo para entrega</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                             
                             {selectedProduct.status === 'reserved' && (

@@ -19,6 +19,7 @@ export interface Product {
   purchaseDate: string;
   purchasePrice: number; // Unit price for purchase
   salePrice?: number;    // Unit price for sale
+  regularPrice?: number; // Original price before promotion
   status: 'stock' | 'sold' | 'reserved' | 'out_of_stock';
   saleDate?: string;
   buyer?: string;

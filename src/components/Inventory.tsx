@@ -280,6 +280,7 @@ export default function Inventory() {
     purchaseDate: new Date().toISOString().split('T')[0],
     purchasePrice: 0,
     salePrice: 0,
+    regularPrice: 0,
     quantity: 1,
     status: 'stock',
     images: [],
@@ -1148,9 +1149,15 @@ export default function Inventory() {
                 </div>
               </div>
 
-              <div className="grid gap-2 border-t border-slate-50 pt-4">
-                <Label htmlFor="pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Sugerido Venta</Label>
-                <Input id="pv" type="number" placeholder="0" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={newProduct.salePrice || ''} onChange={e => setNewProduct({...newProduct, salePrice: parseFloat(e.target.value) || 0})} />
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Sugerido Venta</Label>
+                  <Input id="pv" type="number" placeholder="0" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={newProduct.salePrice || ''} onChange={e => setNewProduct({...newProduct, salePrice: parseFloat(e.target.value) || 0})} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="pr" className="text-[10px] font-black uppercase tracking-widest text-rose-500">Precio Regular (Promo)</Label>
+                  <Input id="pr" type="number" placeholder="0" className="rounded-xl border-rose-100 bg-rose-50/30 h-11 font-black text-rose-700" value={newProduct.regularPrice || ''} onChange={e => setNewProduct({...newProduct, regularPrice: parseFloat(e.target.value) || 0})} />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
@@ -1355,6 +1362,12 @@ export default function Inventory() {
                       <div className="text-sm font-black text-emerald-700">
                         {fmt(p.salePrice || 0)}
                       </div>
+                      {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                        <div className="flex flex-col items-end">
+                            <div className="text-[8px] font-black text-rose-500 bg-rose-50 px-1 rounded uppercase tracking-[0.2em] mb-0.5">PROMO</div>
+                            <div className="text-[9px] font-bold text-slate-300 line-through leading-none">{fmt(p.regularPrice || 0)}</div>
+                        </div>
+                      )}
                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Sugerido</div>
                     </TableCell>
                     <TableCell className="py-5 text-right">
@@ -1489,8 +1502,8 @@ export default function Inventory() {
           return (
             <Card key={p.id} className="card-premium border-none shadow-sm overflow-hidden rounded-3xl relative">
                 {(p.status === 'stock' || p.status === 'reserved') && (
-                  <button 
-                    className="absolute top-0 left-0 w-24 h-24 z-30 flex items-start justify-start p-4 group"
+                  <div 
+                    className="absolute top-0 left-0 w-24 h-24 z-30 flex items-start justify-start p-4 group cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1502,7 +1515,7 @@ export default function Inventory() {
                       checked={selectedIds.has(p.id)}
                       onCheckedChange={() => {}}
                     />
-                  </button>
+                  </div>
                 )}
               <div className="flex flex-col">
                 <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
@@ -1581,7 +1594,12 @@ export default function Inventory() {
                     </div>
                     <div className="space-y-1 p-3 bg-emerald-50/50 rounded-2xl border border-emerald-100/30">
                       <div className="text-[9px] font-black uppercase tracking-widest text-emerald-600">P. Venta</div>
-                      <div className="text-sm font-black text-emerald-700">{fmt(p.salePrice || 0)}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-black text-emerald-700">{fmt(p.salePrice || 0)}</div>
+                        {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                          <div className="text-[8px] font-bold text-slate-300 line-through">{fmt(p.regularPrice || 0)}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1807,9 +1825,15 @@ export default function Inventory() {
               </div>
             </div>
 
-            <div className="grid gap-2 border-t border-slate-50 pt-4">
-              <Label htmlFor="e-pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Venta Sugerido</Label>
-              <Input id="e-pv" type="number" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={editProductState?.salePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, salePrice: parseFloat(e.target.value) || 0}) : null)} />
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">
+              <div className="grid gap-2">
+                <Label htmlFor="e-pv" className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Precio Venta Sugerido</Label>
+                <Input id="e-pv" type="number" className="rounded-xl border-emerald-100 bg-emerald-50/30 h-11 font-black text-emerald-700" value={editProductState?.salePrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, salePrice: parseFloat(e.target.value) || 0}) : null)} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="e-pr" className="text-[10px] font-black uppercase tracking-widest text-rose-500">Precio Regular (Promo)</Label>
+                <Input id="e-pr" type="number" className="rounded-xl border-rose-100 bg-rose-50/30 h-11 font-black text-rose-700" value={editProductState?.regularPrice || 0} onChange={e => setEditProductState(prev => prev ? ({...prev, regularPrice: parseFloat(e.target.value) || 0}) : null)} />
+              </div>
             </div>
 
             <div className="grid gap-2 border-t border-slate-50 pt-4">

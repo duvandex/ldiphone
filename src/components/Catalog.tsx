@@ -476,16 +476,16 @@ export default function Catalog() {
                 <div className="flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-[80vh]">
                     {/* Image Gallery */}
                     <div className="w-full md:w-1/2 bg-muted/10 relative group flex flex-col border-r border-border/50">
-                        <div className="flex-1 relative overflow-hidden bg-slate-950 flex items-center justify-center min-h-[350px] md:min-h-0">
+                        <div className="flex-1 relative overflow-hidden bg-white flex items-center justify-center min-h-[300px] sm:min-h-[450px]">
                             <AnimatePresence mode="wait">
                                 <motion.img 
                                     key={activeImageIndex}
-                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 1.05 }}
-                                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                                    exit={{ opacity: 0, scale: 1.1 }}
+                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
                                     src={getOptimizedUrl(selectedProduct.images?.[activeImageIndex] || '', 1200, 1200, 'fit')} 
-                                    className="w-full h-full object-contain pointer-events-none"
+                                    className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-none drop-shadow-2xl"
                                     alt={selectedProduct.name}
                                     loading="eager"
                                 />

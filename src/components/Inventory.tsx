@@ -748,15 +748,73 @@ export default function Inventory() {
 
   const summaryByStatus = React.useMemo(() => {
     const stock = data.products.filter(p => p.status === 'stock' || p.status === 'reserved');
-    const totalCost = stock.reduce((sum, p) => sum + (p.purchasePrice * (p.quantity || 1)), 0);
-    const totalEstSale = stock.reduce((sum, p) => sum + ((p.salePrice || 0) * (p.quantity || 1)), 0);
+    let totalCost = 0;
+    let totalEstSale = 0;
+    let totalUnits = 0;
+    let matchingCount = 0;
+
+    stock.forEach(p => {
+      const q = p.quantity || 1;
+      let pct = 100;
+      
+      const hasInvestorMatch = investorFilter === 'all' || 
+                              p.investor === investorFilter || 
+                              p.coInvestors?.some(c => c.investor === investorFilter);
+      
+      if (!hasInvestorMatch) return;
+
+      matchingCount++;
+      if (investorFilter !== 'all') {
+        if (p.coInvestors && p.coInvestors.length > 0) {
+          const match = p.coInvestors.find(c => c.investor === investorFilter);
+          pct = match ? match.percentage : (p.investor === investorFilter ? 100 : 0);
+        } else {
+          pct = p.investor === investorFilter ? 100 : 0;
+        }
+      }
+      
+      totalCost += p.purchasePrice * q * (pct / 100);
+      totalEstSale += (p.salePrice || 0) * q * (pct / 100);
+      totalUnits += q * (pct / 100);
+    });
+
     return {
-      count: stock.length,
-      units: stock.reduce((sum, p) => sum + (p.quantity || 1), 0),
+      count: matchingCount,
+      units: Math.round(totalUnits * 100) / 100,
       cost: totalCost,
       profit: totalEstSale - totalCost
     };
-  }, [data.products]);
+  }, [data.products, investorFilter]);
+
+  const filteredTotals = React.useMemo(() => {
+    let totalCost = 0;
+    let totalEstSale = 0;
+    let totalUnits = 0;
+
+    filteredProducts.forEach(p => {
+      const q = p.quantity || 1;
+      let pct = 100;
+      if (investorFilter !== 'all') {
+        if (p.coInvestors && p.coInvestors.length > 0) {
+          const match = p.coInvestors.find(c => c.investor === investorFilter);
+          pct = match ? match.percentage : (p.investor === investorFilter ? 100 : 0);
+        } else {
+          pct = p.investor === investorFilter ? 100 : 0;
+        }
+      }
+      totalCost += p.purchasePrice * q * (pct / 100);
+      totalEstSale += (p.salePrice || 0) * q * (pct / 100);
+      totalUnits += q * (pct / 100);
+    });
+
+    return {
+      cost: totalCost,
+      sale: totalEstSale,
+      profit: totalEstSale - totalCost,
+      units: Math.round(totalUnits * 100) / 100,
+      count: filteredProducts.length
+    };
+  }, [filteredProducts, investorFilter]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -1492,6 +1550,35 @@ export default function Inventory() {
               })}
             </TableBody>
           </Table>
+          
+          <div className="bg-muted/15 p-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-6 sm:gap-10">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Equipos Mostrados</span>
+                <span className="text-xl font-black text-slate-950">{filteredTotals.count} <span className="text-xs text-slate-400 font-bold uppercase">unid.</span></span>
+              </div>
+              <div className="border-l border-slate-100 pl-6 sm:pl-8">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">
+                  {investorFilter !== 'all' ? `Inversión total (${investorFilter})` : 'Inversión total en vista'}
+                </span>
+                <span className="text-3xl font-black text-[#f15a24]">
+                  {fmt(filteredTotals.cost)}
+                </span>
+              </div>
+              <div className="border-l border-slate-100 pl-6 sm:pl-8">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Profit Est.</span>
+                <span className="text-xl font-black text-emerald-600">
+                  +{fmt(filteredTotals.profit)}
+                </span>
+              </div>
+            </div>
+            {investorFilter !== 'all' && (
+              <div className="bg-[#f15a24]/5 rounded-2xl border border-[#f15a24]/10 p-3.5 flex items-center gap-2 pr-5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#f15a24] animate-pulse"></span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#f15a24]">Filtrado por: {investorFilter}</span>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -1705,6 +1792,43 @@ export default function Inventory() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Mobile Summary Card */}
+      <div className="md:hidden">
+        <Card className="card-premium border-none bg-slate-900 text-white rounded-[2rem] p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -mr-12 -mt-12" />
+          <div className="relative space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Resumen Filtrado</span>
+              {investorFilter !== 'all' ? (
+                <span className="text-[9px] font-black uppercase tracking-wider bg-[#f15a24] text-white px-2 py-0.5 rounded-md">Socio: {investorFilter}</span>
+              ) : (
+                <span className="text-[9px] font-black uppercase tracking-wider bg-white/10 text-white/60 px-2 py-0.5 rounded-md">Todos</span>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 block mb-0.5">Equipos</span>
+                <span className="text-lg font-black">{filteredTotals.count} ud.</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 block mb-0.5">Profit Est.</span>
+                <span className="text-lg font-black text-emerald-400">+{fmt(filteredTotals.profit)}</span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/10">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-white/40 block mb-1">
+                {investorFilter !== 'all' ? `Inversión Total (${investorFilter})` : 'Inversión Total en Vista'}
+              </span>
+              <span className="text-3xl font-black text-[#f15a24]">
+                {fmt(filteredTotals.cost)}
+              </span>
+            </div>
+          </div>
+        </Card>
       </div>
 
       {/* Bulk Action Bar */}

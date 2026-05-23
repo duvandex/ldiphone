@@ -78,12 +78,19 @@ export interface Debtor {
   status: 'pending' | 'paid';
 }
 
+export interface LiabilityPayment {
+  amount: number;
+  date: string;
+  description?: string;
+}
+
 export interface Liability {
   id: string;
   creditor: string;
   description: string;
   totalAmount: number;
   payments: number[];
+  paymentHistory?: LiabilityPayment[];
   status: 'pending' | 'paid';
 }
 

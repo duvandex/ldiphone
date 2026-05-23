@@ -704,13 +704,17 @@ export function useAppData() {
   const addLiability = async (liability: Omit<Liability, 'id'>) => {
     try {
       const id = Math.random().toString(36).substr(2, 9);
-      await setDoc(doc(db, 'liabilities', id), { ...liability, id });
+      const paymentHistory = liability.payments.map(amount => ({
+        amount,
+        date: new Date().toISOString(),
+      }));
+      await setDoc(doc(db, 'liabilities', id), { ...liability, paymentHistory, id });
     } catch (err) {
       handleFirestoreError(err, 'create', 'liabilities');
     }
   };
 
-  const addLiabilityPayment = async (liabilityId: string, amount: number) => {
+  const addLiabilityPayment = async (liabilityId: string, amount: number, description?: string) => {
     try {
       const libRef = doc(db, 'liabilities', liabilityId);
       await runTransaction(db, async (transaction) => {
@@ -718,10 +722,14 @@ export function useAppData() {
         if (!lDoc.exists()) return;
 
         const l = lDoc.data() as Liability;
-        const newPayments = [...l.payments, amount];
+        const legacyPayments = l.payments || [];
+        const newPayments = [...legacyPayments, amount];
+        const currentHist = l.paymentHistory || legacyPayments.map(amt => ({ amount: amt, date: new Date().toISOString() }));
+        const newPaymentHistory = [...currentHist, { amount, date: new Date().toISOString(), description: description || '' }];
         const totalPaid = newPayments.reduce((a, b) => a + b, 0);
         transaction.update(libRef, {
           payments: newPayments,
+          paymentHistory: newPaymentHistory,
           status: totalPaid >= l.totalAmount ? 'paid' : 'pending',
         });
       });

@@ -21,6 +21,15 @@ export default function Catalog() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    images: string[];
+    currentIndex: number;
+  }>({
+    isOpen: false,
+    images: [],
+    currentIndex: 0,
+  });
   const [isUploading, setIsUploading] = useState<number | null>(null);
   const [cart, setCart] = useState<Product[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -344,7 +353,7 @@ export default function Catalog() {
                     {p.images && p.images.length > 0 ? (
                       <img 
                         src={getOptimizedUrl(p.images[0], 600, 800)} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                        className="w-full h-full object-contain sm:object-cover sm:group-hover:scale-110 transition-transform duration-700 bg-slate-50/60 dark:bg-slate-900/20" 
                         alt={p.name} 
                         loading="lazy"
                       />
@@ -468,25 +477,53 @@ export default function Catalog() {
 
       {/* Product View Modal */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-         <DialogContent className="sm:max-w-5xl p-0 overflow-hidden border-none rounded-[2rem] gap-0 shadow-2xl">
+         <DialogContent className="sm:max-w-5xl h-[90vh] sm:h-auto p-0 overflow-hidden border-none rounded-[2rem] md:rounded-[2.5rem] gap-0 shadow-2xl">
             <DialogHeader className="sr-only">
                 <DialogTitle>{selectedProduct?.name}</DialogTitle>
             </DialogHeader>
             {selectedProduct && (
                 <div className="flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-[80vh]">
                     {/* Image Gallery */}
-                    <div className="w-full md:w-1/2 bg-muted/10 relative group flex flex-col border-r border-border/50">
-                        <div className="flex-1 relative overflow-hidden bg-white flex items-center justify-center min-h-[300px] sm:min-h-[450px]">
+                    <div className="w-full md:w-1/2 bg-white relative group flex flex-col md:flex-row border-r border-border/50">
+                        {/* Thumbnails */}
+                        {selectedProduct.images && selectedProduct.images.length > 1 && (
+                            <div className="p-3 bg-slate-50/50 flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto no-scrollbar order-2 md:order-1 select-none w-full md:w-24 shrink-0 border-t md:border-t-0 md:border-r border-border/50 min-h-[80px]">
+                                {selectedProduct.images.map((img, i) => (
+                                    <button 
+                                        key={i} 
+                                        onClick={() => setActiveImageIndex(i)}
+                                        onMouseEnter={() => setActiveImageIndex(i)}
+                                        className={cn(
+                                            "w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border-2 transition-all p-0.5 shrink-0 bg-white shadow-xs focus:outline-none",
+                                            activeImageIndex === i ? "border-slate-800 dark:border-slate-200 scale-105" : "border-slate-200 hover:border-slate-400 dark:border-slate-700 opacity-60 hover:opacity-100"
+                                        )}
+                                        aria-label={`Ver imagen ${i + 1}`}
+                                    >
+                                        <img src={getOptimizedUrl(img, 200, 200)} className="w-full h-full object-contain rounded-lg bg-slate-50/20" alt="" />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Main Stage */}
+                        <div className="flex-1 w-full relative overflow-hidden bg-white flex items-center justify-center min-h-[250px] sm:min-h-[450px] p-4 sm:p-6 order-1 md:order-2">
                             <AnimatePresence mode="wait">
                                 <motion.img 
                                     key={activeImageIndex}
-                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 1.1 }}
-                                    transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                                    exit={{ opacity: 0, scale: 1.05 }}
+                                    transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                                     src={getOptimizedUrl(selectedProduct.images?.[activeImageIndex] || '', 1200, 1200, 'fit')} 
-                                    className="max-w-full max-h-full w-auto h-auto object-contain pointer-events-none drop-shadow-2xl"
+                                    className="mx-auto block max-w-[85%] max-h-[220px] sm:max-h-[420px] md:max-h-[480px] w-auto h-auto object-contain cursor-zoom-in drop-shadow-sm hover:scale-[1.02] active:scale-95 transition-all duration-300 pointer-events-auto select-none"
                                     alt={selectedProduct.name}
+                                    onClick={() => {
+                                        setLightbox({
+                                            isOpen: true,
+                                            images: selectedProduct.images || [],
+                                            currentIndex: activeImageIndex
+                                        });
+                                    }}
                                     loading="eager"
                                 />
                             </AnimatePresence>
@@ -495,37 +532,19 @@ export default function Catalog() {
                                 <>
                                     <button 
                                         onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1)}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-all shadow-xl z-10 active:scale-90"
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
                                     >
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>
                                     <button 
                                         onClick={() => setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0)}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-all shadow-xl z-10 active:scale-90"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
                                     >
                                         <ChevronRight className="w-5 h-5" />
                                     </button>
                                 </>
                             )}
                         </div>
-
-                        {/* Thumbnails */}
-                        {selectedProduct.images && selectedProduct.images.length > 1 && (
-                            <div className="p-4 bg-muted/5 flex justify-center gap-3 overflow-x-auto no-scrollbar border-t border-border/10">
-                                {selectedProduct.images.map((img, i) => (
-                                    <button 
-                                        key={i} 
-                                        onClick={() => setActiveImageIndex(i)}
-                                        className={cn(
-                                            "w-16 h-16 rounded-xl overflow-hidden border-2 transition-all p-0.5 shrink-0 bg-white shadow-sm",
-                                            activeImageIndex === i ? "border-primary scale-110 shadow-primary/20" : "border-transparent opacity-40 hover:opacity-100"
-                                        )}
-                                    >
-                                        <img src={getOptimizedUrl(img, 200, 200)} className="w-full h-full object-cover rounded-lg" alt="" />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     {/* Details */}
@@ -792,6 +811,94 @@ export default function Catalog() {
             </div>
         </div>
       </footer>
+
+      {/* Full-Screen Beautiful Lightbox / Zoom Overlay */}
+      <AnimatePresence>
+        {lightbox.isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[10000] bg-slate-950/98 backdrop-blur-xl flex flex-col justify-between items-center p-4 select-none cursor-zoom-out"
+            onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}
+          >
+            {/* Header / Counter & Controls */}
+            <div className="w-full max-w-6xl flex items-center justify-between text-white/80 z-20 px-4 py-2 mt-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] bg-white/10 px-3 py-1 rounded-full backdrop-blur-md">
+                IMAGEN {lightbox.currentIndex + 1} / {lightbox.images.length}
+              </span>
+              <button 
+                type="button"
+                className="p-3 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full transition-all text-white shadow-xl pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightbox(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Big Resizing / Zoom Stage */}
+            <div className="flex-1 w-full max-w-5xl flex items-center justify-center relative my-4">
+              {lightbox.images.length > 1 && (
+                <button 
+                  type="button"
+                  className="absolute left-2 sm:left-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex > 0 ? prev.currentIndex - 1 : prev.images.length - 1
+                    }));
+                  }}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+
+              <motion.img 
+                key={lightbox.currentIndex}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.05, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                src={lightbox.images[lightbox.currentIndex]} 
+                className="mx-auto block max-w-[85%] sm:max-w-full max-h-[60vh] sm:max-h-[80vh] w-auto h-auto object-contain transition-all duration-300 drop-shadow-[0_25px_50px_rgba(0,0,0,0.8)] rounded-xl pointer-events-auto" 
+                alt="Expanded catalog view"
+                onClick={(e) => e.stopPropagation()} 
+              />
+
+              {lightbox.images.length > 1 && (
+                <button 
+                  type="button"
+                  className="absolute right-2 sm:right-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex < prev.images.length - 1 ? prev.currentIndex + 1 : 0
+                    }));
+                  }}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+
+            {/* Clean bottom guidance captions */}
+            <div className="text-center pb-6 space-y-1.5 z-10">
+              <p className="text-white/60 font-black text-[10px] uppercase tracking-[0.25em]">
+                {selectedProduct?.name}
+              </p>
+              <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest">
+                Toca en cualquier parte oscura para volver al catálogo
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

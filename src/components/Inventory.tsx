@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -169,6 +170,15 @@ export default function Inventory() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [lightbox, setLightbox] = useState<{
+    isOpen: boolean;
+    images: string[];
+    currentIndex: number;
+  }>({
+    isOpen: false,
+    images: [],
+    currentIndex: 0,
+  });
 
   // Multi-Selection State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -1333,7 +1343,22 @@ export default function Inventory() {
                     </TableCell>
                     <TableCell className="py-5 pl-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-card shadow-sm transition-transform group-hover:scale-105 duration-300">
+                        <div 
+                          className={cn(
+                            "w-14 h-14 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-card shadow-sm transition-transform group-hover:scale-105 duration-300",
+                            p.images && p.images.length > 0 ? "cursor-zoom-in" : ""
+                          )}
+                          onClick={(e) => {
+                            if (p.images && p.images.length > 0) {
+                              e.stopPropagation();
+                              setLightbox({
+                                isOpen: true,
+                                images: p.images,
+                                currentIndex: 0
+                              });
+                            }
+                          }}
+                        >
                           {p.images && p.images.length > 0 ? (
                             <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
                           ) : (
@@ -1605,9 +1630,23 @@ export default function Inventory() {
                   </div>
                 )}
               <div className="flex flex-col">
-                <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
+                <div 
+                  className={cn(
+                    "relative aspect-video bg-muted flex items-center justify-center overflow-hidden",
+                    p.images && p.images.length > 0 ? "cursor-zoom-in group-hover:opacity-95 transition-opacity" : ""
+                  )}
+                  onClick={() => {
+                    if (p.images && p.images.length > 0) {
+                      setLightbox({
+                        isOpen: true,
+                        images: p.images,
+                        currentIndex: 0
+                      });
+                    }
+                  }}
+                >
                   {p.images && p.images.length > 0 ? (
-                    <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
+                    <img src={p.images[0]} className="w-full h-full object-contain bg-slate-100 dark:bg-slate-950/40" alt={p.name} />
                   ) : (
                     <Smartphone className="w-12 h-12 text-muted-foreground/30" />
                   )}
@@ -2606,6 +2645,91 @@ export default function Inventory() {
           }}
         />
       )}
+
+      {/* Full-Screen Beautiful Lightbox / Zoom Overlay */}
+      <AnimatePresence>
+        {lightbox.isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[10000] bg-slate-950/98 backdrop-blur-xl flex flex-col justify-between items-center p-4 select-none cursor-zoom-out"
+            onClick={() => setLightbox(prev => ({ ...prev, isOpen: false }))}
+          >
+            {/* Header / Counter & Controls */}
+            <div className="w-full max-w-6xl flex items-center justify-between text-white/80 z-20 px-4 py-2 mt-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] bg-white/10 px-3 py-1 rounded-full backdrop-blur-md">
+                IMAGEN {lightbox.currentIndex + 1} / {lightbox.images.length}
+              </span>
+              <button 
+                type="button"
+                className="p-3 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full transition-all text-white shadow-xl pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightbox(prev => ({ ...prev, isOpen: false }));
+                }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Big Resizing / Zoom Stage */}
+            <div className="flex-1 w-full max-w-5xl flex items-center justify-center relative my-4">
+              {lightbox.images.length > 1 && (
+                <button 
+                  type="button"
+                  className="absolute left-2 sm:left-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex > 0 ? prev.currentIndex - 1 : prev.images.length - 1
+                    }));
+                  }}
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+              )}
+
+              <motion.img 
+                key={lightbox.currentIndex}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 1.05, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                src={lightbox.images[lightbox.currentIndex]} 
+                className="max-w-full max-h-[75vh] sm:max-h-[80vh] w-auto h-auto object-contain transition-all duration-300 drop-shadow-[0_25px_50px_rgba(0,0,0,0.8)] rounded-xl pointer-events-auto" 
+                alt="Expanded inventory view"
+                onClick={(e) => e.stopPropagation()} 
+              />
+
+              {lightbox.images.length > 1 && (
+                <button 
+                  type="button"
+                  className="absolute right-2 sm:right-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex < prev.images.length - 1 ? prev.currentIndex + 1 : 0
+                    }));
+                  }}
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              )}
+            </div>
+
+            {/* Clean bottom guidance captions */}
+            <div className="text-center pb-6 space-y-1.5 z-10">
+              <p className="text-white/30 text-[9px] font-bold uppercase tracking-widest">
+                Toca en cualquier parte oscura para volver al inventario
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -13,6 +13,62 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Product } from '../types';
 
+// Dynamic Warranty Badge/Label based on product characteristics & category
+export const getProductWarranty = (p: Product) => {
+  const nameLower = p.name.toLowerCase();
+  const descLower = (p.description || '').toLowerCase();
+  
+  const isApple = nameLower.includes('iphone') || 
+                  nameLower.includes('apple') || 
+                  nameLower.includes('ipad') || 
+                  nameLower.includes('watch') || 
+                  (p.category && ['CELULARES', 'TABLETS', 'RELOJ INTELIGENTES', 'AURICULARES'].includes(p.category));
+
+  // If the product explicitly says "apple directo", "garantia apple", "nueva de apple", etc.
+  const isAppleDirect = isApple && (
+    nameLower.includes('apple directo') || 
+    nameLower.includes('directa apple') || 
+    nameLower.includes('garantía apple') ||
+    descLower.includes('garantía apple') || 
+    descLower.includes('apple directo') ||
+    descLower.includes('garantía directa apple')
+  );
+
+  const isNew = nameLower.includes('nuevo') || 
+                nameLower.includes('sellado') || 
+                nameLower.includes('new') ||
+                descLower.includes('nuevo') || 
+                descLower.includes('sellado');
+
+  if (isApple) {
+    if (isNew || isAppleDirect) {
+      return {
+        short: "🍏 1 Año Apple Directo",
+        long: "1 Año Garantía Directa Apple",
+        description: "Equipo original nuevo o con garantía vigente de Apple. Cobertura oficial de Apple de un año a nivel mundial.",
+        badgeColor: "bg-[#f15a24]/10 text-[#f15a24] dark:bg-[#f15a24]/20 dark:text-[#f15a24]"
+      };
+    } else {
+      const months = p.warrantyMonths || 3;
+      return {
+        short: `🛡️ ${months} Meses Garantía Premium`,
+        long: `Garantía Premium de ${months} Meses`,
+        description: `iPhone certificado con batería testeada. Incluye ${months} meses de garantía con cobertura técnica y soporte post-venta de confianza.`,
+        badgeColor: "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400"
+      };
+    }
+  }
+
+  // Default other products
+  const months = p.warrantyMonths || 3;
+  return {
+    short: `🛡️ ${months} Meses Garantía`,
+    long: `Garantía de ${months} Meses`,
+    description: `Este artículo cuenta con ${months} meses de garantía local y de nuestra marca con cobertura de soporte técnico ante cualquier imperfección.`,
+    badgeColor: "bg-slate-50 text-slate-700 dark:bg-slate-900/45 dark:text-slate-300"
+  };
+};
+
 export default function Catalog() {
   const { data, user, updateSettings, loading } = useData();
   const { uploadImage, getOptimizedUrl } = useCloudinary();
@@ -396,23 +452,26 @@ export default function Catalog() {
                        <h4 className="text-sm sm:text-2xl font-bold text-slate-900 line-clamp-2 leading-tight min-h-[2.5rem] sm:min-h-[3.5rem] tracking-tight group-hover:text-[#f15a24] transition-colors" onClick={() => { setSelectedProduct(p); setActiveImageIndex(0); }}>{p.name}</h4>
                        
                        {/* Auto Spec Labels */}
-                       {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
-                         <div className="flex flex-wrap gap-1 mt-1.5">
+                       {(p.category === 'CELULARES' || p.category === 'TABLETS' || p.category === 'RELOJ INTELIGENTES' || p.category === 'AURICULARES' || p.name.toLowerCase().includes('iphone') || p.name.toLowerCase().includes('ipad') || p.name.toLowerCase().includes('apple')) && (
+                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                            {extractGB(p.name, p.description) && (
-                             <div className="bg-slate-100 text-slate-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                             <div className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5 shadow-xs">
                                💾 {extractGB(p.name, p.description)}
                              </div>
                            )}
                            {extractBattery(p.name, p.description) && (
-                             <div className="bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
+                             <div className="bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5 shadow-xs">
                                🔋 {extractBattery(p.name, p.description)}
                              </div>
                            )}
-                           {p.warrantyMonths && (
-                             <div className="bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
-                               🛡️ {p.warrantyMonths} MESES GARANTÍA
-                             </div>
-                           )}
+                           {(() => {
+                             const warranty = getProductWarranty(p);
+                             return (
+                               <div className={cn("px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5 shadow-xs", warranty.badgeColor)}>
+                                 {warranty.short}
+                               </div>
+                             );
+                           })()}
                          </div>
                        )}
                     </div>
@@ -587,11 +646,14 @@ export default function Catalog() {
                                         🔋 BATERÍA: {extractBattery(selectedProduct.name, selectedProduct.description)}
                                     </div>
                                 )}
-                                {selectedProduct.warrantyMonths && (
-                                    <div className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                        🛡️ GARANTÍA: {selectedProduct.warrantyMonths} MESES
-                                    </div>
-                                )}
+                                {(() => {
+                                    const warranty = getProductWarranty(selectedProduct);
+                                    return (
+                                        <div className={cn("px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xs", warranty.badgeColor)}>
+                                            {warranty.short}
+                                        </div>
+                                    );
+                                })()}
                             </div>
                              <div className="flex flex-col gap-1 mb-6 sm:mb-8">
                                 {(selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) && (
@@ -653,7 +715,23 @@ export default function Catalog() {
                            </div>
                            
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {selectedProduct.warrantyMonths && (
+                                {(() => {
+                                     const warranty = getProductWarranty(selectedProduct);
+                                     return (
+                                         <div className="p-5 bg-muted/20 rounded-2xl border border-border/50 flex flex-col gap-3">
+                                             <div className="flex items-center gap-2 text-[#f15a24]">
+                                                 <ShieldCheck className="w-5 h-5 animate-pulse" />
+                                                 <span className="text-[10px] font-black uppercase tracking-widest">Garantía del Equipo</span>
+                                             </div>
+                                             <div>
+                                                 <p className="text-base font-black text-foreground leading-none uppercase">{warranty.long}</p>
+                                                 <p className="text-[10px] text-muted-foreground font-medium mt-1.5 leading-normal">{warranty.description}</p>
+                                             </div>
+                                         </div>
+                                     );
+                                 })() && (
+                                     null
+                                 ) && (
                                     <div className="p-5 bg-muted/20 rounded-2xl border border-border/50 flex flex-col gap-3">
                                         <div className="flex items-center gap-2 text-primary">
                                             <ShieldCheck className="w-5 h-5" />

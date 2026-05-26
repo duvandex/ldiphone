@@ -21,6 +21,7 @@ export default function Catalog() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [lightbox, setLightbox] = useState<{
     isOpen: boolean;
     images: string[];
@@ -477,36 +478,54 @@ export default function Catalog() {
 
       {/* Product View Modal */}
       <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-         <DialogContent className="sm:max-w-5xl h-[90vh] sm:h-auto p-0 overflow-hidden border-none rounded-[2rem] md:rounded-[2.5rem] gap-0 shadow-2xl">
+         <DialogContent className="sm:max-w-5xl h-[92vh] sm:h-auto p-0 overflow-hidden border-none rounded-[2rem] md:rounded-[2.5rem] gap-0 shadow-2xl">
             <DialogHeader className="sr-only">
                 <DialogTitle>{selectedProduct?.name}</DialogTitle>
             </DialogHeader>
             {selectedProduct && (
-                <div className="flex flex-col md:flex-row h-full max-h-[90vh] md:max-h-[80vh]">
+                <div className="flex flex-col md:flex-row h-full max-h-[92vh] md:max-h-[80vh]">
                     {/* Image Gallery */}
-                    <div className="w-full md:w-1/2 bg-white relative group flex flex-col md:flex-row border-r border-border/50">
+                    <div className="w-full md:w-1/2 bg-white relative group flex flex-col md:flex-row border-b md:border-b-0 md:border-r border-border/50 shrink-0">
                         {/* Thumbnails */}
                         {selectedProduct.images && selectedProduct.images.length > 1 && (
-                            <div className="p-3 bg-slate-50/50 flex md:flex-col gap-2.5 overflow-x-auto md:overflow-y-auto no-scrollbar order-2 md:order-1 select-none w-full md:w-24 shrink-0 border-t md:border-t-0 md:border-r border-border/50 min-h-[80px]">
+                            <div className="p-2 sm:p-3 bg-slate-50/50 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto no-scrollbar order-2 md:order-1 select-none w-full md:w-24 shrink-0 border-t md:border-t-0 md:border-r border-border/50 min-h-[66px] sm:min-h-[80px] items-center justify-center md:justify-start">
                                 {selectedProduct.images.map((img, i) => (
                                     <button 
                                         key={i} 
                                         onClick={() => setActiveImageIndex(i)}
                                         onMouseEnter={() => setActiveImageIndex(i)}
                                         className={cn(
-                                            "w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border-2 transition-all p-0.5 shrink-0 bg-white shadow-xs focus:outline-none",
-                                            activeImageIndex === i ? "border-slate-800 dark:border-slate-200 scale-105" : "border-slate-200 hover:border-slate-400 dark:border-slate-700 opacity-60 hover:opacity-100"
+                                            "w-11 h-11 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-lg sm:rounded-xl overflow-hidden border-2 transition-all p-0.5 shrink-0 bg-white shadow-xs focus:outline-none",
+                                            activeImageIndex === i ? "border-slate-800 dark:border-slate-200 scale-105" : "border-slate-100 hover:border-slate-300 dark:border-slate-700 opacity-60 hover:opacity-100"
                                         )}
                                         aria-label={`Ver imagen ${i + 1}`}
                                     >
-                                        <img src={getOptimizedUrl(img, 200, 200)} className="w-full h-full object-contain rounded-lg bg-slate-50/20" alt="" />
+                                        <img src={getOptimizedUrl(img, 200, 200)} className="w-full h-full object-contain rounded-md bg-slate-50/20" alt="" />
                                     </button>
                                 ))}
                             </div>
                         )}
 
                         {/* Main Stage */}
-                        <div className="flex-1 w-full relative overflow-hidden bg-white flex items-center justify-center min-h-[250px] sm:min-h-[450px] p-4 sm:p-6 order-1 md:order-2">
+                        <div 
+                            className="flex-1 w-full relative overflow-hidden bg-white flex items-center justify-center min-h-[220px] sm:min-h-[450px] p-4 sm:p-6 order-1 md:order-2 touch-pan-y"
+                            onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+                            onTouchEnd={(e) => {
+                                if (touchStartX === null) return;
+                                const touchEndX = e.changedTouches[0].clientX;
+                                const diff = touchStartX - touchEndX;
+                                if (Math.abs(diff) > 40) { // swipe threshold
+                                    if (diff > 0) {
+                                        // Swipe Left (Next Image)
+                                        setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0);
+                                    } else {
+                                        // Swipe Right (Prev Image)
+                                        setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1);
+                                    }
+                                }
+                                setTouchStartX(null);
+                            }}
+                        >
                             <AnimatePresence mode="wait">
                                 <motion.img 
                                     key={activeImageIndex}
@@ -515,7 +534,7 @@ export default function Catalog() {
                                     exit={{ opacity: 0, scale: 1.05 }}
                                     transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
                                     src={getOptimizedUrl(selectedProduct.images?.[activeImageIndex] || '', 1200, 1200, 'fit')} 
-                                    className="mx-auto block max-w-[85%] max-h-[220px] sm:max-h-[420px] md:max-h-[480px] w-auto h-auto object-contain cursor-zoom-in drop-shadow-sm hover:scale-[1.02] active:scale-95 transition-all duration-300 pointer-events-auto select-none"
+                                    className="mx-auto block max-w-[85%] max-h-[190px] sm:max-h-[420px] md:max-h-[480px] w-auto h-auto object-contain cursor-zoom-in drop-shadow-sm hover:scale-[1.02] active:scale-95 transition-all duration-300 pointer-events-auto select-none"
                                     alt={selectedProduct.name}
                                     onClick={() => {
                                         setLightbox({
@@ -532,15 +551,15 @@ export default function Catalog() {
                                 <>
                                     <button 
                                         onClick={() => setActiveImageIndex(prev => prev > 0 ? prev - 1 : selectedProduct.images!.length - 1)}
-                                        className="absolute left-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
+                                        className="absolute left-2.5 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 bg-white/90 dark:bg-slate-900/90 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
                                     >
-                                        <ChevronLeft className="w-5 h-5" />
+                                        <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </button>
                                     <button 
                                         onClick={() => setActiveImageIndex(prev => prev < selectedProduct.images!.length - 1 ? prev + 1 : 0)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-white/80 dark:bg-slate-900/80 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-2 sm:p-2.5 bg-white/90 dark:bg-slate-900/90 hover:bg-white dark:hover:bg-slate-900 active:scale-90 rounded-full text-slate-800 dark:text-slate-100 transition-all shadow-md z-10 border border-slate-200/50"
                                     >
-                                        <ChevronRight className="w-5 h-5" />
+                                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                                     </button>
                                 </>
                             )}
@@ -548,62 +567,62 @@ export default function Catalog() {
                     </div>
 
                     {/* Details */}
-                    <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col bg-card overflow-y-auto custom-scrollbar">
-                        <div className="mb-8">
+                    <div className="w-full md:w-1/2 p-5 sm:p-8 md:p-12 flex flex-col flex-1 bg-card overflow-y-auto custom-scrollbar">
+                        <div className="mb-6 sm:mb-8">
                             <Badge className={cn(
-                                "border-none text-[9px] font-black uppercase tracking-[0.2em] mb-4 px-4 py-1.5 rounded-full shadow-sm",
+                                "border-none text-[9px] font-black uppercase tracking-[0.2em] mb-3 px-4 py-1.5 rounded-full shadow-sm w-fit",
                                 selectedProduct.status === 'reserved' ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"
                             )}>
                                 {selectedProduct.status === 'reserved' ? 'EQUIPO SEPARADO' : 'STOCK DISPONIBLE'}
                             </Badge>
-                            <h2 className="text-4xl font-black text-foreground tracking-tighter leading-none mb-4">{selectedProduct.name}</h2>
-                            <div className="flex flex-wrap gap-2 mb-4">
+                            <h2 className="text-2xl sm:text-4xl font-black text-foreground tracking-tighter leading-tight mb-3">{selectedProduct.name}</h2>
+                            <div className="flex flex-wrap gap-1.5 mb-4">
                                 {extractGB(selectedProduct.name, selectedProduct.description) && (
-                                    <div className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <div className="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                                         💾 CAPACIDAD: {extractGB(selectedProduct.name, selectedProduct.description)}
                                     </div>
                                 )}
                                 {extractBattery(selectedProduct.name, selectedProduct.description) && (
-                                    <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <div className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                                         🔋 BATERÍA: {extractBattery(selectedProduct.name, selectedProduct.description)}
                                     </div>
                                 )}
                                 {selectedProduct.warrantyMonths && (
-                                    <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <div className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
                                         🛡️ GARANTÍA: {selectedProduct.warrantyMonths} MESES
                                     </div>
                                 )}
                             </div>
-                             <div className="flex flex-col gap-1 mb-8">
+                             <div className="flex flex-col gap-1 mb-6 sm:mb-8">
                                 {(selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) && (
-                                    <div className="flex flex-col gap-2 mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <Badge className="bg-[#f15a24] text-white border-none text-[12px] font-black px-3 py-1 rounded-sm">
+                                    <div className="flex flex-col gap-1.5 mb-3 sm:mb-4">
+                                        <div className="flex items-center gap-2">
+                                            <Badge className="bg-[#f15a24] text-white border-none text-[10px] sm:text-[12px] font-black px-2.5 py-0.5 rounded-xs">
                                                 OFERTA ESPECIAL
                                             </Badge>
-                                            <span className="text-[10px] font-black text-[#f15a24] uppercase tracking-widest animate-pulse">¡Ahorras el {Math.round(((selectedProduct.regularPrice! - selectedProduct.salePrice!) / selectedProduct.regularPrice!) * 100)}%!</span>
+                                            <span className="text-[9px] sm:text-[10px] font-black text-[#f15a24] uppercase tracking-widest animate-pulse">¡Ahorras el {Math.round(((selectedProduct.regularPrice! - selectedProduct.salePrice!) / selectedProduct.regularPrice!) * 100)}%!</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-black text-slate-400 uppercase tracking-widest">Precio Anterior:</span>
-                                            <span className="text-2xl font-bold text-slate-300 line-through">{fmt(selectedProduct.regularPrice || 0)}</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Precio Anterior:</span>
+                                            <span className="text-lg sm:text-2xl font-bold text-slate-300 line-through">{fmt(selectedProduct.regularPrice || 0)}</span>
                                         </div>
                                     </div>
                                 )}
                                 <div className="flex flex-col">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 mb-2">Precio de Hoy</span>
-                                    <div className="flex items-start gap-4">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 mb-1">Precio de Hoy</span>
+                                    <div className="flex flex-wrap items-center gap-3">
                                         <div className={cn(
-                                            "text-6xl sm:text-8xl font-black tracking-tighter leading-none",
+                                            "text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter leading-none",
                                             (selectedProduct.regularPrice || 0) > (selectedProduct.salePrice || 0) ? "text-[#f15a24]" : "text-slate-900"
                                         )}>
                                             {fmt(selectedProduct.salePrice || 0)}
                                         </div>
                                         {selectedProduct.status === 'stock' && (
-                                            <div className="flex flex-col gap-2 pt-2">
-                                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black px-3">DISPONIBILIDAD INMEDIATA</Badge>
-                                                <div className="flex items-center gap-1.5 pl-2">
-                                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                                    <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600">Certificado Apple</span>
+                                            <div className="flex flex-col gap-1 pt-1">
+                                                <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 text-[8px] sm:text-[10px] font-black px-2 py-0.5">DISPONIBILIDAD INMEDIATA</Badge>
+                                                <div className="flex items-center gap-1 pl-1.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600">Certificado Apple</span>
                                                 </div>
                                             </div>
                                         )}
@@ -612,10 +631,10 @@ export default function Catalog() {
                             </div>
                             
                             {selectedProduct.status === 'reserved' && (
-                                <div className="mt-4 p-4 bg-orange-50 rounded-2xl border border-orange-100 flex items-start gap-3">
-                                    <ShieldCheck className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                <div className="mt-3 p-3.5 bg-orange-50 rounded-2xl border border-orange-100 flex items-start gap-2.5">
+                                    <ShieldCheck className="w-4.5 h-4.5 text-orange-500 shrink-0 mt-0.5" />
                                     <div>
-                                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-none mb-1">Estado de Reserva</p>
+                                        <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest leading-none mb-1">Estado de Reserva</p>
                                         <p className="text-xs font-bold text-orange-700 leading-tight">Este equipo ya cuenta con un abono inicial y está siendo procesado para entrega.</p>
                                     </div>
                                 </div>
@@ -659,28 +678,28 @@ export default function Catalog() {
                            </div>
                         </div>
 
-                        <div className="pt-10 space-y-4">
+                        <div className="pt-6 sm:pt-10 space-y-3.5">
                             <Button 
                                 onClick={() => addToCart(selectedProduct)}
-                                className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center gap-4 font-black uppercase text-sm tracking-widest shadow-2xl shadow-slate-900/20 transition-all active:scale-[0.98]"
+                                className="w-full h-14 sm:h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-xs sm:text-sm tracking-widest shadow-2xl shadow-slate-900/20 transition-all active:scale-[0.98]"
                             >
-                                <ShoppingBag className="w-6 h-6" />
+                                <ShoppingBag className="w-5.5 h-5.5 sm:w-6 sm:h-6" />
                                 AÑADIR AL CARRITO
                             </Button>
                             <a 
                                 href={getWhatsAppLink(selectedProduct)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="w-full h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center gap-4 font-black uppercase text-sm tracking-widest shadow-2xl shadow-emerald-600/30 transition-all active:scale-[0.98] group"
+                                className="w-full h-14 sm:h-16 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl flex items-center justify-center gap-3 font-black uppercase text-xs sm:text-sm tracking-widest shadow-2xl shadow-emerald-600/30 transition-all active:scale-[0.98] group"
                             >
-                                <svg viewBox="0 0 24 24" className="w-6 h-6 fill-white group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg">
+                                <svg viewBox="0 0 24 24" className="w-5.5 h-5.5 sm:w-6 sm:h-6 fill-white group-hover:scale-110 transition-transform" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                                 </svg>
                                 COMPRAR POR WHATSAPP
                             </a>
                             <button 
                                 onClick={() => setSelectedProduct(null)}
-                                className="w-full h-14 bg-muted hover:bg-muted/80 text-muted-foreground rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-[0.2em] transition-colors"
+                                className="w-full h-12 bg-muted hover:bg-muted/80 text-muted-foreground rounded-2xl flex items-center justify-center font-black uppercase text-[10px] tracking-[0.2em] transition-colors"
                             >
                                 SEGUIR NAVEGANDO
                             </button>
@@ -841,11 +860,35 @@ export default function Catalog() {
             </div>
 
             {/* Big Resizing / Zoom Stage */}
-            <div className="flex-1 w-full max-w-5xl flex items-center justify-center relative my-4">
+            <div 
+              className="flex-1 w-full max-w-5xl flex items-center justify-center relative my-4 touch-pan-y"
+              onTouchStart={(e) => setTouchStartX(e.touches[0].clientX)}
+              onTouchEnd={(e) => {
+                if (touchStartX === null) return;
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = touchStartX - touchEndX;
+                if (Math.abs(diff) > 40) {
+                  if (diff > 0) {
+                    // Swipe Left (Next Image)
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex < prev.images.length - 1 ? prev.currentIndex + 1 : 0
+                    }));
+                  } else {
+                    // Swipe Right (Prev Image)
+                    setLightbox(prev => ({
+                      ...prev,
+                      currentIndex: prev.currentIndex > 0 ? prev.currentIndex - 1 : prev.images.length - 1
+                    }));
+                  }
+                }
+                setTouchStartX(null);
+              }}
+            >
               {lightbox.images.length > 1 && (
                 <button 
                   type="button"
-                  className="absolute left-2 sm:left-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  className="absolute left-2 sm:left-6 z-20 p-2 text-white bg-white/10 active:scale-95 rounded-full backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all pointer-events-auto"
                   onClick={(e) => {
                     e.stopPropagation();
                     setLightbox(prev => ({
@@ -854,7 +897,7 @@ export default function Catalog() {
                     }));
                   }}
                 >
-                  <ChevronLeft className="w-6 h-6" />
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               )}
 
@@ -865,7 +908,7 @@ export default function Catalog() {
                 exit={{ scale: 1.05, opacity: 0 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
                 src={lightbox.images[lightbox.currentIndex]} 
-                className="mx-auto block max-w-[85%] sm:max-w-full max-h-[60vh] sm:max-h-[80vh] w-auto h-auto object-contain transition-all duration-300 drop-shadow-[0_25px_50px_rgba(0,0,0,0.8)] rounded-xl pointer-events-auto" 
+                className="mx-auto block max-w-[92%] sm:max-w-full max-h-[65vh] sm:max-h-[80vh] w-auto h-auto object-contain transition-all duration-300 drop-shadow-[0_25px_50px_rgba(0,0,0,0.8)] rounded-xl pointer-events-auto" 
                 alt="Expanded catalog view"
                 onClick={(e) => e.stopPropagation()} 
               />
@@ -873,7 +916,7 @@ export default function Catalog() {
               {lightbox.images.length > 1 && (
                 <button 
                   type="button"
-                  className="absolute right-2 sm:right-6 z-20 p-4 bg-white/10 hover:bg-white/20 active:scale-90 rounded-full text-white transition-all shadow-lg pointer-events-auto"
+                  className="absolute right-2 sm:right-6 z-20 p-2 text-white bg-white/10 active:scale-95 rounded-full backdrop-blur-md border border-white/10 hover:bg-white/20 transition-all pointer-events-auto"
                   onClick={(e) => {
                     e.stopPropagation();
                     setLightbox(prev => ({
@@ -882,7 +925,7 @@ export default function Catalog() {
                     }));
                   }}
                 >
-                  <ChevronRight className="w-6 h-6" />
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               )}
             </div>

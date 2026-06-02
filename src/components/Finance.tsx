@@ -221,6 +221,7 @@ export default function Finance() {
     'Banco de Bogota': <Landmark className="w-4 h-4 text-slate-800" />,
     'Efectivo': <Banknote className="w-4 h-4 text-emerald-600" />,
     'Cripto (USDT)': <Bitcoin className="w-4 h-4 text-orange-500" />,
+    'Deudores': <Users className="w-4 h-4 text-amber-500" />,
   };
 
   return (
@@ -340,6 +341,16 @@ export default function Finance() {
             } as FinancialAccount;
           });
 
+          if (investor === 'Duvan') {
+            accountsToRender.push({
+              id: 'Duvan-Deudores',
+              investor: 'Duvan',
+              method: 'Deudores' as any,
+              name: 'Deudores',
+              balance: totalDebts
+            });
+          }
+
           const investorProducts = filteredData.soldInPeriod.filter(p => 
             p.investor === investor || 
             (p.coInvestors && p.coInvestors.some(co => co.investor === investor))
@@ -414,23 +425,25 @@ export default function Finance() {
                 </Card>
 
                 {/* Investor Accounts */}
-                <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-5 gap-2">
+                <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
                   {accountsToRender.map(acc => (
                     <div key={acc.id} className="p-3 bg-card border border-border rounded-lg shadow-sm group relative flex flex-col justify-between">
                       <div className="flex justify-between items-start">
                         {accountIcons[acc.method]}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            setSelectedAccount(acc);
-                            setNewBalance(acc.balance);
-                            setIsAdjustOpen(true);
-                          }}
-                        >
-                          <Pencil className="w-3 h-3 text-muted-foreground" />
-                        </Button>
+                        {acc.method !== 'Deudores' && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                              setSelectedAccount(acc);
+                              setNewBalance(acc.balance);
+                              setIsAdjustOpen(true);
+                            }}
+                          >
+                            <Pencil className="w-3 h-3 text-muted-foreground" />
+                          </Button>
+                        )}
                       </div>
                       <div className="mt-1">
                         <div className="text-[10px] font-bold text-muted-foreground uppercase truncate">{acc.method}</div>

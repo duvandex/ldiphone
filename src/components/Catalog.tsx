@@ -145,6 +145,53 @@ export default function Catalog() {
     await updateSettings({ paymentMethods: currentMethods });
   };
 
+  const renderPaymentCard = (index: number, classNames?: string) => {
+    const imageUrl = data.settings.paymentMethods?.[index];
+    return (
+      <div key={index} className={cn("relative group shrink-0", classNames)}>
+        <div className={cn(
+          "w-36 h-18 sm:w-44 sm:h-22 md:w-52 md:h-26 lg:w-64 lg:h-32 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all duration-300 shadow-sm bg-card/50",
+          imageUrl ? "border-transparent bg-card hover:shadow-md" : "border-border bg-muted/20"
+        )}>
+          {imageUrl ? (
+            <img src={imageUrl} alt={`Pago ${index + 1}`} className="w-full h-full object-contain p-2 sm:p-3 lg:p-4" referrerPolicy="no-referrer" />
+          ) : (
+            <div className="flex flex-col items-center gap-0.5 opacity-20 text-foreground">
+              <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8" />
+              <span className="text-[7px] sm:text-[9px] font-black uppercase tracking-widest text-center">Disponible</span>
+            </div>
+          )}
+        </div>
+
+        {isAuthenticated && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl gap-2 backdrop-blur-sm">
+            <button 
+              onClick={() => handlePaymentImageUpload(index)}
+              className="p-1.5 sm:p-2 bg-white rounded-full text-slate-900 hover:scale-110 transition-transform shadow-lg"
+              disabled={isUploading === index}
+            >
+              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+            </button>
+            {imageUrl && (
+              <button 
+                onClick={() => removePaymentImage(index)}
+                className="p-1.5 sm:p-2 bg-rose-500 rounded-full text-white hover:scale-110 transition-transform shadow-lg"
+              >
+                <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
+              </button>
+            )}
+          </div>
+        )}
+        
+        {isUploading === index && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
+            <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent animate-spin rounded-full" />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const publicProducts = React.useMemo(() => {
     if (!data.products) return [];
     return data.products
@@ -270,89 +317,58 @@ export default function Catalog() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative bg-card pt-2 sm:pt-16 pb-4 sm:pb-24 overflow-hidden border-b border-border">
+      <section className="relative bg-card pt-3 sm:pt-6 pb-4 sm:pb-8 overflow-hidden border-b border-border">
         <div className="absolute inset-0 z-0 opacity-40">
            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-muted/20 rounded-full translate-x-1/2 -translate-y-1/2"></div>
            <div className="absolute bottom-0 left-0 w-[800px] h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center text-center space-y-2 sm:space-y-6"
-          >
-            <Badge variant="outline" className="rounded-full border-border bg-card px-2 sm:px-4 py-0 sm:py-1 text-[7px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
-               Catálogo Premium 2026
-            </Badge>
-            <h2 className="text-lg sm:text-7xl font-black tracking-tighter text-foreground leading-[1.1] sm:leading-none">
-              Tu próximo dispositivo.<br className="hidden sm:block"/>
-              <span className="text-muted-foreground/30 sm:ml-4">Sin complicaciones.</span>
-            </h2>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-8">
+            
+            {/* Left Payment (Payment Method 1) - Desktop Only */}
+            <div className="hidden md:flex flex-col items-center gap-1.5 shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Pago 1</span>
+              {renderPaymentCard(0)}
+            </div>
 
-            <p className="max-w-xl text-muted-foreground font-medium text-[10px] sm:text-xl leading-relaxed opacity-80 sm:opacity-100 hidden sm:block">
-              Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
-            </p>
+            {/* Title / Info - Centered */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex-1 flex flex-col items-center text-center space-y-2 sm:space-y-3"
+            >
+              <Badge variant="outline" className="rounded-full border-border bg-card px-2 sm:px-4 py-0 sm:py-1 text-[7px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground shadow-sm shadow-muted">
+                 Catálogo Premium 2026
+              </Badge>
+              <h2 className="text-xs sm:text-xl lg:text-2xl font-black tracking-tighter text-foreground leading-[1.1] sm:leading-none">
+                Tu próximo dispositivo.<br className="hidden sm:block"/>
+                <span className="text-muted-foreground/30 sm:ml-4">Sin complicaciones.</span>
+              </h2>
+              <p className="max-w-sm text-muted-foreground font-medium text-[9px] sm:text-xs leading-relaxed opacity-85 hidden sm:block">
+                Explora nuestra colección selecta de dispositivos con garantía extendida y soporte personalizado. Calidad Apple garantizada.
+              </p>
+            </motion.div>
 
-            <div className="pt-4 sm:pt-12 w-full max-w-4xl hidden sm:block">
-              <div className="flex flex-col items-center gap-6">
-                <div className="flex items-center gap-4 w-full">
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent to-border"></div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground whitespace-nowrap">Medios de Pago</span>
-                  <div className="h-px flex-1 bg-gradient-to-l from-transparent to-border"></div>
-                </div>
-                
-                <div className="flex flex-wrap justify-center gap-6">
-                  {[0, 1].map((index) => {
-                    const imageUrl = data.settings.paymentMethods?.[index];
-                    return (
-                      <div key={index} className="relative group">
-                        <div className={cn(
-                          "w-40 h-20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all",
-                          imageUrl ? "border-transparent bg-card shadow-sm" : "border-border bg-muted/20"
-                        )}>
-                          {imageUrl ? (
-                            <img src={imageUrl} alt={`Pago ${index + 1}`} className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
-                          ) : (
-                            <div className="flex flex-col items-center gap-2 opacity-20 text-foreground">
-                              <CreditCard className="w-6 h-6" />
-                              <span className="text-[8px] font-black uppercase tracking-widest">Disponible</span>
-                            </div>
-                          )}
-                        </div>
+            {/* Right Payment (Payment Method 2) - Desktop Only */}
+            <div className="hidden md:flex flex-col items-center gap-1.5 shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Pago 2</span>
+              {renderPaymentCard(1)}
+            </div>
 
-                        {isAuthenticated && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl gap-2 backdrop-blur-sm">
-                            <button 
-                              onClick={() => handlePaymentImageUpload(index)}
-                              className="p-2 bg-white rounded-full text-slate-900 hover:scale-110 transition-transform shadow-lg"
-                              disabled={isUploading === index}
-                            >
-                              <Camera className="w-4 h-4" />
-                            </button>
-                            {imageUrl && (
-                              <button 
-                                onClick={() => removePaymentImage(index)}
-                                className="p-2 bg-rose-500 rounded-full text-white hover:scale-110 transition-transform shadow-lg"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        
-                        {isUploading === index && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-white/80 rounded-2xl">
-                            <div className="w-4 h-4 border-2 border-slate-900 border-t-transparent animate-spin rounded-full" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+          </div>
+
+          {/* Payment Methods - Mobile/Tablet Only */}
+          <div className="md:hidden mt-4 pt-4 border-t border-border/40">
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-[8px] font-black uppercase tracking-[0.3em] text-muted-foreground/50">Medios de Pago</span>
+              <div className="flex justify-center gap-3 w-full animate-fade-in">
+                {renderPaymentCard(0)}
+                {renderPaymentCard(1)}
               </div>
             </div>
-          </motion.div>
+          </div>
+
         </div>
       </section>
 

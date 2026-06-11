@@ -6,11 +6,12 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Receipt, Download, Pencil, Trash2, Copy, Search, Filter, TrendingUp, ShoppingBag, Hash } from 'lucide-react';
+import { Receipt, Download, Pencil, Trash2, Copy, Search, Filter, TrendingUp, ShoppingBag, Hash, Users } from 'lucide-react';
 import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
-import { Product, PaymentMethod } from '../types';
+import { Product, PaymentMethod, Investor } from '../types';
+import { motion } from 'motion/react';
 
 type TimePeriod = 'hoy' | 'semana' | 'mes' | 'año' | 'todo';
 
@@ -23,6 +24,7 @@ export default function Sales() {
   const [editingSale, setEditingSale] = useState<Product | null>(null);
   const [isUndoOpen, setIsUndoOpen] = useState(false);
   const [undoId, setUndoId] = useState<string | null>(null);
+  const [showInvestorProfitability, setShowInvestorProfitability] = useState(false);
 
   const periodOptions: { value: TimePeriod; label: string }[] = [
     { value: 'hoy', label: 'Hoy' },
@@ -74,6 +76,43 @@ export default function Sales() {
     const total = soldProducts.reduce((acc, p) => acc + ((p.salePrice || 0) * (p.quantity || 1)), 0);
     const profit = soldProducts.reduce((acc, p) => acc + (((p.salePrice || 0) - p.purchasePrice) * (p.quantity || 1)), 0);
     return { total, profit, count: soldProducts.length };
+  }, [soldProducts]);
+
+  const investorsList: Investor[] = ['Duvan', 'Lina', 'Santiago', 'Johana', 'Pool', 'Santa Maria', 'Thomas'];
+
+  const investorProfitability = React.useMemo(() => {
+    return investorsList.map(inv => {
+      let salesTotal = 0;
+      let costTotal = 0;
+      let profitTotal = 0;
+      let qtyTotal = 0;
+
+      soldProducts.forEach(p => {
+        const share = p.coInvestors && p.coInvestors.length > 0
+          ? (p.coInvestors.find(co => co.investor === inv)?.percentage || 0) / 100
+          : (p.investor === inv ? 1 : 0);
+
+        if (share > 0) {
+          const qty = p.quantity || 1;
+          const purchaseVal = p.purchasePrice * share * qty;
+          const saleVal = (p.salePrice || 0) * share * qty;
+          const profitVal = (saleVal - purchaseVal);
+
+          qtyTotal += qty * share;
+          salesTotal += saleVal;
+          costTotal += purchaseVal;
+          profitTotal += profitVal;
+        }
+      });
+
+      return {
+        investor: inv,
+        sales: salesTotal,
+        cost: costTotal,
+        profit: profitTotal,
+        quantity: qtyTotal
+      };
+    }).filter(item => item.sales > 0 || item.cost > 0 || item.profit !== 0);
   }, [soldProducts]);
 
   const handleUpdateSale = () => {
@@ -178,6 +217,72 @@ export default function Sales() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Rentabilidad por Persona Section */}
+      <div className="bg-card border border-border/80 rounded-2xl p-4 sm:p-5 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">Rentabilidad por Persona</h3>
+              <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider">Distribución proporcional de ganancias según aportes en {period}</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowInvestorProfitability(!showInvestorProfitability)}
+            className="text-[10px] font-black uppercase tracking-widest border-border h-9 rounded-xl px-4 shrink-0"
+          >
+            {showInvestorProfitability ? "Ocultar Rentabilidad" : "Ver Rentabilidad"}
+          </Button>
+        </div>
+
+        {showInvestorProfitability && (
+          <div className="pt-5 mt-4 border-t border-border">
+            {investorProfitability.length === 0 ? (
+              <p className="text-center py-6 text-xs font-medium text-muted-foreground">
+                No hay ventas o rentabilidad para los inversores seleccionados en este período.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {investorProfitability.map((item) => (
+                  <div key={item.investor} className="p-4 bg-muted/20 rounded-xl border border-border/60 flex flex-col justify-between">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-black uppercase tracking-wider text-foreground">{item.investor}</span>
+                      <span className="text-[10px] font-mono bg-muted/60 px-2 py-0.5 rounded-full border text-muted-foreground font-bold">
+                        {item.quantity.toFixed(1)} ud
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 mt-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">Ventas:</span>
+                        <span className="font-semibold text-foreground">{fmt(item.sales)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-medium">Inversión (Costo):</span>
+                        <span className="font-semibold text-foreground">{fmt(item.cost)}</span>
+                      </div>
+                      <div className="h-px bg-border/50 my-1"></div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground font-bold">Ganancia:</span>
+                        <span className={cn(
+                          "font-black font-mono",
+                          item.profit >= 0 ? "text-emerald-600" : "text-rose-600"
+                        )}>
+                          {fmt(item.profit)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center">

@@ -3,7 +3,7 @@ import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
-import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send, Tablet, Watch, Headphones, CreditCard } from 'lucide-react';
+import { Search, ShoppingBag, Camera, Menu, ShieldCheck, LayoutDashboard, ChevronRight, Apple, Smartphone, X, ChevronLeft, Send, Tablet, Watch, Headphones, CreditCard, MessageCircle } from 'lucide-react';
 import { useData } from '../context/AppDataContext';
 import { useCloudinary } from '../hooks/useCloudinary';
 import { fmt, cn, extractGB, extractBattery } from '../lib/utils';
@@ -857,7 +857,7 @@ export default function Catalog() {
          <motion.button 
            initial={{ scale: 0, opacity: 0 }}
            animate={{ scale: 1, opacity: 1 }}
-           className="fixed bottom-6 right-6 z-40 sm:hidden w-16 h-16 bg-primary text-primary-foreground rounded-2xl shadow-2xl flex items-center justify-center"
+           className="fixed bottom-24 right-6 z-40 sm:hidden w-16 h-16 bg-primary text-primary-foreground rounded-2xl shadow-2xl flex items-center justify-center"
            onClick={() => setIsCartOpen(true)}
          >
             <ShoppingBag className="w-6 h-6" />
@@ -866,6 +866,25 @@ export default function Catalog() {
             </span>
          </motion.button>
       )}
+
+      {/* Floating WhatsApp Button */}
+      <motion.a
+        href="https://wa.me/573012949934?text=Hola!%20Vengo%20desde%20el%20catálogo%20y%20me%20gustaría%20recibir%20asesoría%20sobre%20sus%20equipos."
+        target="_blank"
+        rel="noopener noreferrer"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-6 right-6 z-40 w-14 h-14 sm:w-16 sm:h-16 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-2xl transition-colors duration-300 pointer-events-auto"
+        id="whatsapp-floating-button"
+      >
+        <MessageCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+        <span className="absolute -top-1 -right-1 flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+        </span>
+      </motion.a>
 
       {/* Trust Banner */}
       <section className="bg-muted/30 py-16 border-t border-border">

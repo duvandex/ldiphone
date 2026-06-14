@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
-import { AppData, Product, Debtor, Liability, Expense, Investor, PaymentMethod, FinancialAccount } from '../types';
+import { AppData, Product, Debtor, Liability, Expense, Investor, PaymentMethod, FinancialAccount, CryptoTransaction } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_DEBTORS, INITIAL_LIABILITIES } from '../constants';
 
 export function useAppData() {
@@ -28,6 +28,7 @@ export function useAppData() {
     invoiceCounter: 15,
     accounts: [],
     expenses: [],
+    cryptoTransactions: [],
     settings: {
       companyName: 'LDIPHONE',
       warrantyTerms: 'La garantía cubre defectos de fábrica. No cubre daños por humedad, golpes o mal uso.',
@@ -155,11 +156,18 @@ export function useAppData() {
       setIsQuotaExceeded(false);
     }, handleQuotaError);
 
+    const unsubCrypto = onSnapshot(collection(db, 'crypto_transactions'), (snapshot) => {
+      const cryptoTransactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CryptoTransaction));
+      setData(prev => ({ ...prev, cryptoTransactions }));
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
+
     return () => {
       unsubDebtors && unsubDebtors();
       unsubLiabilities && unsubLiabilities();
       unsubAccounts && unsubAccounts();
       unsubExpenses && unsubExpenses();
+      unsubCrypto && unsubCrypto();
       unsubSettings && unsubSettings();
     };
   }, [user]);
@@ -904,6 +912,23 @@ export function useAppData() {
     }
   };
 
+  const addCryptoTransaction = async (tx: Omit<CryptoTransaction, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      await setDoc(doc(db, 'crypto_transactions', id), { ...tx, id });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'crypto_transactions');
+    }
+  };
+
+  const deleteCryptoTransaction = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'crypto_transactions', id));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `crypto_transactions/${id}`);
+    }
+  };
+
   return React.useMemo(() => ({
     data,
     user,
@@ -922,6 +947,8 @@ export function useAppData() {
     updateLiability,
     addExpense,
     deleteExpense,
+    addCryptoTransaction,
+    deleteCryptoTransaction,
     updateAccountBalance,
     updateSettings,
     generateInvoiceNumber,

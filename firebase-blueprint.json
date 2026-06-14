@@ -79,6 +79,22 @@
       },
       "required": ["creditor", "totalAmount", "status"]
     },
+    "CryptoTransaction": {
+      "title": "Crypto Transaction",
+      "description": "Represents a purchase of BTC or ETH",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cryptocurrency": { "type": "string", "enum": ["BTC", "ETH"] },
+        "quantity": { "type": "number" },
+        "purchasePriceUsd": { "type": "number" },
+        "purchasePriceCop": { "type": "number" },
+        "date": { "type": "string" },
+        "investor": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["cryptocurrency", "quantity", "purchasePriceUsd", "date", "investor"]
+    },
     "Settings": {
       "title": "Settings",
       "description": "Application wide settings like invoice counter and payment methods",
@@ -114,6 +130,10 @@
     "/liabilities/{liabilityId}": {
       "schema": "Liability",
       "description": "List of liabilities"
+    },
+    "/crypto_transactions/{transactionId}": {
+      "schema": "CryptoTransaction",
+      "description": "BTC and ETH purchase transactions"
     },
     "/app_settings/global": {
       "schema": "Settings",

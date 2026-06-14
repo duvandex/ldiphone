@@ -102,6 +102,17 @@ export interface AppSettings {
   paymentMethods?: string[]; // Cloudinary URLs
 }
 
+export interface CryptoTransaction {
+  id: string;
+  cryptocurrency: 'BTC' | 'ETH';
+  quantity: number;
+  purchasePriceUsd: number;
+  purchasePriceCop?: number;
+  date: string;
+  investor: Investor;
+  notes?: string;
+}
+
 export interface AppData {
   products: Product[];
   debtors: Debtor[];
@@ -110,4 +121,5 @@ export interface AppData {
   accounts: FinancialAccount[];
   expenses: Expense[];
   settings: AppSettings;
+  cryptoTransactions: CryptoTransaction[];
 }

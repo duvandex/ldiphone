@@ -11,7 +11,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && request.auth.token.email == 'duvanmarinj@gmail.com';
+      return isSignedIn() && (
+        request.auth.token.email == 'duvanmarinj@gmail.com' ||
+        request.auth.uid == 'AUzaLFNAVkcfmH482LbpfofYYc33'
+      );
     }
 
     function isValidId(id) {
@@ -41,6 +44,11 @@ service cloud.firestore {
     }
 
     match /liabilities/{liabilityId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /crypto_transactions/{transactionId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // Version: 1.2.0 - Inventory Categories, External Products & Co-Investment Logic
 // Optimized for deployment and automatic change detection.
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon, Coins } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -19,6 +19,7 @@ import Finance from './components/Finance';
 import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
 import Settings from './components/Settings';
+import Crypto from './components/Crypto';
 import { useTheme, ThemeProvider } from './hooks/useTheme';
 import { AppDataProvider, useData } from './context/AppDataContext';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
@@ -143,6 +144,7 @@ function Navigation({ onLogout, user }: { onLogout: () => void, user: any }) {
     { path: '/inventory', label: 'Inventario', icon: Package },
     { path: '/sales', label: 'Ventas', icon: ShoppingCart },
     { path: '/finance', label: 'Cuentas/Gastos', icon: Wallet },
+    { path: '/crypto', label: 'Criptomonedas', icon: Coins },
     { path: '/debtors', label: 'Cuentas x Cobrar', icon: CreditCard },
     { path: '/liabilities', label: 'Pasivos', icon: TrendingDown },
     { path: '/settings', label: 'Configuración', icon: SettingsIcon },
@@ -286,6 +288,9 @@ function AppContent() {
           } />
           <Route path="/finance" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Finance /></AdminLayout>
+          } />
+          <Route path="/crypto" element={
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Crypto /></AdminLayout>
           } />
           <Route path="/debtors" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Debtors /></AdminLayout>

@@ -36,7 +36,7 @@ export default function Crypto() {
 
   // Form state
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedCoin, setSelectedCoin] = useState<'BTC' | 'ETH'>('BTC');
+  const [selectedCoin, setSelectedCoin] = useState<'BTC' | 'ETH' | 'USDT'>('BTC');
   const [quantity, setQuantity] = useState('');
   const [purchasePriceUsd, setPurchasePriceUsd] = useState('');
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
@@ -78,7 +78,8 @@ export default function Crypto() {
   const coinStats = React.useMemo(() => {
     const stats = {
       BTC: { totalQty: 0, totalSpentUsd: 0, avgPriceUsd: 0 },
-      ETH: { totalQty: 0, totalSpentUsd: 0, avgPriceUsd: 0 }
+      ETH: { totalQty: 0, totalSpentUsd: 0, avgPriceUsd: 0 },
+      USDT: { totalQty: 0, totalSpentCop: 0, avgPriceCop: 0, totalSpentUsd: 0, avgPriceUsd: 0 }
     };
 
     transactions.forEach((tx) => {
@@ -86,6 +87,11 @@ export default function Crypto() {
       if (coin === 'BTC' || coin === 'ETH') {
         stats[coin].totalQty += tx.quantity;
         stats[coin].totalSpentUsd += tx.quantity * tx.purchasePriceUsd;
+      } else if (coin === 'USDT') {
+        stats.USDT.totalQty += tx.quantity;
+        const spentCop = tx.quantity * (tx.purchasePriceCop || (tx.purchasePriceUsd * usdtRate));
+        stats.USDT.totalSpentCop += spentCop;
+        stats.USDT.totalSpentUsd += tx.quantity * tx.purchasePriceUsd;
       }
     });
 
@@ -95,24 +101,32 @@ export default function Crypto() {
     if (stats.ETH.totalQty > 0) {
       stats.ETH.avgPriceUsd = stats.ETH.totalSpentUsd / stats.ETH.totalQty;
     }
+    if (stats.USDT.totalQty > 0) {
+      stats.USDT.avgPriceCop = stats.USDT.totalSpentCop / stats.USDT.totalQty;
+      stats.USDT.avgPriceUsd = stats.USDT.totalSpentUsd / stats.USDT.totalQty;
+    }
 
     return stats;
-  }, [transactions]);
+  }, [transactions, usdtRate]);
 
   // General Calculations
   const summary = React.useMemo(() => {
     const btcInvestedUsd = coinStats.BTC.totalSpentUsd;
     const ethInvestedUsd = coinStats.ETH.totalSpentUsd;
-    const totalInvestedUsd = btcInvestedUsd + ethInvestedUsd;
-    const totalInvestedCop = totalInvestedUsd * usdtRate;
+    const usdtInvestedUsd = coinStats.USDT.totalSpentUsd;
+
+    const totalInvestedUsd = btcInvestedUsd + ethInvestedUsd + usdtInvestedUsd;
+    const totalInvestedCop = (btcInvestedUsd + ethInvestedUsd) * usdtRate + coinStats.USDT.totalSpentCop;
 
     const btcCurrentValueUsd = coinStats.BTC.totalQty * livePrices.btc;
     const ethCurrentValueUsd = coinStats.ETH.totalQty * livePrices.eth;
-    const totalCurrentValueUsd = btcCurrentValueUsd + ethCurrentValueUsd;
+    const usdtCurrentValueUsd = coinStats.USDT.totalQty * 1.0; // USDT is pegged to $1 USD
+
+    const totalCurrentValueUsd = btcCurrentValueUsd + ethCurrentValueUsd + usdtCurrentValueUsd;
     const totalCurrentValueCop = totalCurrentValueUsd * usdtRate;
 
     const totalProfitUsd = totalCurrentValueUsd - totalInvestedUsd;
-    const totalProfitCop = totalProfitUsd * usdtRate;
+    const totalProfitCop = totalCurrentValueCop - totalInvestedCop;
     const roiPercentage = totalInvestedUsd > 0 ? (totalProfitUsd / totalInvestedUsd) * 100 : 0;
 
     return {
@@ -130,24 +144,39 @@ export default function Crypto() {
       ethInvestedUsd,
       ethCurrentValueUsd,
       ethProfitUsd: ethCurrentValueUsd - ethInvestedUsd,
-      ethRoi: ethInvestedUsd > 0 ? ((ethCurrentValueUsd - ethInvestedUsd) / ethInvestedUsd) * 100 : 0
+      ethRoi: ethInvestedUsd > 0 ? ((ethCurrentValueUsd - ethInvestedUsd) / ethInvestedUsd) * 100 : 0,
+      usdtInvestedCop: coinStats.USDT.totalSpentCop,
+      usdtCurrentValueCop: coinStats.USDT.totalQty * usdtRate,
+      usdtProfitCop: (coinStats.USDT.totalQty * usdtRate) - coinStats.USDT.totalSpentCop,
+      usdtRoi: coinStats.USDT.totalSpentCop > 0 ? (((coinStats.USDT.totalQty * usdtRate) - coinStats.USDT.totalSpentCop) / coinStats.USDT.totalSpentCop) * 100 : 0
     };
   }, [coinStats, livePrices, usdtRate]);
 
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
     const qty = parseFloat(quantity);
-    const price = parseFloat(purchasePriceUsd);
-    if (!qty || !price || isNaN(qty) || isNaN(price)) {
+    const priceInput = parseFloat(purchasePriceUsd);
+    if (!qty || !priceInput || isNaN(qty) || isNaN(priceInput)) {
       alert("Por favor ingrese cantidad y precio válidos");
       return;
+    }
+
+    let pUsd = 0;
+    let pCop = 0;
+
+    if (selectedCoin === 'USDT') {
+      pCop = priceInput;
+      pUsd = priceInput / usdtRate;
+    } else {
+      pUsd = priceInput;
+      pCop = priceInput * usdtRate;
     }
 
     addCryptoTransaction({
       cryptocurrency: selectedCoin,
       quantity: qty,
-      purchasePriceUsd: price,
-      purchasePriceCop: price * usdtRate,
+      purchasePriceUsd: pUsd,
+      purchasePriceCop: pCop,
       date: purchaseDate,
       investor,
       notes: notes.trim() || ""
@@ -239,6 +268,16 @@ export default function Crypto() {
                       >
                         ETH
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCoin('USDT')}
+                        className={cn(
+                          "flex-1 py-1.5 rounded-lg text-xs font-black transition-all",
+                          selectedCoin === 'USDT' ? "bg-white text-[#26A17B] shadow-sm" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        USDT
+                      </button>
                     </div>
                   </div>
 
@@ -268,11 +307,11 @@ export default function Crypto() {
                       id="quantity"
                       type="number"
                       step="any"
-                      placeholder="0.025"
+                      placeholder={selectedCoin === 'USDT' ? "100" : "0.025"}
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value)}
                       required
-                      className="rounded-xl h-10 pr-12 text-xs border-border pr-12 font-mono font-bold"
+                      className="rounded-xl h-10 pr-12 text-xs border-border font-mono font-bold"
                     />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">
                       {selectedCoin}
@@ -282,23 +321,34 @@ export default function Crypto() {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="price-usd" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                    Precio por Unidad (USD)
+                    {selectedCoin === 'USDT' ? 'Precio por USDT (COP)' : 'Precio por Unidad (USD)'}
                   </Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    {selectedCoin === 'USDT' ? (
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground font-mono">COP$</span>
+                    ) : (
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    )}
                     <Input
                       id="price-usd"
                       type="number"
                       step="any"
-                      placeholder="67500"
+                      placeholder={selectedCoin === 'USDT' ? "4050" : "67500"}
                       value={purchasePriceUsd}
                       onChange={(e) => setPurchasePriceUsd(e.target.value)}
                       required
-                      className="rounded-xl h-10 pl-9 text-xs border-border font-mono font-bold"
+                      className={cn(
+                        "rounded-xl h-10 text-xs border-border font-mono font-bold",
+                        selectedCoin === 'USDT' ? "pl-14" : "pl-9"
+                      )}
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground italic font-semibold">
-                    Equivale aprox a {purchasePriceUsd ? fmt(parseFloat(purchasePriceUsd) * usdtRate) : '$0'} COP (TRM USDT: {fmt(usdtRate)})
+                    {selectedCoin === 'USDT' ? (
+                      `Equivale aprox a $${purchasePriceUsd && !isNaN(parseFloat(purchasePriceUsd)) ? (parseFloat(purchasePriceUsd) / usdtRate).toFixed(4) : '0'} USD por USDT (TRM actual: ${fmt(usdtRate)} COP)`
+                    ) : (
+                      `Equivale aprox a ${purchasePriceUsd && !isNaN(parseFloat(purchasePriceUsd)) ? fmt(parseFloat(purchasePriceUsd) * usdtRate) : '$0'} COP (TRM USDT: {fmt(usdtRate)})`
+                    )}
                   </p>
                 </div>
 
@@ -471,7 +521,7 @@ export default function Crypto() {
       </div>
 
       {/* Coin specifics widgets */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {/* Bitcoin specific */}
         <Card className="border border-border/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
@@ -621,6 +671,81 @@ export default function Crypto() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Tether USDT specific */}
+        <Card className="border border-border/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-[#26A17B]/15 flex items-center justify-center text-[#26A17B] font-black text-lg">
+                ₮
+              </div>
+              <div>
+                <CardTitle className="text-sm font-black uppercase tracking-wider text-foreground">Tether (USDT)</CardTitle>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[10px] text-muted-foreground font-bold font-mono">TRM Actual: {fmt(usdtRate)} COP</span>
+                </div>
+              </div>
+            </div>
+            <span className={cn(
+              "text-[10px] font-black px-2.5 py-1 rounded-full border uppercase tracking-wider",
+              summary.usdtProfitCop >= 0 
+                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" 
+                : "bg-rose-500/10 text-rose-600 border-rose-500/20"
+            )}>
+              {summary.usdtRoi >= 0 ? '+' : ''}{summary.usdtRoi.toFixed(1)}% ROI
+            </span>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="p-4 bg-muted/20 border border-border/40 rounded-xl grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Monto en Hold</span>
+                <span className="text-base font-black text-foreground font-mono mt-0.5 block">
+                  {coinStats.USDT.totalQty.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} USDT
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground block">Precio Promedio Compra</span>
+                <span className="text-base font-black text-[#26A17B] font-mono mt-0.5 block">
+                  {fmt(coinStats.USDT.avgPriceCop)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-border/30">
+                <span className="text-muted-foreground font-semibold">Total Invertido COP:</span>
+                <div className="text-right font-mono">
+                  <span className="font-bold text-foreground block">{fmt(summary.usdtInvestedCop)} COP</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{fmtUsd(coinStats.USDT.totalSpentUsd)} USD</span>
+                </div>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/30">
+                <span className="text-muted-foreground font-semibold">Valor Actual TRM:</span>
+                <div className="text-right font-mono">
+                  <span className="font-bold text-foreground block">{fmt(summary.usdtCurrentValueCop)} COP</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">{fmtUsd(coinStats.USDT.totalQty)} USD</span>
+                </div>
+              </div>
+              <div className="flex justify-between py-1">
+                <span className="text-muted-foreground font-bold">Rendimiento Estimado:</span>
+                <div className="text-right font-mono">
+                  <span className={cn(
+                    "font-black block",
+                    summary.usdtProfitCop >= 0 ? "text-emerald-500" : "text-rose-500"
+                  )}>
+                    {summary.usdtProfitCop >= 0 ? '+' : ''}{fmt(summary.usdtProfitCop)} COP
+                  </span>
+                  <span className={cn(
+                    "text-[10px] font-bold",
+                    summary.usdtProfitCop >= 0 ? "text-emerald-600" : "text-rose-600"
+                  )}>
+                    {summary.usdtProfitCop >= 0 ? '+' : ''}{fmtUsd(summary.usdtProfitCop / usdtRate)} USD
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Transaction Records Ledger list */}
@@ -655,11 +780,24 @@ export default function Crypto() {
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((tx) => {
                     const isBtc = tx.cryptocurrency === 'BTC';
-                    const currentSpot = isBtc ? livePrices.btc : livePrices.eth;
+                    const isEth = tx.cryptocurrency === 'ETH';
+                    const isUsdt = tx.cryptocurrency === 'USDT';
+                    
+                    const currentSpot = isBtc ? livePrices.btc : (isEth ? livePrices.eth : 1.0);
+                    
+                    const totalCostCop = tx.cryptocurrency === 'USDT' 
+                      ? tx.quantity * (tx.purchasePriceCop || (tx.purchasePriceUsd * usdtRate))
+                      : tx.quantity * tx.purchasePriceUsd * usdtRate;
+
                     const totalCostUsd = tx.quantity * tx.purchasePriceUsd;
                     const currentValueUsd = tx.quantity * currentSpot;
+                    const currentValueCop = tx.quantity * currentSpot * usdtRate;
                     const profitUsd = currentValueUsd - totalCostUsd;
-                    const roi = totalCostUsd > 0 ? (profitUsd / totalCostUsd) * 100 : 0;
+                    const profitCop = currentValueCop - totalCostCop;
+
+                    const roi = isUsdt 
+                      ? (totalCostCop > 0 ? (profitCop / totalCostCop) * 100 : 0)
+                      : (totalCostUsd > 0 ? (profitUsd / totalCostUsd) * 100 : 0);
 
                     return (
                       <tr key={tx.id} className="border-b border-border/40 hover:bg-muted/10 transition-colors">
@@ -675,36 +813,75 @@ export default function Crypto() {
                             "px-2 py-0.5 rounded-md border font-mono text-[10px]",
                             isBtc 
                               ? "bg-amber-50 text-amber-700 border-amber-200" 
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                              : isEth
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : "bg-emerald-50 text-emerald-700 border-emerald-200"
                           )}>
                             {tx.cryptocurrency}
                           </span>
                         </td>
                         <td className="py-3 px-2 font-mono font-bold text-foreground">
-                          {tx.quantity.toFixed(6).replace(/\.?0+$/, '')}
+                          {tx.quantity.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 6 })}
                         </td>
                         <td className="py-3 px-2 text-right font-mono text-muted-foreground font-semibold">
-                          {fmtUsd(tx.purchasePriceUsd)}
+                          {isUsdt 
+                            ? fmt(tx.purchasePriceCop || tx.purchasePriceUsd * usdtRate) + " COP"
+                            : fmtUsd(tx.purchasePriceUsd)}
                         </td>
                         <td className="py-3 px-2 text-right font-mono font-bold text-foreground">
-                          <div>{fmtUsd(totalCostUsd)}</div>
-                          <div className="text-[10px] text-muted-foreground font-medium font-sans">
-                            {fmt(totalCostUsd * usdtRate)} COP
-                          </div>
+                          {isUsdt ? (
+                            <>
+                              <div>{fmt(totalCostCop)} COP</div>
+                              <div className="text-[10px] text-muted-foreground font-medium font-mono">
+                                {fmtUsd(totalCostUsd)} USD
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div>{fmtUsd(totalCostUsd)}</div>
+                              <div className="text-[10px] text-muted-foreground font-medium font-sans">
+                                {fmt(totalCostCop)} COP
+                              </div>
+                            </>
+                          )}
                         </td>
                         <td className="py-3 px-2 text-right font-mono">
-                          <div className="text-foreground font-bold">{fmtUsd(currentValueUsd)}</div>
-                          <div className="text-[10px] text-muted-foreground font-semibold font-sans">
-                            A {fmtUsd(currentSpot)} spot
-                          </div>
+                          {isUsdt ? (
+                            <>
+                              <div className="text-foreground font-bold">{fmt(currentValueCop)} COP</div>
+                              <div className="text-[10px] text-muted-foreground font-semibold font-sans">
+                                A {fmt(usdtRate)} TRM
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-foreground font-bold">{fmtUsd(currentValueUsd)}</div>
+                              <div className="text-[10px] text-muted-foreground font-semibold font-sans">
+                                A {fmtUsd(currentSpot)} spot
+                              </div>
+                            </>
+                          )}
                         </td>
                         <td className="py-3 px-2 text-right font-mono">
-                          <div className={cn("font-black", profitUsd >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                            {profitUsd >= 0 ? '+' : ''}{fmtUsd(profitUsd)}
-                          </div>
-                          <div className={cn("text-[10px] font-bold", profitUsd >= 0 ? "text-emerald-600" : "text-rose-600")}>
-                            {profitUsd >= 0 ? '+' : ''}{roi.toFixed(1)}%
-                          </div>
+                          {isUsdt ? (
+                            <>
+                              <div className={cn("font-black", profitCop >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                {profitCop >= 0 ? '+' : ''}{fmt(profitCop)} COP
+                              </div>
+                              <div className={cn("text-[10px] font-bold", profitCop >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {profitCop >= 0 ? '+' : ''}{roi.toFixed(1)}% TRM
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className={cn("font-black", profitUsd >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                                {profitUsd >= 0 ? '+' : ''}{fmtUsd(profitUsd)}
+                              </div>
+                              <div className={cn("text-[10px] font-bold", profitUsd >= 0 ? "text-emerald-600" : "text-rose-600")}>
+                                {profitUsd >= 0 ? '+' : ''}{roi.toFixed(1)}%
+                              </div>
+                            </>
+                          )}
                         </td>
                         <td className="py-3 px-2 text-right">
                           <Button

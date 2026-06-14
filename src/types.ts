@@ -104,7 +104,7 @@ export interface AppSettings {
 
 export interface CryptoTransaction {
   id: string;
-  cryptocurrency: 'BTC' | 'ETH';
+  cryptocurrency: 'BTC' | 'ETH' | 'USDT';
   quantity: number;
   purchasePriceUsd: number;
   purchasePriceCop?: number;

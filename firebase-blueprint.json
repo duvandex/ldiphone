@@ -85,7 +85,7 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "cryptocurrency": { "type": "string", "enum": ["BTC", "ETH"] },
+        "cryptocurrency": { "type": "string", "enum": ["BTC", "ETH", "USDT"] },
         "quantity": { "type": "number" },
         "purchasePriceUsd": { "type": "number" },
         "purchasePriceCop": { "type": "number" },

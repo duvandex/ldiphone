@@ -16,7 +16,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
-import { AppData, Product, Debtor, Liability, Expense, Investor, PaymentMethod, FinancialAccount, CryptoTransaction } from '../types';
+import { AppData, Product, Debtor, Liability, Expense, Investor, PaymentMethod, FinancialAccount, CryptoTransaction, CryptoFuture } from '../types';
 import { INITIAL_PRODUCTS, INITIAL_DEBTORS, INITIAL_LIABILITIES } from '../constants';
 
 export function useAppData() {
@@ -29,6 +29,7 @@ export function useAppData() {
     accounts: [],
     expenses: [],
     cryptoTransactions: [],
+    cryptoFutures: [],
     settings: {
       companyName: 'LDIPHONE',
       warrantyTerms: 'La garantía cubre defectos de fábrica. No cubre daños por humedad, golpes o mal uso.',
@@ -162,12 +163,19 @@ export function useAppData() {
       setIsQuotaExceeded(false);
     }, handleQuotaError);
 
+    const unsubCryptoFutures = onSnapshot(collection(db, 'crypto_futures'), (snapshot) => {
+      const cryptoFutures = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CryptoFuture));
+      setData(prev => ({ ...prev, cryptoFutures }));
+      setIsQuotaExceeded(false);
+    }, handleQuotaError);
+
     return () => {
       unsubDebtors && unsubDebtors();
       unsubLiabilities && unsubLiabilities();
       unsubAccounts && unsubAccounts();
       unsubExpenses && unsubExpenses();
       unsubCrypto && unsubCrypto();
+      unsubCryptoFutures && unsubCryptoFutures();
       unsubSettings && unsubSettings();
     };
   }, [user]);
@@ -929,6 +937,31 @@ export function useAppData() {
     }
   };
 
+  const addCryptoFuture = async (future: Omit<CryptoFuture, 'id'>) => {
+    try {
+      const id = Math.random().toString(36).substr(2, 9);
+      await setDoc(doc(db, 'crypto_futures', id), { ...future, id });
+    } catch (err) {
+      handleFirestoreError(err, 'create', 'crypto_futures');
+    }
+  };
+
+  const deleteCryptoFuture = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'crypto_futures', id));
+    } catch (err) {
+      handleFirestoreError(err, 'delete', `crypto_futures/${id}`);
+    }
+  };
+
+  const updateCryptoFuture = async (id: string, updates: Partial<CryptoFuture>) => {
+    try {
+      await updateDoc(doc(db, 'crypto_futures', id), updates);
+    } catch (err) {
+      handleFirestoreError(err, 'update', `crypto_futures/${id}`);
+    }
+  };
+
   return React.useMemo(() => ({
     data,
     user,
@@ -949,6 +982,9 @@ export function useAppData() {
     deleteExpense,
     addCryptoTransaction,
     deleteCryptoTransaction,
+    addCryptoFuture,
+    deleteCryptoFuture,
+    updateCryptoFuture,
     updateAccountBalance,
     updateSettings,
     generateInvoiceNumber,

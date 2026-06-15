@@ -95,6 +95,26 @@
       },
       "required": ["cryptocurrency", "quantity", "purchasePriceUsd", "date", "investor"]
     },
+    "CryptoFuture": {
+      "title": "Crypto Future",
+      "description": "Represents a crypto futures position",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cryptocurrency": { "type": "string" },
+        "type": { "type": "string", "enum": ["LONG", "SHORT"] },
+        "leverage": { "type": "number" },
+        "entryPrice": { "type": "number" },
+        "marginUsd": { "type": "number" },
+        "quantity": { "type": "number" },
+        "date": { "type": "string" },
+        "investor": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "exitPrice": { "type": "number" },
+        "notes": { "type": "string" }
+      },
+      "required": ["cryptocurrency", "type", "leverage", "entryPrice", "marginUsd", "quantity", "date", "investor", "status"]
+    },
     "Settings": {
       "title": "Settings",
       "description": "Application wide settings like invoice counter and payment methods",
@@ -134,6 +154,10 @@
     "/crypto_transactions/{transactionId}": {
       "schema": "CryptoTransaction",
       "description": "BTC and ETH purchase transactions"
+    },
+    "/crypto_futures/{futureId}": {
+      "schema": "CryptoFuture",
+      "description": "Cryptocurrency futures contracts positions"
     },
     "/app_settings/global": {
       "schema": "Settings",

@@ -113,6 +113,21 @@ export interface CryptoTransaction {
   notes?: string;
 }
 
+export interface CryptoFuture {
+  id: string;
+  cryptocurrency: string; // e.g. 'BTC', 'ETH', 'SOL'
+  type: 'LONG' | 'SHORT';
+  leverage: number;
+  entryPrice: number;
+  marginUsd: number;
+  quantity: number; // position size in coins (or calculated as marginUsd * leverage / entryPrice)
+  date: string;
+  investor: Investor;
+  status: 'OPEN' | 'CLOSED';
+  exitPrice?: number;
+  notes?: string;
+}
+
 export interface AppData {
   products: Product[];
   debtors: Debtor[];
@@ -122,4 +137,5 @@ export interface AppData {
   expenses: Expense[];
   settings: AppSettings;
   cryptoTransactions: CryptoTransaction[];
+  cryptoFutures?: CryptoFuture[];
 }

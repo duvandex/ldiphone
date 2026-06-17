@@ -59,7 +59,7 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
     };
 
     const oklchToRgb = (oklchStr: string): string | null => {
-      const formatRegex = /oklch\(\s*([\d\.]+%?)\s*[\s,]\s*([\d\.]+%?)\s*[\s,]\s*([\d\.]+(?:deg|rad|turn)?)\s*(?:[\s,\/]\s*([\d\.]+%?))?\s*\)/i;
+      const formatRegex = /oklch\(\s*([\d\.]+%?)(?:\s+|(?:\s*,\s*))([\d\.]+%?)(?:\s+|(?:\s*,\s*))([\d\.]+(?:deg|rad|turn)?)(?:\s*[\/,\s]\s*([\d\.]+%?))?\s*\)/i;
       const match = oklchStr.match(formatRegex);
       if (!match) return null;
 
@@ -85,7 +85,7 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
     };
 
     const oklabToRgb = (oklabStr: string): string | null => {
-      const formatRegex = /oklab\(\s*([\d\.]+%?)\s*[\s,]\s*(-?[\d\.]+%?)\s*[\s,]\s*(-?[\d\.]+%?)\s*(?:[\s,\/]\s*([\d\.]+%?))?\s*\)/i;
+      const formatRegex = /oklab\(\s*([\d\.]+%?)(?:\s+|(?:\s*,\s*))(-?[\d\.]+%?)(?:\s+|(?:\s*,\s*))(-?[\d\.]+%?)(?:\s*[\/,\s]\s*([\d\.]+%?))?\s*\)/i;
       const match = oklabStr.match(formatRegex);
       if (!match) return null;
 
@@ -106,10 +106,8 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
       const oklchMatches = result.match(/oklch\([^)]+\)/gi);
       if (oklchMatches) {
         for (const match of oklchMatches) {
-          const converted = oklchToRgb(match);
-          if (converted) {
-            result = result.replace(match, converted);
-          }
+          const converted = oklchToRgb(match) || '#1e293b';
+          result = result.replace(match, converted);
         }
       }
       
@@ -117,10 +115,8 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
       const oklabMatches = result.match(/oklab\([^)]+\)/gi);
       if (oklabMatches) {
         for (const match of oklabMatches) {
-          const converted = oklabToRgb(match);
-          if (converted) {
-            result = result.replace(match, converted);
-          }
+          const converted = oklabToRgb(match) || '#1e293b';
+          result = result.replace(match, converted);
         }
       }
 
@@ -134,143 +130,82 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
           result = result.replace(match, lightVal);
         }
       }
+
+      // Final sanity fallback for any remaining unsupported functions
+      if (result.includes('oklch(') || result.includes('oklab(') || result.includes('light-dark(')) {
+        return '#1e293b';
+      }
       
       return result;
     };
 
-    // Deeply robust balanced bracket oklch, oklab, and light-dark cleaner
-    const stripUnsupportedColors = (css: string): string => {
-      let result = '';
-      let i = 0;
-      while (i < css.length) {
-        if (css.substring(i, i + 6) === 'oklch(') {
-          let openPn = 1;
-          let j = i + 6;
-          while (j < css.length && openPn > 0) {
-            if (css[j] === '(') openPn++;
-            else if (css[j] === ')') openPn--;
-            j++;
-          }
-          // Replace with slate-800 default fallback hex color to keep layout clean & harmless to html2canvas
-          result += '#1e293b';
-          i = j;
-        } else if (css.substring(i, i + 6) === 'oklab(') {
-          let openPn = 1;
-          let j = i + 6;
-          while (j < css.length && openPn > 0) {
-            if (css[j] === '(') openPn++;
-            else if (css[j] === ')') openPn--;
-            j++;
-          }
-          // Replace with slate-800 default fallback hex color to keep layout clean & harmless to html2canvas
-          result += '#1e293b';
-          i = j;
-        } else if (css.substring(i, i + 11) === 'light-dark(') {
-          let openPn = 1;
-          let j = i + 11;
-          let innerText = '';
-          while (j < css.length && openPn > 0) {
-            if (css[j] === '(') openPn++;
-            else if (css[j] === ')') openPn--;
-            if (openPn > 0) {
-              innerText += css[j];
-            }
-            j++;
-          }
-          const firstArg = innerText.split(',')[0].trim();
-          result += firstArg || '#1e293b';
-          i = j;
-        } else {
-          result += css[i];
-          i++;
-        }
-      }
-      return result;
-    };
-
+    // Robust lightweight wrapper to mock document.styleSheets and proxy window.getComputedStyle
+    // to dynamically resolve and convert oklch, oklab, and light-dark to standard sRGB format during PDF generation
     const cleanUpOklchStyles = async () => {
-      const originalSheets = Array.from(document.styleSheets);
-      const tempStyles: HTMLStyleElement[] = [];
-      const mockSheetsList: CSSStyleSheet[] = [];
-
-      for (const sheet of originalSheets) {
-        try {
-          let sheetCss = '';
-          try {
-            const rules = sheet.cssRules || sheet.rules;
-            if (rules) {
-              for (let i = 0; i < rules.length; i++) {
-                sheetCss += rules[i].cssText + '\n';
-              }
-            }
-          } catch (ruleError) {
-            // CORS restriction or unreadable
-            console.warn('CORS restriction on styleSheet, will fallback to raw fetch if needed', ruleError);
-          }
-
-          // If same-origin extraction yielded nothing or failed, we can try to fetch it if it has an href
-          if (!sheetCss && sheet.href) {
-            try {
-              const res = await fetch(sheet.href);
-              sheetCss = await res.text();
-            } catch (fetchError) {
-              console.warn(`Failed to fetch sheet from href: ${sheet.href}`, fetchError);
-            }
-          }
-
-          if (sheetCss && (sheetCss.includes('oklch') || sheetCss.includes('oklab') || sheetCss.includes('light-dark'))) {
-            const cleanedCss = stripUnsupportedColors(sheetCss);
-            
-            // Create temporary stylesheet with cleaned CSS
-            const tempStyle = document.createElement('style');
-            tempStyle.type = 'text/css';
-            tempStyle.innerHTML = cleanedCss;
-            document.head.appendChild(tempStyle);
-            tempStyles.push(tempStyle);
-
-            if (tempStyle.sheet) {
-              mockSheetsList.push(tempStyle.sheet);
-            }
-
-            // Disable original stylesheet
-            sheet.disabled = true;
-          } else {
-            // Keep original sheet in standard mock list
-            mockSheetsList.push(sheet as CSSStyleSheet);
-          }
-        } catch (e) {
-          console.warn('Error processing styleSheet, keeping it intact:', e);
-          mockSheetsList.push(sheet as CSSStyleSheet);
-        }
+      // 1. Mock document.styleSheets to return an empty list so html2canvas doesn't try to parse huge Tailwind v4 stylesheets and crash
+      const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'styleSheets');
+      try {
+        Object.defineProperty(document, 'styleSheets', {
+          get: () => [] as unknown as StyleSheetList,
+          configurable: true
+        });
+      } catch (e) {
+        console.warn('Failed to define document.styleSheets override', e);
       }
 
-      // Override document.styleSheets getter safely
-      const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'styleSheets');
-      Object.defineProperty(document, 'styleSheets', {
-        get: () => mockSheetsList,
-        configurable: true
-      });
+      // 2. Proxy window.getComputedStyle to dynamically intercept and convert oklch(...) and oklab(...) to standard sRGB colors
+      const originalGetComputedStyle = window.getComputedStyle;
+      window.getComputedStyle = function (elt, pseudoElt) {
+        const style = originalGetComputedStyle(elt, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop) {
+            try {
+              if (prop === 'getPropertyValue') {
+                return function(propertyName: string) {
+                  try {
+                    const val = target.getPropertyValue(propertyName);
+                    if (typeof val === 'string' && (val.includes('oklch(') || val.includes('oklab(') || val.includes('light-dark('))) {
+                      return convertUnsupportedColors(val);
+                    }
+                    return val;
+                  } catch (e) {
+                    return '';
+                  }
+                };
+              }
+              const val = (target as any)[prop];
+              if (typeof val === 'string' && (val.includes('oklch(') || val.includes('oklab(') || val.includes('light-dark('))) {
+                return convertUnsupportedColors(val);
+              }
+              if (typeof val === 'function') {
+                return val.bind(target);
+              }
+              return val;
+            } catch (err) {
+              return (target as any)[prop];
+            }
+          }
+        }) as any;
+      };
 
       return () => {
-        // Restore document.styleSheets
+        // Restore document.styleSheets original getter
         if (originalDescriptor) {
-          Object.defineProperty(document, 'styleSheets', originalDescriptor);
+          try {
+            Object.defineProperty(document, 'styleSheets', originalDescriptor);
+          } catch (e) {
+            console.warn('Failed to restore document.styleSheets', e);
+          }
         } else {
           try {
             delete (document as any).styleSheets;
           } catch (e) {
-            console.warn('Failed to delete overridden styleSheets property:', e);
+            console.warn('Failed to delete overridden styleSheets property', e);
           }
         }
 
-        // Enable original stylesheets
-        for (const sheet of originalSheets) {
-          sheet.disabled = false;
-        }
-        // Remove temporary stylesheets
-        for (const temp of tempStyles) {
-          temp.remove();
-        }
+        // Restore window.getComputedStyle
+        window.getComputedStyle = originalGetComputedStyle;
       };
     };
 
@@ -297,47 +232,17 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
         console.warn('Style clean up failed, continuing download path...', e);
       }
 
-      // Temporarily proxy getComputedStyle during html2canvas's run to convert colors
-      const originalGetComputedStyle = window.getComputedStyle;
-      window.getComputedStyle = function (elt, pseudoElt) {
-        const style = originalGetComputedStyle(elt, pseudoElt);
-        return new Proxy(style, {
-          get(target, prop) {
-            if (prop === 'getPropertyValue') {
-              return function(propertyName: string) {
-                const val = target.getPropertyValue(propertyName);
-                return convertUnsupportedColors(val);
-              };
-            }
-            const val = (target as any)[prop];
-            if (typeof val === 'string') {
-              return convertUnsupportedColors(val);
-            }
-            if (typeof val === 'function') {
-              return val.bind(target);
-            }
-            return val;
-          }
-        }) as any;
-      };
-
-      const restoreGetComputedStyle = () => {
-        window.getComputedStyle = originalGetComputedStyle;
-      };
-
       // Temporarily apply print classes to force single page structure
       element.classList.add('pdf-rendering');
 
       html2pdf().set(opt).from(element).save().then(() => {
         element.classList.remove('pdf-rendering');
         restoreStyles();
-        restoreGetComputedStyle();
         setDownloading(false);
       }).catch((err: any) => {
         console.error('Error rendering PDF:', err);
         element.classList.remove('pdf-rendering');
         restoreStyles();
-        restoreGetComputedStyle();
         setDownloading(false);
       });
     };

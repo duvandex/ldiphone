@@ -120,3 +120,99 @@
         @apply bg-card border border-border shadow-sm hover:shadow-lg dark:hover:shadow-primary/5 hover:-translate-y-0.5 transition-all duration-300;
     }
 }
+
+/* Print optimization styles for compact single page invoices */
+@media print {
+  @page {
+    size: letter;
+    margin: 4mm 6mm !important;
+  }
+  
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:shadow-none {
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Custom PDF rendering styles to ensure absolute one-page layout */
+.pdf-rendering {
+  width: 790px !important;
+  max-width: 790px !important;
+  background: white !important;
+  color: black !important;
+  padding: 10px 14px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.pdf-rendering * {
+  /* Scale down spacing inside pdf mode */
+  border-color: #f1f5f9 !important;
+}
+
+.pdf-rendering .p-8 {
+  padding: 10px 12px !important;
+}
+
+.pdf-rendering .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 6px !important;
+  margin-bottom: 6px !important;
+}
+.pdf-rendering .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+.pdf-rendering .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+.pdf-rendering .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 3px !important;
+  margin-bottom: 3px !important;
+}
+.pdf-rendering .p-5 {
+  padding: 8px 10px !important;
+}
+.pdf-rendering .p-4 {
+  padding: 6px 8px !important;
+}
+.pdf-rendering svg {
+  max-height: 80px !important;
+  max-width: 80px !important;
+}
+.pdf-rendering hr {
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+.pdf-rendering .text-2xl {
+  font-size: 1.25rem !important;
+}
+.pdf-rendering .text-sm {
+  font-size: 0.775rem !important;
+}
+.pdf-rendering .text-xs {
+  font-size: 0.7rem !important;
+}
+.pdf-rendering .text-\[9px\] {
+  font-size: 7px !important;
+}
+.pdf-rendering .text-\[10px\] {
+  font-size: 8px !important;
+}

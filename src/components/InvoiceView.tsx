@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Separator } from './ui/separator';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck, Smartphone } from 'lucide-react';
+import { Copy, Printer, Share2, CheckCircle2, ChevronLeft, ShieldCheck, Smartphone, Download } from 'lucide-react';
 import { useData } from '../context/AppDataContext';
 import { fmt, cn } from '../lib/utils';
 import Logo from './Logo';
@@ -21,6 +21,226 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
   const [selectedId, setSelectedId] = useState<string>(id || searchParams.get('id') || '');
   const [imeiSearch, setImeiSearch] = useState('');
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('invoice-document');
+    if (!element) return;
+
+    setDownloading(true);
+
+    // Deeply robust balanced bracket oklch, oklab, and light-dark cleaner
+    const stripUnsupportedColors = (css: string): string => {
+      let result = '';
+      let i = 0;
+      while (i < css.length) {
+        if (css.substring(i, i + 6) === 'oklch(') {
+          let openPn = 1;
+          let j = i + 6;
+          while (j < css.length && openPn > 0) {
+            if (css[j] === '(') openPn++;
+            else if (css[j] === ')') openPn--;
+            j++;
+          }
+          // Replace with slate-800 default fallback hex color to keep layout clean & harmless to html2canvas
+          result += '#1e293b';
+          i = j;
+        } else if (css.substring(i, i + 6) === 'oklab(') {
+          let openPn = 1;
+          let j = i + 6;
+          while (j < css.length && openPn > 0) {
+            if (css[j] === '(') openPn++;
+            else if (css[j] === ')') openPn--;
+            j++;
+          }
+          // Replace with slate-800 default fallback hex color to keep layout clean & harmless to html2canvas
+          result += '#1e293b';
+          i = j;
+        } else if (css.substring(i, i + 11) === 'light-dark(') {
+          let openPn = 1;
+          let j = i + 11;
+          let innerText = '';
+          while (j < css.length && openPn > 0) {
+            if (css[j] === '(') openPn++;
+            else if (css[j] === ')') openPn--;
+            if (openPn > 0) {
+              innerText += css[j];
+            }
+            j++;
+          }
+          const firstArg = innerText.split(',')[0].trim();
+          result += firstArg || '#1e293b';
+          i = j;
+        } else {
+          result += css[i];
+          i++;
+        }
+      }
+      return result;
+    };
+
+    const cleanUpOklchStyles = async () => {
+      const originalSheets = Array.from(document.styleSheets);
+      const tempStyles: HTMLStyleElement[] = [];
+      const mockSheetsList: CSSStyleSheet[] = [];
+
+      for (const sheet of originalSheets) {
+        try {
+          let sheetCss = '';
+          try {
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              for (let i = 0; i < rules.length; i++) {
+                sheetCss += rules[i].cssText + '\n';
+              }
+            }
+          } catch (ruleError) {
+            // CORS restriction or unreadable
+            console.warn('CORS restriction on styleSheet, will fallback to raw fetch if needed', ruleError);
+          }
+
+          // If same-origin extraction yielded nothing or failed, we can try to fetch it if it has an href
+          if (!sheetCss && sheet.href) {
+            try {
+              const res = await fetch(sheet.href);
+              sheetCss = await res.text();
+            } catch (fetchError) {
+              console.warn(`Failed to fetch sheet from href: ${sheet.href}`, fetchError);
+            }
+          }
+
+          if (sheetCss && (sheetCss.includes('oklch') || sheetCss.includes('oklab') || sheetCss.includes('light-dark'))) {
+            const cleanedCss = stripUnsupportedColors(sheetCss);
+            
+            // Create temporary stylesheet with cleaned CSS
+            const tempStyle = document.createElement('style');
+            tempStyle.type = 'text/css';
+            tempStyle.innerHTML = cleanedCss;
+            document.head.appendChild(tempStyle);
+            tempStyles.push(tempStyle);
+
+            if (tempStyle.sheet) {
+              mockSheetsList.push(tempStyle.sheet);
+            }
+
+            // Disable original stylesheet
+            sheet.disabled = true;
+          } else {
+            // Keep original sheet in standard mock list
+            mockSheetsList.push(sheet as CSSStyleSheet);
+          }
+        } catch (e) {
+          console.warn('Error processing styleSheet, keeping it intact:', e);
+          mockSheetsList.push(sheet as CSSStyleSheet);
+        }
+      }
+
+      // Override document.styleSheets getter safely
+      const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'styleSheets');
+      Object.defineProperty(document, 'styleSheets', {
+        get: () => mockSheetsList,
+        configurable: true
+      });
+
+      return () => {
+        // Restore document.styleSheets
+        if (originalDescriptor) {
+          Object.defineProperty(document, 'styleSheets', originalDescriptor);
+        } else {
+          try {
+            delete (document as any).styleSheets;
+          } catch (e) {
+            console.warn('Failed to delete overridden styleSheets property:', e);
+          }
+        }
+
+        // Enable original stylesheets
+        for (const sheet of originalSheets) {
+          sheet.disabled = false;
+        }
+        // Remove temporary stylesheets
+        for (const temp of tempStyles) {
+          temp.remove();
+        }
+      };
+    };
+
+    const executeDownload = async () => {
+      // @ts-ignore
+      const html2pdf = window.html2pdf;
+      if (!html2pdf) {
+        setDownloading(false);
+        return;
+      }
+
+      const opt = {
+        margin:       [4, 6, 4, 6], // in mm for highly compact letter page fit
+        filename:     `Factura_${mainProduct.invoiceNumber || 'Sin_Numero'}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+
+      let restoreStyles = () => {};
+      try {
+        restoreStyles = await cleanUpOklchStyles();
+      } catch (e) {
+        console.warn('Style clean up failed, continuing download path...', e);
+      }
+
+      // Temporarily apply print classes to force single page structure
+      element.classList.add('pdf-rendering');
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        element.classList.remove('pdf-rendering');
+        restoreStyles();
+        setDownloading(false);
+      }).catch((err: any) => {
+        console.error('Error rendering PDF:', err);
+        element.classList.remove('pdf-rendering');
+        restoreStyles();
+        setDownloading(false);
+      });
+    };
+
+    // @ts-ignore
+    if (window.html2pdf) {
+      await executeDownload();
+    } else {
+      const loadScript = (url: string, onFallback: () => void) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = async () => {
+          await executeDownload();
+        };
+        script.onerror = () => {
+          console.warn(`Failed to load html2pdf script from: ${url}`);
+          script.remove();
+          onFallback();
+        };
+        document.head.appendChild(script);
+      };
+
+      // Try primary CDN (cdnjs), then fallback to jsdelivr, then unpkg
+      loadScript(
+        'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js',
+        () => {
+          loadScript(
+            'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js',
+            () => {
+              loadScript(
+                'https://unpkg.com/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js',
+                () => {
+                  console.error('Failed to load html2pdf script from all CDNs');
+                  setDownloading(false);
+                }
+              );
+            }
+          );
+        }
+      );
+    }
+  };
 
   // Sync selectedId with URL param and fetch if needed
   useEffect(() => {
@@ -181,7 +401,7 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
       {mainProduct ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Invoice Document */}
-          <Card className="border-none shadow-lg overflow-hidden bg-card text-card-foreground print:shadow-none print:border print:bg-white print:text-black">
+          <Card id="invoice-document" className="border-none shadow-lg overflow-hidden bg-card text-card-foreground print:shadow-none print:border print:bg-white print:text-black">
             <CardContent className="p-8 space-y-8">
               {/* Header */}
               <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 pb-2">
@@ -349,8 +569,8 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
           </Card>
 
           {/* Actions */}
-          {!isPublic && (
-            <div className="flex flex-wrap gap-3 justify-center print:hidden">
+          <div className="flex flex-wrap gap-3 justify-center print:hidden">
+            {!isPublic && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -361,10 +581,25 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
                 {copied ? <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-500" /> : <Copy className="w-4 h-4 mr-2" />}
                 {copied ? 'Copiado' : 'Copiar Link'}
               </Button>
-              <Button variant="outline" size="sm" className="rounded-full border-border text-foreground" onClick={handlePrint}>
-                <Printer className="w-4 h-4 mr-2" />
-                Imprimir
-              </Button>
+            )}
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-full border-[#f15a24]/20 hover:border-[#f15a24]/50 text-foreground bg-amber-50/10 hover:bg-amber-500/5 transition-all" 
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+            >
+              <Download className={cn("w-4 h-4 mr-2 text-[#f15a24]", downloading ? "animate-bounce" : "")} />
+              {downloading ? 'Descargando...' : 'Descargar PDF'}
+            </Button>
+
+            <Button variant="outline" size="sm" className="rounded-full border-border text-foreground" onClick={handlePrint}>
+              <Printer className="w-4 h-4 mr-2" />
+              Imprimir
+            </Button>
+            
+            {!isPublic && (
               <Button 
                 size="sm" 
                 className="rounded-full bg-primary text-primary-foreground" 
@@ -380,8 +615,8 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
                 <Share2 className="w-4 h-4 mr-2" />
                 Compartir
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center py-20 text-muted-foreground print:hidden">

@@ -1250,331 +1250,312 @@ export default function Inventory() {
       {/* Desktop Table View */}
       <Card className="hidden md:block card-premium border-none shadow-sm rounded-[2rem] overflow-hidden bg-card">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="hover:bg-transparent border-b border-border">
-                <TableHead className="w-12 pl-8">
-                  <Checkbox 
-                    checked={selectedIds.size > 0 && selectedIds.size === filteredProducts.filter(p => p.status === 'stock' || p.status === 'reserved').length}
-                    onCheckedChange={() => toggleSelection('all')}
-                  />
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-muted-foreground pl-4 h-14 cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center gap-1">
-                    Detalle Dispositivo {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden xl:table-cell"
-                  onClick={() => handleSort('category')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Tipo {sortBy === 'category' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden sm:table-cell"
-                  onClick={() => handleSort('investor')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Inversor {sortBy === 'investor' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors hidden md:table-cell"
-                  onClick={() => handleSort('quantity')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Qty {sortBy === 'quantity' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400">Identificación</TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => handleSort('purchasePrice')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Inversión (u) {sortBy === 'purchasePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-emerald-600 text-right cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => handleSort('salePrice')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    P. Venta {sortBy === 'salePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => handleSort('profit')}
-                >
-                  <div className="flex items-center justify-end gap-1">
-                    Profit Est. {sortBy === 'profit' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead 
-                   className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-center cursor-pointer hover:text-foreground transition-colors"
-                   onClick={() => handleSort('status')}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    Estado {sortBy === 'status' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                  </div>
-                </TableHead>
-                <TableHead className="text-[10px] uppercase font-black tracking-widest text-slate-400 text-right pr-8">Operaciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedProducts.map((p) => {
-                const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
-                const totalProfit = profitPerUnit * (p.quantity || 1);
-                return (
-                  <TableRow key={p.id} className="group border-b border-border hover:bg-muted/30 transition-colors">
-                    <TableCell className="w-12 pl-8">
-                       {(p.status === 'stock' || p.status === 'reserved') && (
-                         <Checkbox 
-                           checked={selectedIds.has(p.id)}
-                           onCheckedChange={() => toggleSelection(p.id)}
-                         />
-                       )}
-                    </TableCell>
-                    <TableCell className="py-5 pl-4">
-                      <div className="flex items-center gap-4">
-                        <div 
-                          className={cn(
-                            "w-14 h-14 rounded-2xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-card shadow-sm transition-transform group-hover:scale-105 duration-300",
-                            p.images && p.images.length > 0 ? "cursor-zoom-in" : ""
-                          )}
-                          onClick={(e) => {
-                            if (p.images && p.images.length > 0) {
-                              e.stopPropagation();
-                              setLightbox({
-                                isOpen: true,
-                                images: p.images,
-                                currentIndex: 0
-                              });
-                            }
-                          }}
-                        >
-                          {p.images && p.images.length > 0 ? (
-                            <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
-                          ) : (
-                            <div className="text-muted-foreground bg-card w-full h-full flex items-center justify-center">
-                               <Smartphone className="w-6 h-6 opacity-30" />
-                            </div>
-                          )}
-                        </div>
-                         <div className="space-y-0.5">
-                          <div className="font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{p.name}</div>
+          <div className="overflow-x-auto w-full scrollbar-thin">
+            <Table className="min-w-[1000px] xl:min-w-0">
+              <TableHeader className="bg-muted/20">
+                <TableRow className="hover:bg-transparent border-b border-border">
+                  <TableHead className="w-10 pl-6 py-2.5 h-11">
+                    <Checkbox 
+                      checked={selectedIds.size > 0 && selectedIds.size === filteredProducts.filter(p => p.status === 'stock' || p.status === 'reserved').length}
+                      onCheckedChange={() => toggleSelection('all')}
+                    />
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-muted-foreground pl-2 py-2.5 h-11 cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Dispositivo {sortBy === 'name' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-center cursor-pointer hover:text-foreground transition-colors hidden xl:table-cell"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Tipo {sortBy === 'category' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-center cursor-pointer hover:text-foreground transition-colors hidden sm:table-cell"
+                    onClick={() => handleSort('investor')}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Inversor {sortBy === 'investor' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-center cursor-pointer hover:text-foreground transition-colors hidden md:table-cell"
+                    onClick={() => handleSort('quantity')}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Qty {sortBy === 'quantity' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-right cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => handleSort('purchasePrice')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Costo (u) {sortBy === 'purchasePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-emerald-600 py-2.5 h-11 text-right cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => handleSort('salePrice')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      P. Venta {sortBy === 'salePrice' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-right cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => handleSort('profit')}
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Neto {sortBy === 'profit' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                     className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-center cursor-pointer hover:text-foreground transition-colors"
+                     onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Estado {sortBy === 'status' && (sortOrder === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-[9px] uppercase font-black tracking-wider text-slate-400 py-2.5 h-11 text-right pr-6">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedProducts.map((p) => {
+                  const profitPerUnit = (p.salePrice || 0) - p.purchasePrice;
+                  const totalProfit = profitPerUnit * (p.quantity || 1);
+                  return (
+                    <TableRow key={p.id} className="group border-b border-border/50 hover:bg-muted/15 transition-colors">
+                      <TableCell className="w-10 pl-6 py-1.5">
+                         {(p.status === 'stock' || p.status === 'reserved') && (
+                           <Checkbox 
+                             checked={selectedIds.has(p.id)}
+                             onCheckedChange={() => toggleSelection(p.id)}
+                           />
+                         )}
+                      </TableCell>
+                      <TableCell className="py-1.5 pl-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className={cn(
+                              "w-10 h-10 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0 border border-card shadow-sm transition-transform group-hover:scale-105 duration-300",
+                              p.images && p.images.length > 0 ? "cursor-zoom-in" : ""
+                            )}
+                            onClick={(e) => {
+                              if (p.images && p.images.length > 0) {
+                                e.stopPropagation();
+                                setLightbox({
+                                  isOpen: true,
+                                  images: p.images,
+                                  currentIndex: 0
+                                });
+                              }
+                            }}
+                          >
+                            {p.images && p.images.length > 0 ? (
+                              <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />
+                            ) : (
+                              <div className="text-muted-foreground bg-card w-full h-full flex items-center justify-center">
+                                 <Smartphone className="w-4 h-4 opacity-30" />
+                              </div>
+                            )}
+                          </div>
                           
-                          {/* Auto Spec Labels */}
-                          {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {extractGB(p.name, p.description) && (
-                                <div className="bg-slate-100 text-slate-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
-                                  💾 {extractGB(p.name, p.description)}
-                                </div>
-                              )}
-                              {extractBattery(p.name, p.description) && (
-                                <div className="bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
-                                  🔋 {extractBattery(p.name, p.description)}
-                                </div>
-                              )}
-                              {p.warrantyMonths && (
-                                <div className="bg-blue-50 text-blue-700 px-1 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter flex items-center gap-0.5">
-                                  🛡️ {p.warrantyMonths}M GTÍA
-                                </div>
-                              )}
+                          <div className="space-y-0.5 min-w-0 max-w-[280px]">
+                            <div className="font-extrabold text-xs text-foreground tracking-tight group-hover:text-primary transition-colors truncate">{p.name}</div>
+                            
+                            <div className="flex flex-wrap items-center gap-1.5 text-[8px] font-bold text-muted-foreground">
+                              <span className="font-mono tracking-tight text-muted-foreground/90 bg-muted px-1.5 py-0.2 rounded">
+                                ID: {p.imei || p.id.slice(0,8).toUpperCase()}
+                              </span>
+                              <span>•</span>
+                              <span>{p.purchaseDate}</span>
                             </div>
-                          )}
 
-                          <div className="text-[10px] font-bold text-muted-foreground flex items-center gap-2">
-                              {p.purchaseDate}
+                            {/* Auto Spec Labels */}
+                            {(p.category === 'CELULARES' || p.name.toLowerCase().includes('iphone')) && (
+                              <div className="flex flex-wrap gap-1">
+                                {extractGB(p.name, p.description) && (
+                                  <div className="bg-slate-100 text-slate-700 px-1 py-0.2 rounded text-[7px] font-black uppercase tracking-tighter">
+                                    💾 {extractGB(p.name, p.description)}
+                                  </div>
+                                )}
+                                {extractBattery(p.name, p.description) && (
+                                  <div className="bg-emerald-50 text-emerald-700 px-1 py-0.2 rounded text-[7px] font-black uppercase tracking-tighter">
+                                    🔋 {extractBattery(p.name, p.description)}%
+                                  </div>
+                                )}
+                                {p.warrantyMonths ? (
+                                  <div className="bg-blue-50 text-blue-700 px-1 py-0.2 rounded text-[7px] font-black uppercase tracking-tighter">
+                                    🛡️ {p.warrantyMonths}M
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5 text-center hidden xl:table-cell">
-                       <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tighter bg-card border-none text-muted-foreground">
-                          {p.category || 'CELULARES'}
-                       </Badge>
-                    </TableCell>
-                    <TableCell className="py-5 text-center hidden sm:table-cell">
-                      <div className="flex flex-wrap items-center justify-center gap-1 max-w-[150px] mx-auto">
-                        {p.isExternal ? (
-                          <span className="text-rose-500 text-[8px] font-black uppercase flex items-center gap-1"><ExternalLink className="w-2.5 h-2.5" /> Externo</span>
-                        ) : p.coInvestors && p.coInvestors.length > 0 ? (
-                          p.coInvestors.map((c, i) => (
-                            <span key={i} className="bg-primary/10 text-primary px-1.5 py-0.5 rounded-md text-[8px] font-black">
-                              {c.investor}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-[10px] font-black uppercase text-muted-foreground">{p.investor}</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5 text-center hidden md:table-cell">
-                      <div className="text-xs font-black bg-card border border-border shadow-sm px-3 py-1.5 rounded-xl w-fit mx-auto text-foreground">
-                        {p.quantity || 1}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5">
-                      <div className="text-[10px] font-black tracking-widest text-muted-foreground uppercase mb-1">IMEI / ID</div>
-                      <div className="text-xs font-bold text-muted-foreground/80 font-mono tracking-tighter">{p.imei || p.id.slice(0,8).toUpperCase()}</div>
-                    </TableCell>
-                    <TableCell className="py-5 text-right">
-                      <div className="text-sm font-black text-foreground">
-                        {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
-                          <>
-                            {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
-                            <span className="ml-1 text-[10px] text-blue-500">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
-                          </>
-                        ) : (
-                          fmt(p.purchasePrice)
-                        )}
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        Costo {p.quantity > 1 ? 'Unid.' : ''}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-5 text-right">
-                      <div className="text-sm font-black text-emerald-700">
-                        {fmt(p.salePrice || 0)}
-                      </div>
-                      {(p.regularPrice || 0) > (p.salePrice || 0) && (
-                        <div className="flex flex-col items-end">
-                            <div className="text-[8px] font-black text-rose-500 bg-rose-50 px-1 rounded uppercase tracking-[0.2em] mb-0.5">PROMO</div>
-                            <div className="text-[9px] font-bold text-slate-300 line-through leading-none">{fmt(p.regularPrice || 0)}</div>
-                        </div>
-                      )}
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Sugerido</div>
-                    </TableCell>
-                    <TableCell className="py-5 text-right">
-                       <div className="text-sm font-black text-emerald-600">+{fmt(totalProfit)}</div>
-                       <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Neto Sugerido</div>
-                    </TableCell>
-                    <TableCell className="py-5 text-center">
-                      <Badge variant={p.status === 'stock' ? 'secondary' : p.status === 'reserved' ? 'outline' : 'default'} className={cn(
-                        "text-[9px] font-black h-5 px-3 rounded-full border-none shadow-sm flex items-center justify-center uppercase tracking-widest",
-                        p.status === 'stock' ? "bg-blue-50 text-blue-600" : 
-                        p.status === 'reserved' ? "bg-orange-50 text-orange-600" : 
-                        "bg-slate-100 text-slate-400"
-                      )}>
-                        {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
-                      </Badge>
-                      {p.status === 'reserved' && (
-                        <div className="flex flex-col gap-0.5 mt-1">
-                          {p.reservationAmount && (
-                            <div className="text-[8px] font-black text-orange-500 uppercase tracking-tighter">
-                              Debe: {fmt((p.salePrice || 0) * (p.quantity || 1) - p.reservationAmount)}
-                            </div>
-                          )}
-                          {p.reservationPayments && p.reservationPayments.length > 0 && (
-                            <div className="text-[7px] font-bold text-slate-400 uppercase tracking-tighter">
-                              {p.reservationPayments.length} {p.reservationPayments.length === 1 ? 'Abono' : 'Abonos'} realizados
-                            </div>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-center hidden xl:table-cell">
+                         <Badge variant="outline" className="text-[8px] font-bold uppercase tracking-tighter bg-card border-none text-muted-foreground/80 py-0.5 px-1.5">
+                            {p.category || 'CELULARES'}
+                         </Badge>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-center hidden sm:table-cell">
+                        <div className="flex flex-wrap items-center justify-center gap-0.5 max-w-[120px] mx-auto">
+                          {p.isExternal ? (
+                            <span className="text-rose-500 text-[8px] font-black uppercase flex items-center gap-0.5"><ExternalLink className="w-2.5 h-2.5" /> Ext</span>
+                          ) : p.coInvestors && p.coInvestors.length > 0 ? (
+                            p.coInvestors.map((c, i) => (
+                              <span key={i} className="bg-primary/10 text-primary px-1 rounded-[4px] text-[7px] font-black leading-normal">
+                                {c.investor}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-[9px] font-black uppercase text-muted-foreground">{p.investor}</span>
                           )}
                         </div>
-                      )}
-                      {p.warrantyMonths && p.status !== 'reserved' ? (
-                        <div className="text-[8px] font-black text-blue-400 mt-1.5 uppercase tracking-tighter flex items-center justify-center gap-1">
-                            <ShieldCheck className="w-3 h-3" /> {p.warrantyMonths} MESES
+                      </TableCell>
+                      <TableCell className="py-1.5 text-center hidden md:table-cell">
+                        <div className="text-[10px] font-bold bg-card border border-border/80 px-2 py-0.5 rounded-lg w-fit mx-auto text-foreground">
+                          {p.quantity || 1}
                         </div>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="py-5 text-right pr-8">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 text-muted-foreground hover:text-blue-500 hover:bg-card rounded-xl shadow-none hover:shadow-sm transition-all"
-                          title="Duplicar publicación"
-                          onClick={() => handleDuplicate(p)}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 text-muted-foreground hover:text-foreground hover:bg-card rounded-xl shadow-none hover:shadow-sm transition-all"
-                          onClick={() => startEditing(p)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        {(p.status === 'stock' || p.status === 'reserved') && (
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right font-mono">
+                        <div className="text-xs font-extrabold text-foreground leading-tight">
+                          {p.coInvestors && p.coInvestors.length > 0 && investorFilter !== 'all' ? (
+                            <>
+                              {fmt(p.purchasePrice * (p.coInvestors.find(c => c.investor === investorFilter)?.percentage || 0) / 100)}
+                              <span className="ml-1 text-[8px] text-blue-500 font-bold">({p.coInvestors.find(c => c.investor === investorFilter)?.percentage}%)</span>
+                            </>
+                          ) : (
+                            fmt(p.purchasePrice)
+                          )}
+                        </div>
+                        {p.quantity > 1 && <div className="text-[7px] text-slate-400 font-bold uppercase leading-none mt-0.5">Costo Unid</div>}
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right font-mono">
+                        <div className="text-xs font-extrabold text-emerald-700 leading-tight">
+                          {fmt(p.salePrice || 0)}
+                        </div>
+                        {(p.regularPrice || 0) > (p.salePrice || 0) && (
+                          <div className="text-[7px] text-slate-300 line-through leading-none mt-0.5">{fmt(p.regularPrice || 0)}</div>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right font-mono">
+                         <div className="text-xs font-extrabold text-emerald-600 leading-tight">+{fmt(totalProfit)}</div>
+                      </TableCell>
+                      <TableCell className="py-1.5 text-center">
+                        <Badge className={cn(
+                          "text-[8px] font-black h-4 px-2 rounded-md border-none flex items-center justify-center uppercase tracking-wider w-fit mx-auto",
+                          p.status === 'stock' ? "bg-blue-50 text-blue-600" : 
+                          p.status === 'reserved' ? "bg-orange-50 text-orange-600" : 
+                          "bg-slate-100 text-slate-400"
+                        )}>
+                          {p.status === 'stock' ? 'STOCK' : p.status === 'reserved' ? 'SEPARADO' : 'AGOTADO'}
+                        </Badge>
+                        {p.status === 'reserved' && (
+                          <div className="text-[7px] font-black text-orange-500 uppercase tracking-tighter mt-0.5">
+                            Debe: {fmt((p.salePrice || 0) * (p.quantity || 1) - (p.reservationAmount || 0))}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="py-1.5 text-right pr-6">
+                        <div className="flex items-center justify-end gap-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-10 w-10 text-orange-500 hover:text-white hover:bg-orange-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-orange-500/20 transition-all"
-                            title="Abono / Separar"
-                            onClick={() => {
-                              setSelectedProduct(p);
-                              setReserveData({
-                                amount: '',
-                                buyer: p.reservationBuyer || '',
-                                date: new Date().toISOString().split('T')[0],
-                                method: 'Efectivo',
-                              });
-                              setIsReserveOpen(true);
-                            }}
+                            className="h-7 w-7 text-muted-foreground hover:text-blue-500 hover:bg-muted/50 rounded-lg transition-all"
+                            title="Duplicar publicación"
+                            onClick={() => handleDuplicate(p)}
                           >
-                            <HandCoins className="w-4 h-4" />
+                            <Copy className="w-3.5 h-3.5" />
                           </Button>
-                        )}
-                        {(p.status === 'stock' || p.status === 'reserved') && (
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-10 w-10 text-emerald-500 hover:text-white hover:bg-emerald-500 rounded-xl shadow-none hover:shadow-lg hover:shadow-emerald-500/20 transition-all"
-                            title={p.status === 'reserved' ? 'Liquidar Venta' : 'Vender'}
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-all"
+                            onClick={() => startEditing(p)}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          {(p.status === 'stock' || p.status === 'reserved') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-orange-500 hover:text-white hover:bg-orange-500 rounded-lg transition-all"
+                              title="Abono / Separar"
+                              onClick={() => {
+                                setSelectedProduct(p);
+                                setReserveData({
+                                  amount: '',
+                                  buyer: p.reservationBuyer || '',
+                                  date: new Date().toISOString().split('T')[0],
+                                  method: 'Efectivo',
+                                });
+                                setIsReserveOpen(true);
+                              }}
+                            >
+                              <HandCoins className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          {(p.status === 'stock' || p.status === 'reserved') && (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-emerald-500 hover:text-white hover:bg-emerald-500 rounded-lg transition-all"
+                              title={p.status === 'reserved' ? 'Liquidar Venta' : 'Vender'}
+                              onClick={() => {
+                                setSelectedProduct(p);
+                                setSellData({
+                                  salePrice: p.salePrice || 0,
+                                  saleDate: new Date().toISOString().split('T')[0],
+                                  buyer: p.reservationBuyer || '',
+                                  sellQuantity: 1,
+                                  saleMethod: 'Efectivo',
+                                  warrantyMonths: 3,
+                                  warrantyExpiration: '',
+                                });
+                                setIsSellOpen(true);
+                              }}
+                            >
+                              <ShoppingCart className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 text-slate-400 hover:text-rose-500 hover:bg-muted/50 rounded-lg"
                             onClick={() => {
                               setSelectedProduct(p);
-                              setSellData({
-                                salePrice: p.salePrice || 0,
-                                saleDate: new Date().toISOString().split('T')[0],
-                                buyer: p.reservationBuyer || '',
-                                sellQuantity: 1,
-                                saleMethod: 'Efectivo',
-                                warrantyMonths: 3,
-                                warrantyExpiration: '',
-                              });
-                              setIsSellOpen(true);
+                              setIsDeleteOpen(true);
                             }}
                           >
-                            <ShoppingCart className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 text-slate-400 hover:text-rose-500 hover:bg-white rounded-xl shadow-none hover:shadow-sm"
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setIsDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <div className="flex items-center gap-1 ml-2 pr-2 border-l border-slate-100 pl-4">
-                           <Checkbox 
-                             id={`hide-${p.id}`}
-                             checked={p.hideInCatalog}
-                             onCheckedChange={() => toggleHideInCatalog(p)}
-                             className="border-rose-200 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
-                           />
-                           <Label htmlFor={`hide-${p.id}`} className="text-[10px] font-black uppercase text-rose-500 cursor-pointer select-none">No Mostrar</Label>
+                          <div className="flex items-center gap-0.5 ml-1 pl-1.5 border-l border-border h-4">
+                             <Checkbox 
+                               id={`hide-${p.id}`}
+                               checked={p.hideInCatalog}
+                               onCheckedChange={() => toggleHideInCatalog(p)}
+                               className="h-3 w-3 rounded-sm border-rose-200 data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500"
+                             />
+                             <Label htmlFor={`hide-${p.id}`} className="text-[7px] font-black uppercase text-rose-500 cursor-pointer select-none leading-none">Ocultar</Label>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
           
           <div className="bg-muted/15 p-6 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-6 sm:gap-10">

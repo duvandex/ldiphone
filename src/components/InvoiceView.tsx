@@ -29,6 +29,115 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
 
     setDownloading(true);
 
+    // Color converting utilities
+    const oklabToRgbValues = (L: number, a: number, b: number, A: number): string => {
+      const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+      const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+      const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+      const l = Math.pow(Math.max(0, l_), 3);
+      const m = Math.pow(Math.max(0, m_), 3);
+      const s = Math.pow(Math.max(0, s_), 3);
+
+      const r = +4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+      const g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+      const b_co = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+
+      const dscr = (c: number): number => {
+        return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+      };
+
+      const R = Math.max(0, Math.min(255, Math.round(dscr(r) * 255)));
+      const G = Math.max(0, Math.min(255, Math.round(dscr(g) * 255)));
+      const B = Math.max(0, Math.min(255, Math.round(dscr(b_co) * 255)));
+
+      if (A === 1) {
+        return `rgb(${R}, ${G}, ${B})`;
+      } else {
+        return `rgba(${R}, ${G}, ${B}, ${A})`;
+      }
+    };
+
+    const oklchToRgb = (oklchStr: string): string | null => {
+      const formatRegex = /oklch\(\s*([\d\.]+%?)\s*[\s,]\s*([\d\.]+%?)\s*[\s,]\s*([\d\.]+(?:deg|rad|turn)?)\s*(?:[\s,\/]\s*([\d\.]+%?))?\s*\)/i;
+      const match = oklchStr.match(formatRegex);
+      if (!match) return null;
+
+      const L = match[1].endsWith('%') ? parseFloat(match[1]) / 100 : parseFloat(match[1]);
+      const C = match[2].endsWith('%') ? parseFloat(match[2]) / 100 : parseFloat(match[2]);
+      const H_val = parseFloat(match[3]);
+      const H_unit = match[3].replace(/[\d\.]+/g, '').trim().toLowerCase();
+      
+      let H = H_val;
+      if (H_unit === 'rad') {
+        H = H_val * (180 / Math.PI);
+      } else if (H_unit === 'turn') {
+        H = H_val * 360;
+      }
+
+      const A = match[4] ? (match[4].endsWith('%') ? parseFloat(match[4]) / 100 : parseFloat(match[4])) : 1;
+
+      const h_rad = H * Math.PI / 180;
+      const a = C * Math.cos(h_rad);
+      const b = C * Math.sin(h_rad);
+
+      return oklabToRgbValues(L, a, b, A);
+    };
+
+    const oklabToRgb = (oklabStr: string): string | null => {
+      const formatRegex = /oklab\(\s*([\d\.]+%?)\s*[\s,]\s*(-?[\d\.]+%?)\s*[\s,]\s*(-?[\d\.]+%?)\s*(?:[\s,\/]\s*([\d\.]+%?))?\s*\)/i;
+      const match = oklabStr.match(formatRegex);
+      if (!match) return null;
+
+      const L = match[1].endsWith('%') ? parseFloat(match[1]) / 100 : parseFloat(match[1]);
+      const a = match[2].endsWith('%') ? parseFloat(match[2]) / 100 : parseFloat(match[2]);
+      const b = match[3].endsWith('%') ? parseFloat(match[3]) / 100 : parseFloat(match[3]);
+      const A = match[4] ? (match[4].endsWith('%') ? parseFloat(match[4]) / 100 : parseFloat(match[4])) : 1;
+
+      return oklabToRgbValues(L, a, b, A);
+    };
+
+    const convertUnsupportedColors = (val: string): string => {
+      if (!val || typeof val !== 'string') return val;
+      
+      let result = val;
+      
+      // Match oklch(...) occurrences
+      const oklchMatches = result.match(/oklch\([^)]+\)/gi);
+      if (oklchMatches) {
+        for (const match of oklchMatches) {
+          const converted = oklchToRgb(match);
+          if (converted) {
+            result = result.replace(match, converted);
+          }
+        }
+      }
+      
+      // Match oklab(...) occurrences
+      const oklabMatches = result.match(/oklab\([^)]+\)/gi);
+      if (oklabMatches) {
+        for (const match of oklabMatches) {
+          const converted = oklabToRgb(match);
+          if (converted) {
+            result = result.replace(match, converted);
+          }
+        }
+      }
+
+      // Match light-dark(...) occurrences
+      const lightDarkMatches = result.match(/light-dark\([^)]+\)/gi);
+      if (lightDarkMatches) {
+        for (const match of lightDarkMatches) {
+          const inner = match.substring(11, match.length - 1);
+          const parts = inner.split(',');
+          const lightVal = parts[0] ? parts[0].trim() : '#1e293b';
+          result = result.replace(match, lightVal);
+        }
+      }
+      
+      return result;
+    };
+
     // Deeply robust balanced bracket oklch, oklab, and light-dark cleaner
     const stripUnsupportedColors = (css: string): string => {
       let result = '';
@@ -188,17 +297,47 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
         console.warn('Style clean up failed, continuing download path...', e);
       }
 
+      // Temporarily proxy getComputedStyle during html2canvas's run to convert colors
+      const originalGetComputedStyle = window.getComputedStyle;
+      window.getComputedStyle = function (elt, pseudoElt) {
+        const style = originalGetComputedStyle(elt, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop) {
+            if (prop === 'getPropertyValue') {
+              return function(propertyName: string) {
+                const val = target.getPropertyValue(propertyName);
+                return convertUnsupportedColors(val);
+              };
+            }
+            const val = (target as any)[prop];
+            if (typeof val === 'string') {
+              return convertUnsupportedColors(val);
+            }
+            if (typeof val === 'function') {
+              return val.bind(target);
+            }
+            return val;
+          }
+        }) as any;
+      };
+
+      const restoreGetComputedStyle = () => {
+        window.getComputedStyle = originalGetComputedStyle;
+      };
+
       // Temporarily apply print classes to force single page structure
       element.classList.add('pdf-rendering');
 
       html2pdf().set(opt).from(element).save().then(() => {
         element.classList.remove('pdf-rendering');
         restoreStyles();
+        restoreGetComputedStyle();
         setDownloading(false);
       }).catch((err: any) => {
         console.error('Error rendering PDF:', err);
         element.classList.remove('pdf-rendering');
         restoreStyles();
+        restoreGetComputedStyle();
         setDownloading(false);
       });
     };

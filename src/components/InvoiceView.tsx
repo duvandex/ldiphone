@@ -139,21 +139,124 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
       return result;
     };
 
-    // Robust lightweight wrapper to mock document.styleSheets and proxy window.getComputedStyle
-    // to dynamically resolve and convert oklch, oklab, and light-dark to standard sRGB format during PDF generation
-    const cleanUpOklchStyles = async () => {
-      // 1. Mock document.styleSheets to return an empty list so html2canvas doesn't try to parse huge Tailwind v4 stylesheets and crash
-      const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'styleSheets');
-      try {
-        Object.defineProperty(document, 'styleSheets', {
-          get: () => [] as unknown as StyleSheetList,
-          configurable: true
-        });
-      } catch (e) {
-        console.warn('Failed to define document.styleSheets override', e);
+    // Robust, balanced oklch, oklab, and light-dark converter for stylesheets
+    const replaceColorFunctions = (css: string): string => {
+      let cleaned = css;
+      
+      // 1. Extract light-dark color functions and replace them with their light-theme first argument
+      let index = cleaned.indexOf('light-dark(');
+      let count = 0;
+      while (index !== -1 && count < 1000) {
+        count++;
+        let openPn = 1;
+        let j = index + 11;
+        let innerText = '';
+        while (j < cleaned.length && openPn > 0) {
+          if (cleaned[j] === '(') openPn++;
+          else if (cleaned[j] === ')') openPn--;
+          if (openPn > 0) {
+            innerText += cleaned[j];
+          }
+          j++;
+        }
+        const firstArg = innerText.split(',')[0].trim();
+        cleaned = cleaned.substring(0, index) + firstArg + cleaned.substring(j);
+        index = cleaned.indexOf('light-dark(');
       }
 
-      // 2. Proxy window.getComputedStyle to dynamically intercept and convert oklch(...) and oklab(...) to standard sRGB colors
+      // 2. Convert oklch with an index tracker to prevent infinite loops
+      let searchOffset = 0;
+      index = cleaned.indexOf('oklch(', searchOffset);
+      count = 0;
+      while (index !== -1 && count < 1000) {
+        count++;
+        let openPn = 1;
+        let j = index + 6;
+        while (j < cleaned.length && openPn > 0) {
+          if (cleaned[j] === '(') openPn++;
+          else if (cleaned[j] === ')') openPn--;
+          j++;
+        }
+        const oklchText = cleaned.substring(index, j);
+        const rgbText = oklchToRgb(oklchText) || '#1e293b';
+        cleaned = cleaned.substring(0, index) + rgbText + cleaned.substring(j);
+        searchOffset = index + rgbText.length;
+        index = cleaned.indexOf('oklch(', searchOffset);
+      }
+
+      // 3. Convert oklab with an index tracker to prevent infinite loops
+      searchOffset = 0;
+      index = cleaned.indexOf('oklab(', searchOffset);
+      count = 0;
+      while (index !== -1 && count < 1000) {
+        count++;
+        let openPn = 1;
+        let j = index + 6;
+        while (j < cleaned.length && openPn > 0) {
+          if (cleaned[j] === '(') openPn++;
+          else if (cleaned[j] === ')') openPn--;
+          j++;
+        }
+        const oklabText = cleaned.substring(index, j);
+        const rgbText = oklabToRgb(oklabText) || '#1e293b';
+        cleaned = cleaned.substring(0, index) + rgbText + cleaned.substring(j);
+        searchOffset = index + rgbText.length;
+        index = cleaned.indexOf('oklab(', searchOffset);
+      }
+
+      return cleaned;
+    };
+
+    // Clean up active document's stylesheets and proxy window.getComputedStyle during PDF generation
+    const cleanUpOklchStyles = async () => {
+      const originalSheets = Array.from(document.styleSheets);
+      const tempStyles: HTMLStyleElement[] = [];
+      const disabledOriginals: CSSStyleSheet[] = [];
+
+      for (const sheet of originalSheets) {
+        try {
+          let sheetCss = '';
+          try {
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              for (let i = 0; i < rules.length; i++) {
+                sheetCss += rules[i].cssText + '\n';
+              }
+            }
+          } catch (ruleError) {
+            console.warn('CORS restriction on styleSheet, will fallback to raw fetch if needed', ruleError);
+          }
+
+          // If same-origin extraction yielded nothing or failed, we can try to fetch it if it has an href
+          if (!sheetCss && sheet.href) {
+            try {
+              const res = await fetch(sheet.href);
+              sheetCss = await res.text();
+            } catch (fetchError) {
+              console.warn(`Failed to fetch sheet from href: ${sheet.href}`, fetchError);
+            }
+          }
+
+          if (sheetCss && (sheetCss.includes('oklch') || sheetCss.includes('oklab') || sheetCss.includes('light-dark'))) {
+            const cleanedCss = replaceColorFunctions(sheetCss);
+            
+            // Create temporary stylesheet with cleaned CSS
+            const tempStyle = document.createElement('style');
+            tempStyle.type = 'text/css';
+            tempStyle.innerHTML = cleanedCss;
+            document.head.appendChild(tempStyle);
+            tempStyles.push(tempStyle);
+
+            // Disable original stylesheet
+            sheet.disabled = true;
+            disabledOriginals.push(sheet);
+          }
+        } catch (e) {
+          console.warn('Error processing styleSheet:', e);
+        }
+      }
+
+      // Proxy window.getComputedStyle to dynamically handle any remaining computed styles
       const originalGetComputedStyle = window.getComputedStyle;
       window.getComputedStyle = function (elt, pseudoElt) {
         const style = originalGetComputedStyle(elt, pseudoElt);
@@ -189,19 +292,17 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
       };
 
       return () => {
-        // Restore document.styleSheets original getter
-        if (originalDescriptor) {
+        // Restore original stylesheets
+        for (const sheet of disabledOriginals) {
           try {
-            Object.defineProperty(document, 'styleSheets', originalDescriptor);
-          } catch (e) {
-            console.warn('Failed to restore document.styleSheets', e);
+            sheet.disabled = false;
+          } catch (err) {
+            // Ignore issues re-enabling
           }
-        } else {
-          try {
-            delete (document as any).styleSheets;
-          } catch (e) {
-            console.warn('Failed to delete overridden styleSheets property', e);
-          }
+        }
+        // Remove temporary style tags
+        for (const temp of tempStyles) {
+          temp.remove();
         }
 
         // Restore window.getComputedStyle
@@ -221,7 +322,23 @@ export default function InvoiceView({ isPublic = false }: { isPublic?: boolean }
         margin:       [4, 6, 4, 6], // in mm for highly compact letter page fit
         filename:     `Factura_${mainProduct.invoiceNumber || 'Sin_Numero'}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true, 
+          logging: false,
+          onclone: (clonedDoc: Document) => {
+            // Safe inline sanitization of cloned style nodes
+            const styles = clonedDoc.querySelectorAll('style');
+            styles.forEach(style => {
+              if (style.textContent) {
+                style.textContent = replaceColorFunctions(style.textContent);
+              }
+            });
+            // Ensure no main-page navigation tabs or dialog objects bleed into the clone
+            const nav = clonedDoc.querySelector('nav');
+            if (nav) nav.remove();
+          }
+        },
         jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
       };
 

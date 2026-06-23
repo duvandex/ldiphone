@@ -152,7 +152,7 @@ function Navigation({ onLogout, user }: { onLogout: () => void, user: any }) {
   ];
 
   return (
-    <nav className="glass sticky top-0 z-50 px-4 py-2 flex items-center gap-1 border-b shadow-sm overflow-x-auto no-scrollbar">
+    <nav className="glass sticky top-0 z-50 px-4 py-2 flex items-center gap-1 border-b shadow-sm overflow-x-auto no-scrollbar print:hidden">
       <div className="pr-4 border-r border-slate-200 mr-2 flex items-center shrink-0">
         <Logo size="sm" />
       </div>
@@ -222,7 +222,7 @@ function LoadingScreen() {
 
 function QuotaWarning() {
   return (
-    <div className="bg-amber-50 border-y border-amber-200 p-4 text-center animate-in fade-in slide-in-from-top duration-500">
+    <div className="bg-amber-50 border-y border-amber-200 p-4 text-center animate-in fade-in slide-in-from-top duration-500 print:hidden">
       <div className="flex items-center justify-center gap-2 text-amber-800 text-sm font-bold uppercase tracking-wider">
         <Lock className="w-4 h-4" />
         <span>Límite de Acceso Diario Alcanzado</span>

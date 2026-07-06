@@ -28,6 +28,48 @@ export default function Finance() {
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editExpenseState, setEditExpenseState] = useState<Expense | null>(null);
   const [expandedInvestors, setExpandedInvestors] = useState<Set<string>>(new Set());
+  const [filterUser, setFilterUser] = useState<string>('all');
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+
+  const expenseMonths = React.useMemo(() => {
+    const monthsSet = new Set<string>();
+    data.expenses.forEach(e => {
+      if (e.date) {
+        const ym = e.date.substring(0, 7); // "YYYY-MM"
+        if (/^\d{4}-\d{2}$/.test(ym)) {
+          monthsSet.add(ym);
+        }
+      }
+    });
+    // Always guarantee current month is listed in the dropdown if we want to,
+    // but listing all months that actually have expenses is perfect.
+    return Array.from(monthsSet).sort((a, b) => b.localeCompare(a));
+  }, [data.expenses]);
+
+  const getMonthLabel = (yearMonth: string) => {
+    if (yearMonth === 'all') return 'Todos los meses';
+    const [year, month] = yearMonth.split('-');
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    const monthIdx = parseInt(month, 10) - 1;
+    return `${monthNames[monthIdx] || month} ${year}`;
+  };
+
+  const filteredExpenses = React.useMemo(() => {
+    return [...data.expenses]
+      .filter(e => {
+        const matchUser = filterUser === 'all' || e.investor === filterUser;
+        const matchMonth = filterMonth === 'all' || e.date.substring(0, 7) === filterMonth;
+        return matchUser && matchMonth;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }, [data.expenses, filterUser, filterMonth]);
+
+  const filteredExpensesTotal = React.useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  }, [filteredExpenses]);
 
   const toggleInvestor = (name: string) => {
     const next = new Set(expandedInvestors);
@@ -641,10 +683,55 @@ export default function Finance() {
 
         {/* Expenses History */}
         <Card className="mt-8 border-none shadow-sm bg-card">
-          <CardHeader>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
               <TrendingDown className="w-4 h-4" /> Historial de Egresos (Gastos)
             </CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              {(filterMonth !== 'all' || filterUser !== 'all') && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => { setFilterMonth('all'); setFilterUser('all'); }}
+                  className="h-8 text-xs font-bold uppercase text-muted-foreground hover:text-foreground"
+                >
+                  Limpiar Filtros
+                </Button>
+              )}
+              {/* Filter by Month */}
+              <div className="w-[160px]">
+                <Select value={filterMonth} onValueChange={setFilterMonth}>
+                  <SelectTrigger className="h-8 text-xs font-bold uppercase bg-background border-border">
+                    <SelectValue placeholder="Mes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs font-bold uppercase">Todos los meses</SelectItem>
+                    {expenseMonths.map(ym => (
+                      <SelectItem key={ym} value={ym} className="text-xs font-bold uppercase">
+                        {getMonthLabel(ym)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filter by User */}
+              <div className="w-[160px]">
+                <Select value={filterUser} onValueChange={setFilterUser}>
+                  <SelectTrigger className="h-8 text-xs font-bold uppercase bg-background border-border">
+                    <SelectValue placeholder="Usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs font-bold uppercase">Todos los usuarios</SelectItem>
+                    {investors.map(inv => (
+                      <SelectItem key={inv} value={inv} className="text-xs font-bold uppercase">
+                        {inv}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-border overflow-hidden">
@@ -659,7 +746,7 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {[...data.expenses].sort((a, b) => b.date.localeCompare(a.date)).map((e) => (
+                  {filteredExpenses.map((e) => (
                     <TableRow key={e.id} className="border-border">
                       <TableCell className="text-xs font-mono py-3 text-foreground">{e.date}</TableCell>
                       <TableCell className="text-xs py-3">
@@ -695,9 +782,20 @@ export default function Finance() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {data.expenses.length === 0 && (
+                  {filteredExpenses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Sin gastos reportados</TableCell>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">Sin gastos reportados con los filtros seleccionados</TableCell>
+                    </TableRow>
+                  )}
+                  {filteredExpenses.length > 0 && (
+                    <TableRow className="bg-muted/35 hover:bg-muted/35 font-black border-t border-border">
+                      <TableCell colSpan={3} className="text-right py-4 text-xs uppercase tracking-wider text-muted-foreground font-black">
+                        Valor Total Egresos Filtrados:
+                      </TableCell>
+                      <TableCell className="text-sm font-mono text-rose-600 font-black text-right py-4">
+                        {fmt(filteredExpensesTotal)}
+                      </TableCell>
+                      <TableCell className="py-4" />
                     </TableRow>
                   )}
                 </TableBody>

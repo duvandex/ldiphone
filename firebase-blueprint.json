@@ -128,6 +128,28 @@
         "paymentMethods": { "type": "array", "items": { "type": "string" } }
       },
       "required": ["invoiceCounter"]
+    },
+    "PokemonItem": {
+      "title": "PokemonItem",
+      "description": "Represents a Pokemon TCG card or sealed product in the inventory",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["card", "sealed"] },
+        "name": { "type": "string" },
+        "set": { "type": "string" },
+        "cardNumber": { "type": "string" },
+        "rarity": { "type": "string" },
+        "tcgplayerPrice": { "type": "number" },
+        "investedPrice": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "quantity": { "type": "number" },
+        "condition": { "type": "string" },
+        "notes": { "type": "string" },
+        "dateAdded": { "type": "string" },
+        "language": { "type": "string" }
+      },
+      "required": ["name", "type", "tcgplayerPrice", "quantity", "condition", "dateAdded"]
     }
   },
   "firestore": {
@@ -162,6 +184,10 @@
     "/app_settings/global": {
       "schema": "Settings",
       "description": "Global settings for the application"
+    },
+    "/pokemon_inventory/{itemId}": {
+      "schema": "PokemonItem",
+      "description": "Inventory of Pokemon TCG cards and products"
     }
   }
 }

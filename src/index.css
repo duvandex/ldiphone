@@ -218,3 +218,62 @@
 .pdf-rendering .text-\[10px\] {
   font-size: 8px !important;
 }
+
+/* Pokemon TCG Shimmer and Holo effects */
+.pokemon-holo-card {
+  position: relative;
+  overflow: hidden;
+}
+.pokemon-holo-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 0%,
+    transparent 35%,
+    rgba(255, 255, 255, 0.15) 43%,
+    rgba(255, 255, 255, 0.35) 48%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.35) 52%,
+    rgba(255, 255, 255, 0.15) 57%,
+    transparent 65%,
+    transparent 100%
+  );
+  background-size: 300% 300%;
+  background-position: 200% 0%;
+  transition: background-position 0.6s ease;
+  pointer-events: none;
+  z-index: 5;
+}
+.pokemon-holo-card:hover::after {
+  background-position: -100% 0%;
+}
+
+.pokemon-gold-glow {
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+.pokemon-gold-glow:hover {
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+  border-color: rgba(245, 158, 11, 0.6);
+}
+
+.pokemon-ultra-glow {
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.15);
+  border-color: rgba(139, 92, 246, 0.35);
+}
+.pokemon-ultra-glow:hover {
+  box-shadow: 0 0 16px rgba(139, 92, 246, 0.35);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.pokemon-holo-glow {
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+.pokemon-holo-glow:hover {
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.25);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+

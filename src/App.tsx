@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 // Version: 1.2.0 - Inventory Categories, External Products & Co-Investment Logic
 // Optimized for deployment and automatic change detection.
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon, Coins } from 'lucide-react';
+import { LayoutDashboard, Package, Users, ShoppingCart, CreditCard, Receipt, TrendingDown, Wallet, ExternalLink, LogOut, Lock, Settings as SettingsIcon, Coins, Sparkles } from 'lucide-react';
 import { cn } from './lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Input } from './components/ui/input';
@@ -20,6 +20,7 @@ import Catalog from './components/Catalog';
 import WarrantyPage from './components/WarrantyPage';
 import Settings from './components/Settings';
 import Crypto from './components/Crypto';
+import PokemonTCG from './components/PokemonTCG';
 import { useTheme, ThemeProvider } from './hooks/useTheme';
 import { AppDataProvider, useData } from './context/AppDataContext';
 import { loginWithGoogle, logout, loginWithEmail } from './lib/firebase';
@@ -142,6 +143,7 @@ function Navigation({ onLogout, user }: { onLogout: () => void, user: any }) {
     { path: '/', label: 'Resumen', icon: LayoutDashboard },
     { path: '/investors', label: 'Inversores', icon: Users },
     { path: '/inventory', label: 'Inventario', icon: Package },
+    { path: '/pokemon', label: 'Pokémon TCG', icon: Sparkles },
     { path: '/sales', label: 'Ventas', icon: ShoppingCart },
     { path: '/finance', label: 'Cuentas/Gastos', icon: Wallet },
     { path: '/crypto', label: 'Criptomonedas', icon: Coins },
@@ -288,6 +290,9 @@ function AppContent() {
           } />
           <Route path="/finance" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Finance /></AdminLayout>
+          } />
+          <Route path="/pokemon" element={
+            !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><PokemonTCG /></AdminLayout>
           } />
           <Route path="/crypto" element={
             !isAuthenticated ? <Navigate to="/login" replace /> : <AdminLayout><Crypto /></AdminLayout>

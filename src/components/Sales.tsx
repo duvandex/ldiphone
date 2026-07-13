@@ -519,12 +519,22 @@ export default function Sales() {
               </div>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Número de Factura</Label>
-              <Input 
-                value={editingSale?.invoiceNumber || ''} 
-                onChange={e => setEditingSale(prev => prev ? ({...prev, invoiceNumber: e.target.value}) : null)} 
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Número de Factura</Label>
+                <Input 
+                  value={editingSale?.invoiceNumber || ''} 
+                  onChange={e => setEditingSale(prev => prev ? ({...prev, invoiceNumber: e.target.value}) : null)} 
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>IMEI</Label>
+                <Input 
+                  value={editingSale?.imei || ''} 
+                  onChange={e => setEditingSale(prev => prev ? ({...prev, imei: e.target.value}) : null)} 
+                  placeholder="IMEI del equipo"
+                />
+              </div>
             </div>
 
             <div className="grid gap-2 border-t border-border pt-4">
